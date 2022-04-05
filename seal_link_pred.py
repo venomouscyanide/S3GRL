@@ -52,7 +52,7 @@ class SEALDataset(InMemoryDataset):
         self.N = self.data.num_nodes
         self.E = self.data.edge_index.size()[-1]
         self.sparse_adj = SparseTensor(
-            row=self.data.edge_index[0], col=self.data.edge_index[1],
+            row=self.data.edge_index[0].to(device), col=self.data.edge_index[1].to(device),
             value=torch.arange(self.E, device=device),
             sparse_sizes=(self.N, self.N))
         super(SEALDataset, self).__init__(root)
@@ -161,8 +161,8 @@ class SEALDynamicDataset(Dataset):
     def get(self, idx):
         src, dst = self.links[idx]
         y = self.labels[idx]
-        tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop, 
-                             self.max_nodes_per_hop, node_features=self.data.x, 
+        tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                             self.max_nodes_per_hop, node_features=self.data.x,
                              y=y, directed=self.directed, A_csc=self.A_csc)
         data = construct_pyg_graph(*tmp, self.node_label)
 
