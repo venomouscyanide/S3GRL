@@ -78,7 +78,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         rw = sparse_adj.random_walk(start.flatten(), rw_m)
 
-        nodes = list(set(rw.flatten().detach().numpy()))
+        nodes = list(set(rw.flatten().to('cpu').detach().numpy()))
         # sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index)
         # nodes = sub_nodes
 
