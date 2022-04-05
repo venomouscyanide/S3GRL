@@ -38,7 +38,7 @@ from models import *
 class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
-                 max_nodes_per_hop=None, directed=False):
+                 max_nodes_per_hop=None, directed=False, rw_kwargs=None):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -55,6 +55,7 @@ class SEALDataset(InMemoryDataset):
             row=self.data.edge_index[0].to(device), col=self.data.edge_index[1].to(device),
             value=torch.arange(self.E, device=device),
             sparse_sizes=(self.N, self.N))
+        self.rw_kwargs = rw_kwargs
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -95,8 +96,8 @@ class SEALDataset(InMemoryDataset):
         # Extract enclosing subgraphs for pos and neg edges
 
         rw_kwargs = {
-            "rw_m": 5,
-            "rw_M": 50,
+            "rw_m": self.rw_kwargs.get('m'),
+            "rw_M": self.rw_kwargs.get('M'),
             "sparse_adj": self.sparse_adj,
             "edge_index": self.data.edge_index,
             "device": device
@@ -381,6 +382,8 @@ parser.add_argument('--test_multiple_models', action='store_true',
                     help="test multiple models together")
 parser.add_argument('--use_heuristic', type=str, default=None,
                     help="test a link prediction heuristic (CN or AA)")
+parser.add_argument('--m', type=int, default=0, help="Set rw length")
+parser.add_argument('--M', type=int, default=0, help="Set number of rw")
 args = parser.parse_args()
 
 if args.save_appendix == '':
@@ -510,6 +513,13 @@ use_coalesce = True if args.dataset == 'ogbl-collab' else False
 if not args.dynamic_train and not args.dynamic_val and not args.dynamic_test:
     args.num_workers = 0
 
+rw_kwargs = {}
+if args.m and args.M:
+    rw_kwargs = {
+        "m": args.m,
+        "M": args.M
+    }
+
 dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
 train_dataset = eval(dataset_class)(
     path,
@@ -523,6 +533,7 @@ train_dataset = eval(dataset_class)(
     ratio_per_hop=args.ratio_per_hop,
     max_nodes_per_hop=args.max_nodes_per_hop,
     directed=directed,
+    rw_kwargs=rw_kwargs
 )
 if False:  # visualize some graphs
     import networkx as nx
@@ -559,6 +570,7 @@ val_dataset = eval(dataset_class)(
     ratio_per_hop=args.ratio_per_hop,
     max_nodes_per_hop=args.max_nodes_per_hop,
     directed=directed,
+    rw_kwargs=rw_kwargs
 )
 dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
 test_dataset = eval(dataset_class)(
@@ -573,6 +585,7 @@ test_dataset = eval(dataset_class)(
     ratio_per_hop=args.ratio_per_hop,
     max_nodes_per_hop=args.max_nodes_per_hop,
     directed=directed,
+    rw_kwargs=rw_kwargs
 )
 
 max_z = 1000  # set a large max_z so that every z has embeddings to look up
