@@ -20,6 +20,7 @@ import pdb
 import matplotlib.pyplot as plt
 import networkx as nx
 
+
 def neighbors(fringe, A, outgoing=True):
     # Find all 1-hop neighbors of nodes in fringe from graph A, 
     # where A is a scipy csr adjacency matrix.
@@ -68,11 +69,12 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         rw_M = rw_kwargs['rw_M']
         sparse_adj = rw_kwargs['sparse_adj']
         edge_index = rw_kwargs['edge_index']
+        device = rw_kwargs['device']
 
         starting_nodes = []
 
         [starting_nodes.extend([src, dst]) for _ in range(rw_M)]
-        start = torch.tensor(starting_nodes, dtype=torch.long)
+        start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
 
         rw = sparse_adj.random_walk(start.flatten(), rw_m)
 
@@ -206,7 +208,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
         data = construct_pyg_graph(*tmp, node_label)
         draw = False
         if draw:
-           draw_graph(to_networkx(data))
+            draw_graph(to_networkx(data))
         data_list.append(data)
 
     return data_list
