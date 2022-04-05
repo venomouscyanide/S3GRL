@@ -15,9 +15,10 @@ import torch_geometric
 from torch_geometric.data import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.utils import (negative_sampling, add_self_loops,
-                                   train_test_split_edges)
+                                   train_test_split_edges, to_networkx)
 import pdb
-
+import matplotlib.pyplot as plt
+import networkx as nx
 
 def neighbors(fringe, A, outgoing=True):
     # Find all 1-hop neighbors of nodes in fringe from graph A, 
@@ -33,32 +34,52 @@ def neighbors(fringe, A, outgoing=True):
     return res
 
 
-def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0, 
-                   max_nodes_per_hop=None, node_features=None, 
-                   y=1, directed=False, A_csc=None):
+def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
+                   max_nodes_per_hop=None, node_features=None,
+                   y=1, directed=False, A_csc=None, rw_kwargs=None):
     # Extract the k-hop enclosing subgraph around link (src, dst) from A. 
     nodes = [src, dst]
     dists = [0, 0]
     visited = set([src, dst])
     fringe = set([src, dst])
-    for dist in range(1, num_hops+1):
-        if not directed:
-            fringe = neighbors(fringe, A)
-        else:
-            out_neighbors = neighbors(fringe, A)
-            in_neighbors = neighbors(fringe, A_csc, False)
-            fringe = out_neighbors.union(in_neighbors)
-        fringe = fringe - visited
-        visited = visited.union(fringe)
-        if sample_ratio < 1.0:
-            fringe = random.sample(fringe, int(sample_ratio*len(fringe)))
-        if max_nodes_per_hop is not None:
-            if max_nodes_per_hop < len(fringe):
-                fringe = random.sample(fringe, max_nodes_per_hop)
-        if len(fringe) == 0:
-            break
-        nodes = nodes + list(fringe)
-        dists = dists + [dist] * len(fringe)
+
+    if not rw_kwargs:
+        for dist in range(1, num_hops + 1):
+            if not directed:
+                fringe = neighbors(fringe, A)
+            else:
+                out_neighbors = neighbors(fringe, A)
+                in_neighbors = neighbors(fringe, A_csc, False)
+                fringe = out_neighbors.union(in_neighbors)
+            fringe = fringe - visited
+            visited = visited.union(fringe)
+            if sample_ratio < 1.0:
+                fringe = random.sample(fringe, int(sample_ratio * len(fringe)))
+            if max_nodes_per_hop is not None:
+                if max_nodes_per_hop < len(fringe):
+                    fringe = random.sample(fringe, max_nodes_per_hop)
+            if len(fringe) == 0:
+                break
+            nodes = nodes + list(fringe)
+            dists = dists + [dist] * len(fringe)
+    else:
+        from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
+        rw_m = rw_kwargs['rw_m']
+        rw_M = rw_kwargs['rw_M']
+        sparse_adj = rw_kwargs['sparse_adj']
+        edge_index = rw_kwargs['edge_index']
+
+        starting_nodes = []
+
+        [starting_nodes.extend([src, dst]) for _ in range(rw_M)]
+        start = torch.tensor(starting_nodes, dtype=torch.long)
+
+        rw = sparse_adj.random_walk(start.flatten(), rw_m)
+
+        nodes = list(set(rw.flatten().detach().numpy()))
+        # sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index)
+        # nodes = sub_nodes
+
     subgraph = A[nodes, :][:, nodes]
 
     # Remove target link between the subgraph.
@@ -85,7 +106,7 @@ def drnl_node_labeling(adj, src, dst):
     dist2src = np.insert(dist2src, dst, 0, axis=0)
     dist2src = torch.from_numpy(dist2src)
 
-    dist2dst = shortest_path(adj_wo_src, directed=False, unweighted=True, indices=dst-1)
+    dist2dst = shortest_path(adj_wo_src, directed=False, unweighted=True, indices=dst - 1)
     dist2dst = np.insert(dist2dst, src, 0, axis=0)
     dist2dst = torch.from_numpy(dist2dst)
 
@@ -130,7 +151,7 @@ def de_plus_node_labeling(adj, src, dst, max_dist=100):
     dist2src = np.insert(dist2src, dst, 0, axis=0)
     dist2src = torch.from_numpy(dist2src)
 
-    dist2dst = shortest_path(adj_wo_src, directed=False, unweighted=True, indices=dst-1)
+    dist2dst = shortest_path(adj_wo_src, directed=False, unweighted=True, indices=dst - 1)
     dist2dst = np.insert(dist2dst, src, 0, axis=0)
     dist2dst = torch.from_numpy(dist2dst)
 
@@ -145,7 +166,7 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
     # Construct a pytorch_geometric graph from a scipy csr adjacency matrix.
     u, v, r = ssp.find(adj)
     num_nodes = adj.shape[0]
-    
+
     node_ids = torch.LongTensor(node_ids)
     u, v = torch.LongTensor(u), torch.LongTensor(v)
     r = torch.LongTensor(r)
@@ -157,31 +178,35 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
     elif node_label == 'hop':  # mininum distance to src and dst
         z = torch.tensor(dists)
     elif node_label == 'zo':  # zero-one labeling trick
-        z = (torch.tensor(dists)==0).to(torch.long)
+        z = (torch.tensor(dists) == 0).to(torch.long)
     elif node_label == 'de':  # distance encoding
         z = de_node_labeling(adj, 0, 1)
     elif node_label == 'de+':
         z = de_plus_node_labeling(adj, 0, 1)
     elif node_label == 'degree':  # this is technically not a valid labeling trick
         z = torch.tensor(adj.sum(axis=0)).squeeze(0)
-        z[z>100] = 100  # limit the maximum label to 100
+        z[z > 100] = 100  # limit the maximum label to 100
     else:
         z = torch.zeros(len(dists), dtype=torch.long)
-    data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z, 
+    data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z,
                 node_id=node_ids, num_nodes=num_nodes)
     return data
 
- 
-def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl', 
-                                ratio_per_hop=1.0, max_nodes_per_hop=None, 
-                                directed=False, A_csc=None):
+
+def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
+                                ratio_per_hop=1.0, max_nodes_per_hop=None,
+                                directed=False, A_csc=None, rw_kwargs=None):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
     for src, dst in tqdm(link_index.t().tolist()):
-        tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop, 
-                             max_nodes_per_hop, node_features=x, y=y, 
-                             directed=directed, A_csc=A_csc)
+        tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                             max_nodes_per_hop, node_features=x, y=y,
+                             directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+
         data = construct_pyg_graph(*tmp, node_label)
+        draw = False
+        if draw:
+           draw_graph(to_networkx(data))
         data_list.append(data)
 
     return data_list
@@ -272,7 +297,7 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
         source, target, target_neg = source[perm], target[perm], target_neg[perm, :]
         pos_edge = torch.stack([source, target])
         neg_per_target = target_neg.size(1)
-        neg_edge = torch.stack([source.repeat_interleave(neg_per_target), 
+        neg_edge = torch.stack([source.repeat_interleave(neg_per_target),
                                 target_neg.view(-1)])
     return pos_edge, neg_edge
 
@@ -312,7 +337,7 @@ def PPR(A, edge_index):
     src_index, sort_indices = torch.sort(edge_index[0])
     dst_index = edge_index[1, sort_indices]
     edge_index = torch.stack([src_index, dst_index])
-    #edge_index = edge_index[:, :50]
+    # edge_index = edge_index[:, :50]
     scores = []
     visited = set([])
     j = 0
@@ -373,3 +398,10 @@ class Logger(object):
             r = best_result[:, 1]
             print(f'   Final Test: {r.mean():.2f} ± {r.std():.2f}', file=f)
 
+
+def draw_graph(graph):
+    # helps draw a graph object and save it as a png file
+    f = plt.figure(1, figsize=(16, 16))
+    nx.draw(graph, with_labels=True, pos=nx.spring_layout(graph))
+    plt.show()  # check if same as in the doc visually
+    f.savefig("input_graph.pdf", bbox_inches='tight')

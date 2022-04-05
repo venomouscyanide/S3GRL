@@ -18,7 +18,7 @@ import torch
 from torch.nn import BCEWithLogitsLoss
 from torch.utils.data import DataLoader
 
-from torch_sparse import coalesce
+from torch_sparse import coalesce, SparseTensor
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
 from torch_geometric.data import Data, Dataset, InMemoryDataset, DataLoader
@@ -28,6 +28,7 @@ from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
+
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 
 from utils import *
@@ -35,8 +36,8 @@ from models import *
 
 
 class SEALDataset(InMemoryDataset):
-    def __init__(self, root, data, split_edge, num_hops, percent=100, split='train', 
-                 use_coalesce=False, node_label='drnl', ratio_per_hop=1.0, 
+    def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
+                 use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False):
         self.data = data
         self.split_edge = split_edge
@@ -48,6 +49,12 @@ class SEALDataset(InMemoryDataset):
         self.ratio_per_hop = ratio_per_hop
         self.max_nodes_per_hop = max_nodes_per_hop
         self.directed = directed
+        self.N = self.data.num_nodes
+        self.E = self.data.edge_index.size()[-1]
+        self.sparse_adj = SparseTensor(
+            row=self.data.edge_index[0], col=self.data.edge_index[1],
+            value=torch.arange(self.E, device=device),
+            sparse_sizes=(self.N, self.N))
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -61,14 +68,14 @@ class SEALDataset(InMemoryDataset):
         return [name]
 
     def process(self):
-        pos_edge, neg_edge = get_pos_neg_edges(self.split, self.split_edge, 
-                                               self.data.edge_index, 
-                                               self.data.num_nodes, 
+        pos_edge, neg_edge = get_pos_neg_edges(self.split, self.split_edge,
+                                               self.data.edge_index,
+                                               self.data.num_nodes,
                                                self.percent)
 
         if self.use_coalesce:  # compress mutli-edge into edge with weight
             self.data.edge_index, self.data.edge_weight = coalesce(
-                self.data.edge_index, self.data.edge_weight, 
+                self.data.edge_index, self.data.edge_weight,
                 self.data.num_nodes, self.data.num_nodes)
 
         if 'edge_weight' in self.data:
@@ -76,7 +83,7 @@ class SEALDataset(InMemoryDataset):
         else:
             edge_weight = torch.ones(self.data.edge_index.size(1), dtype=int)
         A = ssp.csr_matrix(
-            (edge_weight, (self.data.edge_index[0], self.data.edge_index[1])), 
+            (edge_weight, (self.data.edge_index[0], self.data.edge_index[1])),
             shape=(self.data.num_nodes, self.data.num_nodes)
         )
 
@@ -84,22 +91,30 @@ class SEALDataset(InMemoryDataset):
             A_csc = A.tocsc()
         else:
             A_csc = None
-        
+
         # Extract enclosing subgraphs for pos and neg edges
+
+        rw_kwargs = {
+            "rw_m": 5,
+            "rw_M": 50,
+            "sparse_adj": self.sparse_adj,
+            "edge_index": self.data.edge_index
+        }
+
         pos_list = extract_enclosing_subgraphs(
-            pos_edge, A, self.data.x, 1, self.num_hops, self.node_label, 
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc)
+            pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
         neg_list = extract_enclosing_subgraphs(
-            neg_edge, A, self.data.x, 0, self.num_hops, self.node_label, 
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc)
+            neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
 
         torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
         del pos_list, neg_list
 
 
 class SEALDynamicDataset(Dataset):
-    def __init__(self, root, data, split_edge, num_hops, percent=100, split='train', 
-                 use_coalesce=False, node_label='drnl', ratio_per_hop=1.0, 
+    def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
+                 use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, **kwargs):
         self.data = data
         self.split_edge = split_edge
@@ -112,16 +127,16 @@ class SEALDynamicDataset(Dataset):
         self.directed = directed
         super(SEALDynamicDataset, self).__init__(root)
 
-        pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge, 
-                                               self.data.edge_index, 
-                                               self.data.num_nodes, 
+        pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
+                                               self.data.edge_index,
+                                               self.data.num_nodes,
                                                self.percent)
         self.links = torch.cat([pos_edge, neg_edge], 1).t().tolist()
         self.labels = [1] * pos_edge.size(1) + [0] * neg_edge.size(1)
 
         if self.use_coalesce:  # compress mutli-edge into edge with weight
             self.data.edge_index, self.data.edge_weight = coalesce(
-                self.data.edge_index, self.data.edge_weight, 
+                self.data.edge_index, self.data.edge_weight,
                 self.data.num_nodes, self.data.num_nodes)
 
         if 'edge_weight' in self.data:
@@ -129,14 +144,14 @@ class SEALDynamicDataset(Dataset):
         else:
             edge_weight = torch.ones(self.data.edge_index.size(1), dtype=int)
         self.A = ssp.csr_matrix(
-            (edge_weight, (self.data.edge_index[0], self.data.edge_index[1])), 
+            (edge_weight, (self.data.edge_index[0], self.data.edge_index[1])),
             shape=(self.data.num_nodes, self.data.num_nodes)
         )
         if self.directed:
             self.A_csc = self.A.tocsc()
         else:
             self.A_csc = None
-        
+
     def __len__(self):
         return len(self.links)
 
@@ -188,8 +203,8 @@ def test():
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     val_pred, val_true = torch.cat(y_pred), torch.cat(y_true)
-    pos_val_pred = val_pred[val_true==1]
-    neg_val_pred = val_pred[val_true==0]
+    pos_val_pred = val_pred[val_true == 1]
+    neg_val_pred = val_pred[val_true == 0]
 
     y_pred, y_true = [], []
     for data in tqdm(test_loader, ncols=70):
@@ -201,9 +216,9 @@ def test():
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
-    pos_test_pred = test_pred[test_true==1]
-    neg_test_pred = test_pred[test_true==0]
-    
+    pos_test_pred = test_pred[test_true == 1]
+    neg_test_pred = test_pred[test_true == 0]
+
     if args.eval_metric == 'hits':
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'mrr':
@@ -231,8 +246,8 @@ def test_multiple_models(models):
             y_true[i].append(data.y.view(-1).cpu().to(torch.float))
     val_pred = [torch.cat(y_pred[i]) for i in range(len(models))]
     val_true = [torch.cat(y_true[i]) for i in range(len(models))]
-    pos_val_pred = [val_pred[i][val_true[i]==1] for i in range(len(models))]
-    neg_val_pred = [val_pred[i][val_true[i]==0] for i in range(len(models))]
+    pos_val_pred = [val_pred[i][val_true[i] == 1] for i in range(len(models))]
+    neg_val_pred = [val_pred[i][val_true[i] == 0] for i in range(len(models))]
 
     y_pred, y_true = [[] for _ in range(len(models))], [[] for _ in range(len(models))]
     for data in tqdm(test_loader, ncols=70):
@@ -246,19 +261,19 @@ def test_multiple_models(models):
             y_true[i].append(data.y.view(-1).cpu().to(torch.float))
     test_pred = [torch.cat(y_pred[i]) for i in range(len(models))]
     test_true = [torch.cat(y_true[i]) for i in range(len(models))]
-    pos_test_pred = [test_pred[i][test_true[i]==1] for i in range(len(models))]
-    neg_test_pred = [test_pred[i][test_true[i]==0] for i in range(len(models))]
-    
+    pos_test_pred = [test_pred[i][test_true[i] == 1] for i in range(len(models))]
+    neg_test_pred = [test_pred[i][test_true[i] == 0] for i in range(len(models))]
+
     Results = []
     for i in range(len(models)):
         if args.eval_metric == 'hits':
-            Results.append(evaluate_hits(pos_val_pred[i], neg_val_pred[i], 
+            Results.append(evaluate_hits(pos_val_pred[i], neg_val_pred[i],
                                          pos_test_pred[i], neg_test_pred[i]))
         elif args.eval_metric == 'mrr':
-            Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i], 
+            Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i],
                                         pos_test_pred[i], neg_test_pred[i]))
         elif args.eval_metric == 'auc':
-            Results.append(evaluate_auc(val_pred[i], val_true[i], 
+            Results.append(evaluate_auc(val_pred[i], val_true[i],
                                         test_pred[i], test_pred[i]))
     return Results
 
@@ -279,7 +294,7 @@ def evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
         results[f'Hits@{K}'] = (valid_hits, test_hits)
 
     return results
-        
+
 
 def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     neg_val_pred = neg_val_pred.view(pos_val_pred.shape[0], -1)
@@ -296,7 +311,7 @@ def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     })['mrr_list'].mean().item()
 
     results['MRR'] = (valid_mrr, test_mrr)
-    
+
     return results
 
 
@@ -307,12 +322,12 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     results['AUC'] = (valid_auc, test_auc)
 
     return results
-        
+
 
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
 parser.add_argument('--dataset', type=str, default='ogbl-collab')
-parser.add_argument('--fast_split', action='store_true', 
+parser.add_argument('--fast_split', action='store_true',
                     help="for large custom datasets (not OGB), do a fast data split")
 # GNN settings
 parser.add_argument('--model', type=str, default='DGCNN')
@@ -324,11 +339,11 @@ parser.add_argument('--batch_size', type=int, default=32)
 parser.add_argument('--num_hops', type=int, default=1)
 parser.add_argument('--ratio_per_hop', type=float, default=1.0)
 parser.add_argument('--max_nodes_per_hop', type=int, default=None)
-parser.add_argument('--node_label', type=str, default='drnl', 
+parser.add_argument('--node_label', type=str, default='drnl',
                     help="which specific labeling trick to use")
-parser.add_argument('--use_feature', action='store_true', 
+parser.add_argument('--use_feature', action='store_true',
                     help="whether to use raw node features as GNN input")
-parser.add_argument('--use_edge_weight', action='store_true', 
+parser.add_argument('--use_edge_weight', action='store_true',
                     help="whether to consider edge weight in GNN")
 # Training settings
 parser.add_argument('--lr', type=float, default=0.0001)
@@ -337,33 +352,33 @@ parser.add_argument('--runs', type=int, default=1)
 parser.add_argument('--train_percent', type=float, default=100)
 parser.add_argument('--val_percent', type=float, default=100)
 parser.add_argument('--test_percent', type=float, default=100)
-parser.add_argument('--dynamic_train', action='store_true', 
+parser.add_argument('--dynamic_train', action='store_true',
                     help="dynamically extract enclosing subgraphs on the fly")
 parser.add_argument('--dynamic_val', action='store_true')
 parser.add_argument('--dynamic_test', action='store_true')
-parser.add_argument('--num_workers', type=int, default=16, 
+parser.add_argument('--num_workers', type=int, default=16,
                     help="number of workers for dynamic mode; 0 if not dynamic")
-parser.add_argument('--train_node_embedding', action='store_true', 
+parser.add_argument('--train_node_embedding', action='store_true',
                     help="also train free-parameter node embeddings together with GNN")
-parser.add_argument('--pretrained_node_embedding', type=str, default=None, 
+parser.add_argument('--pretrained_node_embedding', type=str, default=None,
                     help="load pretrained node embeddings as additional node features")
 # Testing settings
 parser.add_argument('--use_valedges_as_input', action='store_true')
 parser.add_argument('--eval_steps', type=int, default=1)
 parser.add_argument('--log_steps', type=int, default=1)
-parser.add_argument('--data_appendix', type=str, default='', 
+parser.add_argument('--data_appendix', type=str, default='',
                     help="an appendix to the data directory")
-parser.add_argument('--save_appendix', type=str, default='', 
+parser.add_argument('--save_appendix', type=str, default='',
                     help="an appendix to the save directory")
-parser.add_argument('--keep_old', action='store_true', 
+parser.add_argument('--keep_old', action='store_true',
                     help="do not overwrite old files in the save directory")
-parser.add_argument('--continue_from', type=int, default=None, 
+parser.add_argument('--continue_from', type=int, default=None,
                     help="from which epoch's checkpoint to continue training")
-parser.add_argument('--only_test', action='store_true', 
+parser.add_argument('--only_test', action='store_true',
                     help="only test without training")
-parser.add_argument('--test_multiple_models', action='store_true', 
+parser.add_argument('--test_multiple_models', action='store_true',
                     help="test multiple models together")
-parser.add_argument('--use_heuristic', type=str, default=None, 
+parser.add_argument('--use_heuristic', type=str, default=None,
                     help="test a link prediction heuristic (CN or AA)")
 args = parser.parse_args()
 
@@ -380,7 +395,7 @@ if args.data_appendix == '':
 args.res_dir = os.path.join('results/{}{}'.format(args.dataset, args.save_appendix))
 print('Results will be saved in ' + args.res_dir)
 if not os.path.exists(args.res_dir):
-    os.makedirs(args.res_dir) 
+    os.makedirs(args.res_dir)
 if not args.keep_old:
     # Backup python files.
     copy('seal_link_pred.py', args.res_dir)
@@ -439,7 +454,7 @@ elif args.eval_metric == 'auc':
     loggers = {
         'AUC': Logger(args.runs, args),
     }
-    
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 if args.use_heuristic:
@@ -450,14 +465,14 @@ if args.use_heuristic:
     else:
         edge_weight = torch.ones(data.edge_index.size(1), dtype=int)
 
-    A = ssp.csr_matrix((edge_weight, (data.edge_index[0], data.edge_index[1])), 
+    A = ssp.csr_matrix((edge_weight, (data.edge_index[0], data.edge_index[1])),
                        shape=(num_nodes, num_nodes))
 
-    pos_val_edge, neg_val_edge = get_pos_neg_edges('valid', split_edge, 
-                                                   data.edge_index, 
+    pos_val_edge, neg_val_edge = get_pos_neg_edges('valid', split_edge,
+                                                   data.edge_index,
                                                    data.num_nodes)
-    pos_test_edge, neg_test_edge = get_pos_neg_edges('test', split_edge, 
-                                                     data.edge_index, 
+    pos_test_edge, neg_test_edge = get_pos_neg_edges('test', split_edge,
+                                                     data.edge_index,
                                                      data.num_nodes)
     pos_val_pred, pos_val_edge = eval(args.use_heuristic)(A, pos_val_edge)
     neg_val_pred, neg_val_edge = eval(args.use_heuristic)(A, neg_val_edge)
@@ -470,11 +485,11 @@ if args.use_heuristic:
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         val_pred = torch.cat([pos_val_pred, neg_val_pred])
-        val_true = torch.cat([torch.ones(pos_val_pred.size(0), dtype=int), 
+        val_true = torch.cat([torch.ones(pos_val_pred.size(0), dtype=int),
                               torch.zeros(neg_val_pred.size(0), dtype=int)])
         test_pred = torch.cat([pos_test_pred, neg_test_pred])
-        test_true = torch.cat([torch.ones(pos_test_pred.size(0), dtype=int), 
-                              torch.zeros(neg_test_pred.size(0), dtype=int)])
+        test_true = torch.cat([torch.ones(pos_test_pred.size(0), dtype=int),
+                               torch.zeros(neg_test_pred.size(0), dtype=int)])
         results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
     for key, result in results.items():
@@ -488,7 +503,6 @@ if args.use_heuristic:
     pdb.set_trace()
     exit()
 
-
 # SEAL.
 path = dataset.root + '_seal{}'.format(args.data_appendix)
 use_coalesce = True if args.dataset == 'ogbl-collab' else False
@@ -497,24 +511,26 @@ if not args.dynamic_train and not args.dynamic_val and not args.dynamic_test:
 
 dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
 train_dataset = eval(dataset_class)(
-    path, 
-    data, 
-    split_edge, 
-    num_hops=args.num_hops, 
-    percent=args.train_percent, 
-    split='train', 
-    use_coalesce=use_coalesce, 
-    node_label=args.node_label, 
-    ratio_per_hop=args.ratio_per_hop, 
-    max_nodes_per_hop=args.max_nodes_per_hop, 
-    directed=directed, 
-) 
+    path,
+    data,
+    split_edge,
+    num_hops=args.num_hops,
+    percent=args.train_percent,
+    split='train',
+    use_coalesce=use_coalesce,
+    node_label=args.node_label,
+    ratio_per_hop=args.ratio_per_hop,
+    max_nodes_per_hop=args.max_nodes_per_hop,
+    directed=directed,
+)
 if False:  # visualize some graphs
     import networkx as nx
     from torch_geometric.utils import to_networkx
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
     for g in loader:
         f = plt.figure(figsize=(20, 20))
@@ -531,40 +547,40 @@ if False:  # visualize some graphs
 
 dataset_class = 'SEALDynamicDataset' if args.dynamic_val else 'SEALDataset'
 val_dataset = eval(dataset_class)(
-    path, 
-    data, 
-    split_edge, 
-    num_hops=args.num_hops, 
-    percent=args.val_percent, 
-    split='valid', 
-    use_coalesce=use_coalesce, 
-    node_label=args.node_label, 
-    ratio_per_hop=args.ratio_per_hop, 
-    max_nodes_per_hop=args.max_nodes_per_hop, 
-    directed=directed, 
+    path,
+    data,
+    split_edge,
+    num_hops=args.num_hops,
+    percent=args.val_percent,
+    split='valid',
+    use_coalesce=use_coalesce,
+    node_label=args.node_label,
+    ratio_per_hop=args.ratio_per_hop,
+    max_nodes_per_hop=args.max_nodes_per_hop,
+    directed=directed,
 )
 dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
 test_dataset = eval(dataset_class)(
-    path, 
-    data, 
-    split_edge, 
-    num_hops=args.num_hops, 
-    percent=args.test_percent, 
-    split='test', 
-    use_coalesce=use_coalesce, 
-    node_label=args.node_label, 
-    ratio_per_hop=args.ratio_per_hop, 
-    max_nodes_per_hop=args.max_nodes_per_hop, 
-    directed=directed, 
+    path,
+    data,
+    split_edge,
+    num_hops=args.num_hops,
+    percent=args.test_percent,
+    split='test',
+    use_coalesce=use_coalesce,
+    node_label=args.node_label,
+    ratio_per_hop=args.ratio_per_hop,
+    max_nodes_per_hop=args.max_nodes_per_hop,
+    directed=directed,
 )
 
 max_z = 1000  # set a large max_z so that every z has embeddings to look up
 
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, 
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                           shuffle=True, num_workers=args.num_workers)
-val_loader = DataLoader(val_dataset, batch_size=args.batch_size, 
+val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
                         num_workers=args.num_workers)
-test_loader = DataLoader(test_dataset, batch_size=args.batch_size, 
+test_loader = DataLoader(test_dataset, batch_size=args.batch_size,
                          num_workers=args.num_workers)
 
 if args.train_node_embedding:
@@ -572,23 +588,23 @@ if args.train_node_embedding:
 elif args.pretrained_node_embedding:
     weight = torch.load(args.pretrained_node_embedding)
     emb = torch.nn.Embedding.from_pretrained(weight)
-    emb.weight.requires_grad=False
+    emb.weight.requires_grad = False
 else:
     emb = None
 
 for run in range(args.runs):
     if args.model == 'DGCNN':
-        model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k, 
-                      train_dataset, args.dynamic_train, use_feature=args.use_feature, 
+        model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k,
+                      train_dataset, args.dynamic_train, use_feature=args.use_feature,
                       node_embedding=emb).to(device)
     elif args.model == 'SAGE':
-        model = SAGE(args.hidden_channels, args.num_layers, max_z, train_dataset,  
+        model = SAGE(args.hidden_channels, args.num_layers, max_z, train_dataset,
                      args.use_feature, node_embedding=emb).to(device)
     elif args.model == 'GCN':
-        model = GCN(args.hidden_channels, args.num_layers, max_z, train_dataset, 
+        model = GCN(args.hidden_channels, args.num_layers, max_z, train_dataset,
                     args.use_feature, node_embedding=emb).to(device)
     elif args.model == 'GIN':
-        model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset, 
+        model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset,
                     args.use_feature, node_embedding=emb).to(device)
     parameters = list(model.parameters())
     if args.train_node_embedding:
@@ -607,16 +623,16 @@ for run in range(args.runs):
     start_epoch = 1
     if args.continue_from is not None:
         model.load_state_dict(
-            torch.load(os.path.join(args.res_dir, 
-                'run{}_model_checkpoint{}.pth'.format(run+1, args.continue_from)))
+            torch.load(os.path.join(args.res_dir,
+                                    'run{}_model_checkpoint{}.pth'.format(run + 1, args.continue_from)))
         )
         optimizer.load_state_dict(
-            torch.load(os.path.join(args.res_dir, 
-                'run{}_optimizer_checkpoint{}.pth'.format(run+1, args.continue_from)))
+            torch.load(os.path.join(args.res_dir,
+                                    'run{}_optimizer_checkpoint{}.pth'.format(run + 1, args.continue_from)))
         )
         start_epoch = args.continue_from + 1
         args.epochs -= args.continue_from
-    
+
     if args.only_test:
         results = test()
         for key, result in results.items():
@@ -632,7 +648,7 @@ for run in range(args.runs):
 
     if args.test_multiple_models:
         model_paths = [
-        ] # enter all your pretrained .pth model paths here
+        ]  # enter all your pretrained .pth model paths here
         models = []
         for path in model_paths:
             m = cp.deepcopy(model)
@@ -670,9 +686,9 @@ for run in range(args.runs):
 
             if epoch % args.log_steps == 0:
                 model_name = os.path.join(
-                    args.res_dir, 'run{}_model_checkpoint{}.pth'.format(run+1, epoch))
+                    args.res_dir, 'run{}_model_checkpoint{}.pth'.format(run + 1, epoch))
                 optimizer_name = os.path.join(
-                    args.res_dir, 'run{}_optimizer_checkpoint{}.pth'.format(run+1, epoch))
+                    args.res_dir, 'run{}_optimizer_checkpoint{}.pth'.format(run + 1, epoch))
                 torch.save(model.state_dict(), model_name)
                 torch.save(optimizer.state_dict(), optimizer_name)
 
@@ -702,5 +718,3 @@ for key in loggers.keys():
         loggers[key].print_statistics(f=f)
 print(f'Total number of parameters is {total_params}')
 print(f'Results are saved in {args.res_dir}')
-
-
