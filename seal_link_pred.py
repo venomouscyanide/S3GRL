@@ -100,7 +100,8 @@ class SEALDataset(InMemoryDataset):
             "rw_M": self.rw_kwargs.get('M'),
             "sparse_adj": self.sparse_adj,
             "edge_index": self.data.edge_index,
-            "device": device
+            "device": device,
+            "data": self.data
         }
 
         pos_list = extract_enclosing_subgraphs(

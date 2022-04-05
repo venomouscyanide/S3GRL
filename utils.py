@@ -19,6 +19,8 @@ from torch_geometric.utils import (negative_sampling, add_self_loops,
 import pdb
 import matplotlib.pyplot as plt
 import networkx as nx
+from torch_geometric.utils import to_scipy_sparse_matrix
+from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 
 
 def neighbors(fringe, A, outgoing=True):
@@ -38,13 +40,12 @@ def neighbors(fringe, A, outgoing=True):
 def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
                    max_nodes_per_hop=None, node_features=None,
                    y=1, directed=False, A_csc=None, rw_kwargs=None):
-    # Extract the k-hop enclosing subgraph around link (src, dst) from A. 
-    nodes = [src, dst]
-    dists = [0, 0]
-    visited = set([src, dst])
-    fringe = set([src, dst])
-
+    # Extract the k-hop enclosing subgraph around link (src, dst) from A.
     if not rw_kwargs:
+        nodes = [src, dst]
+        dists = [0, 0]
+        visited = set([src, dst])
+        fringe = set([src, dst])
         for dist in range(1, num_hops + 1):
             if not directed:
                 fringe = neighbors(fringe, A)
@@ -63,13 +64,24 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
                 break
             nodes = nodes + list(fringe)
             dists = dists + [dist] * len(fringe)
+
+        subgraph = A[nodes, :][:, nodes]
+
+        # Remove target link between the subgraph.
+        subgraph[0, 1] = 0
+        subgraph[1, 0] = 0
+
+        if node_features is not None:
+            node_features = node_features[nodes]
+
+        return nodes, subgraph, dists, node_features, y
     else:
-        from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
         rw_m = rw_kwargs['rw_m']
         rw_M = rw_kwargs['rw_M']
         sparse_adj = rw_kwargs['sparse_adj']
         edge_index = rw_kwargs['edge_index']
         device = rw_kwargs['device']
+        data_org = rw_kwargs['data']
 
         starting_nodes = []
 
@@ -79,19 +91,72 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         rw = sparse_adj.random_walk(start.flatten(), rw_m)
 
         nodes = list(set(rw.flatten().to('cpu').detach().numpy()))
-        # sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index)
-        # nodes = sub_nodes
 
-    subgraph = A[nodes, :][:, nodes]
+        # Start of paste
+        rw_set = nodes
+        sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(
+            rw_set, 0, edge_index, relabel_nodes=True)
 
-    # Remove target link between the subgraph.
-    subgraph[0, 1] = 0
-    subgraph[1, 0] = 0
+        # adj_saint, _ = sparse_adj.saint_subgraph(rw.view( -1))  # not used.
 
-    if node_features is not None:
-        node_features = node_features[nodes]
+        src_index = rw_set.index(src)  # TODO: Maybe opt??
+        dst_index = rw_set.index(dst)
+        mapping_list = mapping.tolist()
+        src, dst = mapping_list[src_index], mapping_list[dst_index]
+        # Remove target link from the subgraph.
+        mask1 = (sub_edge_index[0] != src) | (sub_edge_index[1] != dst)
+        mask2 = (sub_edge_index[0] != dst) | (sub_edge_index[1] != src)
+        sub_edge_index_revised = sub_edge_index[:, mask1 & mask2]
 
-    return nodes, subgraph, dists, node_features, y
+        # Calculate node labeling.
+        z = py_g_drnl_node_labeling(sub_edge_index, src, dst,
+                                    num_nodes=sub_nodes.size(0))
+        z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
+                                            num_nodes=sub_nodes.size(0))
+        new_mapping = {k: v for k, v in zip(rw_set, list(mapping.detach().numpy()))}
+
+        y = torch.tensor([y], dtype=torch.int)
+        data = Data(x=data_org.x[sub_nodes], z=z, edge_index=sub_edge_index, y=y)
+        data_revised = Data(x=data_org.x[sub_nodes], z=z_revised,
+                            edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
+                            num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
+        # end of paste
+        return data_revised
+
+
+def py_g_drnl_node_labeling(edge_index, src, dst, num_nodes=None):
+    # Double-radius node labeling (DRNL).
+    src, dst = (dst, src) if src > dst else (src, dst)
+    adj = to_scipy_sparse_matrix(edge_index, num_nodes=num_nodes).tocsr()
+
+    idx = list(range(src)) + list(range(src + 1, adj.shape[0]))
+    adj_wo_src = adj[idx, :][:, idx]
+
+    idx = list(range(dst)) + list(range(dst + 1, adj.shape[0]))
+    adj_wo_dst = adj[idx, :][:, idx]
+
+    dist2src = shortest_path(adj_wo_dst, directed=False, unweighted=True,
+                             indices=src)
+    dist2src = np.insert(dist2src, dst, 0, axis=0)
+    dist2src = torch.from_numpy(dist2src)
+
+    dist2dst = shortest_path(adj_wo_src, directed=False, unweighted=True,
+                             indices=dst - 1)
+    dist2dst = np.insert(dist2dst, src, 0, axis=0)
+    dist2dst = torch.from_numpy(dist2dst)
+
+    dist = dist2src + dist2dst
+    dist_over_2, dist_mod_2 = dist // 2, dist % 2
+
+    z = 1 + torch.min(dist2src, dist2dst)
+    z += dist_over_2 * (dist_over_2 + dist_mod_2 - 1)
+    z[src] = 1.
+    z[dst] = 1.
+    z[torch.isnan(z)] = 0.
+
+    # self._max_z = max(int(z.max()), self._max_z) # this is used to one hot encode. Not needed in my case?
+
+    return z.to(torch.long)
 
 
 def drnl_node_labeling(adj, src, dst):
@@ -201,11 +266,24 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
     for src, dst in tqdm(link_index.t().tolist()):
-        tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                             max_nodes_per_hop, node_features=x, y=y,
-                             directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+        # delete
+        # tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+        #                      max_nodes_per_hop, node_features=x, y=y,
+        #                      directed=directed, A_csc=A_csc)
+        #
+        # data_org = construct_pyg_graph(*tmp, node_label)
 
-        data = construct_pyg_graph(*tmp, node_label)
+        # me
+        if not rw_kwargs['rw_m']:
+            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                 max_nodes_per_hop, node_features=x, y=y,
+                                 directed=directed, A_csc=A_csc)
+
+            data = construct_pyg_graph(*tmp, node_label)
+        else:
+            data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                  max_nodes_per_hop, node_features=x, y=y,
+                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
         draw = False
         if draw:
             draw_graph(to_networkx(data))
