@@ -618,10 +618,10 @@ for run in range(args.runs):
     if args.model == 'DGCNN':
         model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k,
                       train_dataset, args.dynamic_train, use_feature=args.use_feature,
-                      node_embedding=emb).to(device)
+                      node_embedding=emb, dropedge=args.dropedge).to(device)
     elif args.model == 'SAGE':
         model = SAGE(args.hidden_channels, args.num_layers, max_z, train_dataset,
-                     args.use_feature, node_embedding=emb).to(device)
+                     args.use_feature, node_embedding=emb, dropedge=args.dropedge).to(device)
     elif args.model == 'GCN':
         # I am only focussing on GCN. Every other model is broken!
         model = GCN(args.hidden_channels, args.num_layers, max_z, train_dataset,

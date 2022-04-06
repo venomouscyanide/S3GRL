@@ -9,7 +9,7 @@ from torch.nn import (ModuleList, Linear, Conv1d, MaxPool1d, Embedding, ReLU,
                       Sequential, BatchNorm1d as BN)
 import torch.nn.functional as F
 from torch_geometric.nn import (GCNConv, SAGEConv, GINConv,
-                                global_sort_pool, global_add_pool, global_mean_pool, MLP)
+                                global_sort_pool, global_add_pool, global_mean_pool, MLP, global_max_pool)
 import pdb
 from torch_geometric.utils import dropout_adj
 
@@ -65,10 +65,16 @@ class GCN(torch.nn.Module):
         x = self.convs[-1](x, edge_index, edge_weight)
 
         # center pooling
-        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-        x_src = x[center_indices]
-        x_dst = x[center_indices + 1]
-        x = (x_src * x_dst)
+        # _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
+        # x_src = x[center_indices]
+        # x_dst = x[center_indices + 1]
+        # x = (x_src * x_dst)
+
+        # sum pool
+        # x = global_add_pool(x, batch)
+
+        # max pool
+        x = global_max_pool(x, batch)
 
         x = self.mlp(x)
         return x
@@ -76,7 +82,7 @@ class GCN(torch.nn.Module):
 
 class SAGE(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, train_dataset=None,
-                 use_feature=False, node_embedding=None, dropout=0.5):
+                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0):
         super(SAGE, self).__init__()
         self.use_feature = use_feature
         self.node_embedding = node_embedding
@@ -94,14 +100,18 @@ class SAGE(torch.nn.Module):
             self.convs.append(SAGEConv(hidden_channels, hidden_channels))
 
         self.dropout = dropout
-        self.lin1 = Linear(hidden_channels, hidden_channels)
-        self.lin2 = Linear(hidden_channels, 1)
+        self.dropedge = dropedge
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
 
     def reset_parameters(self):
         for conv in self.convs:
             conv.reset_parameters()
 
-    def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
+    def forward(self, num_nodes, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
+        edge_index, _ = dropout_adj(edge_index, p=self.dropedge,
+                                    force_undirected=True,
+                                    num_nodes=num_nodes,
+                                    training=self.training)
         z_emb = self.z_embedding(z)
         if z_emb.ndim == 3:  # in case z has multiple integer labels
             z_emb = z_emb.sum(dim=1)
@@ -117,7 +127,7 @@ class SAGE(torch.nn.Module):
             x = F.relu(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.convs[-1](x, edge_index)
-        if True:  # center pooling
+        if False:  # center pooling
             _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
             x_src = x[center_indices]
             x_dst = x[center_indices + 1]
@@ -125,11 +135,9 @@ class SAGE(torch.nn.Module):
             x = F.relu(self.lin1(x))
             x = F.dropout(x, p=self.dropout, training=self.training)
             x = self.lin2(x)
-        else:  # sum pooling
-            x = global_add_pool(x, batch)
-            x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = self.lin2(x)
+        else:  # max pooling
+            x = global_max_pool(x, batch)
+            x = self.mlp(x)
 
         return x
 
@@ -138,7 +146,7 @@ class SAGE(torch.nn.Module):
 class DGCNN(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, k=0.6, train_dataset=None,
                  dynamic_train=False, GNN=GCNConv, use_feature=False,
-                 node_embedding=None):
+                 node_embedding=None, dropedge=0.0):
         super(DGCNN, self).__init__()
 
         self.use_feature = use_feature
@@ -181,11 +189,17 @@ class DGCNN(torch.nn.Module):
         self.conv2 = Conv1d(conv1d_channels[0], conv1d_channels[1],
                             conv1d_kws[1], 1)
         dense_dim = int((self.k - 2) / 2 + 1)
-        dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
-        self.lin1 = Linear(dense_dim, 128)
-        self.lin2 = Linear(128, 1)
 
-    def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
+        dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
+        self.dropedge = dropedge
+        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=False)
+
+    def forward(self, num_nodes, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
+        edge_index, _ = dropout_adj(edge_index, p=self.dropedge,
+                                    force_undirected=True,
+                                    num_nodes=num_nodes,
+                                    training=self.training)
+
         z_emb = self.z_embedding(z)
         if z_emb.ndim == 3:  # in case z has multiple integer labels
             z_emb = z_emb.sum(dim=1)
@@ -211,9 +225,7 @@ class DGCNN(torch.nn.Module):
         x = x.view(x.size(0), -1)  # [num_graphs, dense_dim]
 
         # MLP.
-        x = F.relu(self.lin1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin2(x)
+        x = self.mlp(x)
         return x
 
 
