@@ -12,7 +12,7 @@ from scipy.sparse.csgraph import shortest_path
 import torch
 from torch_sparse import spspmm
 import torch_geometric
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.utils import (negative_sampling, add_self_loops,
                                    train_test_split_edges, to_networkx)

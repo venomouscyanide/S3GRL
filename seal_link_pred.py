@@ -8,31 +8,33 @@ import os, sys
 import os.path as osp
 from shutil import copy
 import copy as cp
+
+from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 import pdb
 
-import numpy as np
 from sklearn.metrics import roc_auc_score
 import scipy.sparse as ssp
 import torch
 from torch.nn import BCEWithLogitsLoss
-from torch.utils.data import DataLoader
 
 from torch_sparse import coalesce, SparseTensor
-import torch_geometric.transforms as T
+
 from torch_geometric.datasets import Planetoid
-from torch_geometric.data import Data, Dataset, InMemoryDataset, DataLoader
-from torch_geometric.utils import to_networkx, to_undirected
+from torch_geometric.data import Dataset, InMemoryDataset
+from torch_geometric.utils import to_undirected
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
+from models import SAGE, DGCNN, GCN, GIN
+from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
+    Logger
+
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 
-from utils import *
-from models import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -120,7 +122,7 @@ class SEALDataset(InMemoryDataset):
 class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
-                 max_nodes_per_hop=None, directed=False, **kwargs):
+                 max_nodes_per_hop=None, directed=False, rw_kwargs=None, **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -130,6 +132,7 @@ class SEALDynamicDataset(Dataset):
         self.ratio_per_hop = ratio_per_hop
         self.max_nodes_per_hop = max_nodes_per_hop
         self.directed = directed
+        self.rw_kwargs = rw_kwargs
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -157,6 +160,13 @@ class SEALDynamicDataset(Dataset):
         else:
             self.A_csc = None
 
+        self.N = self.data.num_nodes
+        self.E = self.data.edge_index.size()[-1]
+        self.sparse_adj = SparseTensor(
+            row=self.data.edge_index[0].to(device), col=self.data.edge_index[1].to(device),
+            value=torch.arange(self.E, device=device),
+            sparse_sizes=(self.N, self.N))
+
     def __len__(self):
         return len(self.links)
 
@@ -166,10 +176,25 @@ class SEALDynamicDataset(Dataset):
     def get(self, idx):
         src, dst = self.links[idx]
         y = self.labels[idx]
-        tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
-                             self.max_nodes_per_hop, node_features=self.data.x,
-                             y=y, directed=self.directed, A_csc=self.A_csc)
-        data = construct_pyg_graph(*tmp, self.node_label)
+
+        rw_kwargs = {
+            "rw_m": self.rw_kwargs.get('m'),
+            "rw_M": self.rw_kwargs.get('M'),
+            "sparse_adj": self.sparse_adj,
+            "edge_index": self.data.edge_index,
+            "device": device,
+            "data": self.data
+        }
+
+        if not rw_kwargs['rw_m']:
+            tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                                 self.max_nodes_per_hop, node_features=self.data.x,
+                                 y=y, directed=self.directed, A_csc=self.A_csc)
+            data = construct_pyg_graph(*tmp, self.node_label)
+        else:
+            data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                                  self.max_nodes_per_hop, node_features=self.data.x,
+                                  y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
 
         return data
 
@@ -466,7 +491,7 @@ def run_sweal(args):
             'AUC': Logger(args.runs, args),
         }
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.cuda_device)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.cuda_device)  # TODO: does not work
 
     if args.use_heuristic:
         # Test link prediction heuristics.
