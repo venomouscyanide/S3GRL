@@ -109,15 +109,17 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         sub_edge_index_revised = sub_edge_index[:, mask1 & mask2]
 
         # Calculate node labeling.
-        z = py_g_drnl_node_labeling(sub_edge_index, src, dst,
-                                    num_nodes=sub_nodes.size(0))
+        # original z before removing the link to be predicted
+        # z = py_g_drnl_node_labeling(sub_edge_index, src, dst,
+        #                             num_nodes=sub_nodes.size(0))
         z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
                                             num_nodes=sub_nodes.size(0))
-        new_mapping = {k: v for k, v in zip(rw_set, list(mapping.detach().numpy()))}
+        # new_mapping = {k: v for k, v in zip(rw_set, list(mapping.detach().numpy()))}
 
         y = torch.tensor([y], dtype=torch.int)
-        data = Data(x=data_org.x[sub_nodes], z=z, edge_index=sub_edge_index, y=y)
-        data_revised = Data(x=data_org.x[sub_nodes], z=z_revised,
+        # data = Data(x=data_org.x[sub_nodes], z=z, edge_index=sub_edge_index, y=y)
+        x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
+        data_revised = Data(x=x, z=z_revised,
                             edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
                             num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
         # end of paste
