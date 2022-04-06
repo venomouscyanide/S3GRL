@@ -36,7 +36,7 @@ class GCN(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge
-        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -101,7 +101,7 @@ class SAGE(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge
-        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -192,7 +192,7 @@ class DGCNN(torch.nn.Module):
 
         dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
         self.dropedge = dropedge
-        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=False)
+        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=True)
 
     def forward(self, num_nodes, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
         edge_index, _ = dropout_adj(edge_index, p=self.dropedge,
@@ -232,7 +232,7 @@ class DGCNN(torch.nn.Module):
 class GIN(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
                  use_feature=False, node_embedding=None, dropout=0.5,
-                 jk=True, train_eps=False):
+                 jk=True, train_eps=False, dropedge=0.0):
         super(GIN, self).__init__()
         self.use_feature = use_feature
         self.node_embedding = node_embedding
@@ -270,11 +270,18 @@ class GIN(torch.nn.Module):
         self.dropout = dropout
         if self.jk:
             self.lin1 = Linear(num_layers * hidden_channels, hidden_channels)
+            self.mlp = MLP([num_layers * hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=True)
         else:
-            self.lin1 = Linear(hidden_channels, hidden_channels)
-        self.lin2 = Linear(hidden_channels, 1)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=True)
 
-    def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
+        self.dropedge = dropedge
+
+    def forward(self, num_nodes, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
+        edge_index, _ = dropout_adj(edge_index, p=self.dropedge,
+                                    force_undirected=True,
+                                    num_nodes=num_nodes,
+                                    training=self.training)
+
         z_emb = self.z_embedding(z)
         if z_emb.ndim == 3:  # in case z has multiple integer labels
             z_emb = z_emb.sum(dim=1)
@@ -294,8 +301,6 @@ class GIN(torch.nn.Module):
             x = global_mean_pool(torch.cat(xs, dim=1), batch)
         else:
             x = global_mean_pool(xs[-1], batch)
-        x = F.relu(self.lin1(x))
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.lin2(x)
+        x = self.mlp(x)
 
         return x
