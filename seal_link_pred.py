@@ -389,6 +389,7 @@ parser.add_argument('--use_heuristic', type=str, default=None,
 parser.add_argument('--m', type=int, default=0, help="Set rw length")
 parser.add_argument('--M', type=int, default=0, help="Set number of rw")
 parser.add_argument('--dropedge', type=float, default=.0, help="Drop Edge Value for initial edge_index")
+parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
 args = parser.parse_args()
 
 if args.save_appendix == '':
@@ -463,6 +464,8 @@ elif args.eval_metric == 'auc':
     loggers = {
         'AUC': Logger(args.runs, args),
     }
+
+os.environment["CUDA_VISIBLE_DEVICES"] = args.cuda_device
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
