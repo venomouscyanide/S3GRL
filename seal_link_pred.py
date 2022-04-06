@@ -465,7 +465,7 @@ elif args.eval_metric == 'auc':
         'AUC': Logger(args.runs, args),
     }
 
-os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_device
+os.environ["CUDA_VISIBLE_DEVICES"] = str(args.cuda_device)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
