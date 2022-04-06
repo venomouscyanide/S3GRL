@@ -183,7 +183,8 @@ def train():
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
-        logits = model(data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        num_nodes = data.num_nodes
+        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
         loss.backward()
         optimizer.step()
@@ -202,7 +203,8 @@ def test():
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
-        logits = model(data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        num_nodes = data.num_nodes
+        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     val_pred, val_true = torch.cat(y_pred), torch.cat(y_true)
@@ -215,7 +217,8 @@ def test():
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
-        logits = model(data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        num_nodes = data.num_nodes
+        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
@@ -385,6 +388,7 @@ parser.add_argument('--use_heuristic', type=str, default=None,
                     help="test a link prediction heuristic (CN or AA)")
 parser.add_argument('--m', type=int, default=0, help="Set rw length")
 parser.add_argument('--M', type=int, default=0, help="Set number of rw")
+parser.add_argument('--dropedge', type=float, default=.0, help="Drop Edge Value for initial edge_index")
 args = parser.parse_args()
 
 if args.save_appendix == '':
@@ -616,8 +620,9 @@ for run in range(args.runs):
         model = SAGE(args.hidden_channels, args.num_layers, max_z, train_dataset,
                      args.use_feature, node_embedding=emb).to(device)
     elif args.model == 'GCN':
+        # I am only focussing on GCN. Every other model is broken!
         model = GCN(args.hidden_channels, args.num_layers, max_z, train_dataset,
-                    args.use_feature, node_embedding=emb).to(device)
+                    args.use_feature, node_embedding=emb, dropedge=args.dropedge).to(device)
     elif args.model == 'GIN':
         model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset,
                     args.use_feature, node_embedding=emb).to(device)
