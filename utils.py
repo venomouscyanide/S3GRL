@@ -10,13 +10,11 @@ import numpy as np
 import scipy.sparse as ssp
 from scipy.sparse.csgraph import shortest_path
 import torch
-from torch_sparse import spspmm
-import torch_geometric
+
 from torch_geometric.loader import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.utils import (negative_sampling, add_self_loops,
                                    train_test_split_edges, to_networkx)
-import pdb
 import matplotlib.pyplot as plt
 import networkx as nx
 from torch_geometric.utils import to_scipy_sparse_matrix
@@ -92,7 +90,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         nodes = list(set(rw.flatten().to('cpu').detach().numpy()))
 
-        # Start of paste
+        # Start of core-logic
         rw_set = nodes
         sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(
             rw_set, 0, edge_index, relabel_nodes=True)
@@ -122,7 +120,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         data_revised = Data(x=x, z=z_revised,
                             edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
                             num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
-        # end of paste
+        # end of core-logic
         return data_revised
 
 
@@ -148,7 +146,7 @@ def py_g_drnl_node_labeling(edge_index, src, dst, num_nodes=None):
     dist2dst = torch.from_numpy(dist2dst)
 
     dist = dist2src + dist2dst
-    dist_over_2, dist_mod_2 = dist // 2, dist % 2
+    dist_over_2, dist_mod_2 = torch.div(dist, 2, rounding_mode='trunc'), dist % 2
 
     z = 1 + torch.min(dist2src, dist2dst)
     z += dist_over_2 * (dist_over_2 + dist_mod_2 - 1)

@@ -10,7 +10,6 @@ from torch.nn import (ModuleList, Linear, Conv1d, MaxPool1d, Embedding, ReLU,
 import torch.nn.functional as F
 from torch_geometric.nn import (GCNConv, SAGEConv, GINConv,
                                 global_sort_pool, global_add_pool, global_mean_pool, MLP, global_max_pool)
-import pdb
 from torch_geometric.utils import dropout_adj
 
 
