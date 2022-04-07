@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 import torch
 
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'  # will be overridden in the main block
 
 import argparse
 import time
@@ -834,4 +834,6 @@ if __name__ == '__main__':
     parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
     args = parser.parse_args()
 
+    global device
+    device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
     run_sweal(args)
