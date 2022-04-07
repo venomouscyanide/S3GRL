@@ -773,7 +773,7 @@ def run_sweal(args):
 
 
 if __name__ == '__main__':
-    torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method('fork')
 
     # Data settings
     parser = argparse.ArgumentParser(description='OGBL (SEAL)')
