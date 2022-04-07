@@ -39,7 +39,7 @@ warnings.simplefilter('ignore', SparseEfficiencyWarning)
 class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
-                 max_nodes_per_hop=None, directed=False, rw_kwargs=None):
+                 max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu'):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -53,12 +53,13 @@ class SEALDataset(InMemoryDataset):
         self.N = self.data.num_nodes
         self.E = self.data.edge_index.size()[-1]
         self.sparse_adj = SparseTensor(
-            row=self.data.edge_index[0].to(device), col=self.data.edge_index[1].to(device),
-            value=torch.arange(self.E, device=device),
+            row=self.data.edge_index[0].to(self.device), col=self.data.edge_index[1].to(self.device),
+            value=torch.arange(self.E, device=self.device),
             sparse_sizes=(self.N, self.N))
         self.rw_kwargs = rw_kwargs
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
+        self.device = device
 
     @property
     def processed_file_names(self):
@@ -101,7 +102,7 @@ class SEALDataset(InMemoryDataset):
             "rw_M": self.rw_kwargs.get('M'),
             "sparse_adj": self.sparse_adj,
             "edge_index": self.data.edge_index,
-            "device": device,
+            "device": self.device,
             "data": self.data
         }
 
@@ -161,8 +162,8 @@ class SEALDynamicDataset(Dataset):
         self.N = self.data.num_nodes
         self.E = self.data.edge_index.size()[-1]
         self.sparse_adj = SparseTensor(
-            row=self.data.edge_index[0].to(device), col=self.data.edge_index[1].to(device),
-            value=torch.arange(self.E, device=device),
+            row=self.data.edge_index[0].to(self.device), col=self.data.edge_index[1].to(self.device),
+            value=torch.arange(self.E, device=self.device),
             sparse_sizes=(self.N, self.N))
 
     def __len__(self):
