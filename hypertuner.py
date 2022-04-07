@@ -30,9 +30,8 @@ class ManualTuner:
                                            data_appendix='', save_appendix=save_appendix, keep_old=False,
                                            continue_from=None,
                                            only_test=False, test_multiple_models=False, use_heuristic=use_heuristic,
-                                           m=m, M=M, dropedge=dropedge, cuda_device=0)
+                                           m=m, M=M, dropedge=dropedge)
 
-        device = "cuda:1" if torch.cuda.is_available() else "cpu"
         run_sweal(sweal_parser)
 
 
@@ -48,8 +47,10 @@ if __name__ == '__main__':
     parser.add_argument('--runs', type=int)
     parser.add_argument('--use_heuristic', action='store_true')
     parser.add_argument('--save_appendix', type=str)
+    parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
 
     args = parser.parse_args()
+    device = f"cuda:{args.cuda_device}" if torch.cuda.is_available() else "cpu"
 
     permutations = list(itertools.product(
         HyperTuningSearchSpace.M, HyperTuningSearchSpace.m, HyperTuningSearchSpace.dropedge

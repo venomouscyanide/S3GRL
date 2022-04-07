@@ -360,7 +360,7 @@ class SWEALArgumentParser:
                  train_percent, val_percent, test_percent, dynamic_train, dynamic_val, dynamic_test, num_workers,
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
-                 m, M, dropedge, cuda_device):
+                 m, M, dropedge):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -410,7 +410,6 @@ class SWEALArgumentParser:
         self.m = m
         self.M = M
         self.dropedge = dropedge
-        self.cuda_device = cuda_device
 
 
 def run_sweal(args):
@@ -487,8 +486,6 @@ def run_sweal(args):
         loggers = {
             'AUC': Logger(args.runs, args),
         }
-
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.cuda_device)  # TODO: does not work
 
     if args.use_heuristic:
         # Test link prediction heuristics.
