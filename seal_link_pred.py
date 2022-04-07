@@ -773,7 +773,7 @@ def run_sweal(args):
 
 
 if __name__ == '__main__':
-    torch.multiprocessing.set_start_method('fork')
+    # torch.multiprocessing.set_start_method('fork')
 
     # Data settings
     parser = argparse.ArgumentParser(description='OGBL (SEAL)')
@@ -837,5 +837,5 @@ if __name__ == '__main__':
     parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
     args = parser.parse_args()
 
-    device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'
     run_sweal(args)
