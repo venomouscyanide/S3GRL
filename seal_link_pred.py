@@ -1,6 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import torch
+
+device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
 
 import argparse
 import time
@@ -15,7 +18,6 @@ import pdb
 
 from sklearn.metrics import roc_auc_score
 import scipy.sparse as ssp
-import torch
 from torch.nn import BCEWithLogitsLoss
 
 from torch_sparse import coalesce, SparseTensor
@@ -34,9 +36,6 @@ from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_
     Logger
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
-
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class SEALDataset(InMemoryDataset):
