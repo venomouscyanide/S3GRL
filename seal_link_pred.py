@@ -50,6 +50,7 @@ class SEALDataset(InMemoryDataset):
         self.ratio_per_hop = ratio_per_hop
         self.max_nodes_per_hop = max_nodes_per_hop
         self.directed = directed
+        self.device = device
         self.N = self.data.num_nodes
         self.E = self.data.edge_index.size()[-1]
         self.sparse_adj = SparseTensor(
@@ -59,7 +60,6 @@ class SEALDataset(InMemoryDataset):
         self.rw_kwargs = rw_kwargs
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
-        self.device = device
 
     @property
     def processed_file_names(self):
@@ -132,6 +132,13 @@ class SEALDynamicDataset(Dataset):
         self.directed = directed
         self.rw_kwargs = rw_kwargs
         self.device = device
+        self.N = self.data.num_nodes
+        self.E = self.data.edge_index.size()[-1]
+        self.sparse_adj = SparseTensor(
+            row=self.data.edge_index[0].to(self.device), col=self.data.edge_index[1].to(self.device),
+            value=torch.arange(self.E, device=self.device),
+            sparse_sizes=(self.N, self.N))
+
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -159,12 +166,6 @@ class SEALDynamicDataset(Dataset):
         else:
             self.A_csc = None
 
-        self.N = self.data.num_nodes
-        self.E = self.data.edge_index.size()[-1]
-        self.sparse_adj = SparseTensor(
-            row=self.data.edge_index[0].to(self.device), col=self.data.edge_index[1].to(self.device),
-            value=torch.arange(self.E, device=self.device),
-            sparse_sizes=(self.N, self.N))
 
     def __len__(self):
         return len(self.links)
