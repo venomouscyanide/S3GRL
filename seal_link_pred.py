@@ -119,7 +119,7 @@ class SEALDataset(InMemoryDataset):
 class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
-                 max_nodes_per_hop=None, directed=False, rw_kwargs=None, **kwargs):
+                 max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -130,6 +130,7 @@ class SEALDynamicDataset(Dataset):
         self.max_nodes_per_hop = max_nodes_per_hop
         self.directed = directed
         self.rw_kwargs = rw_kwargs
+        self.device = device
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -179,7 +180,7 @@ class SEALDynamicDataset(Dataset):
             "rw_M": self.rw_kwargs.get('M'),
             "sparse_adj": self.sparse_adj,
             "edge_index": self.data.edge_index,
-            "device": device,
+            "device": self.device,
             "data": self.data
         }
 
@@ -559,7 +560,8 @@ def run_sweal(args):
         ratio_per_hop=args.ratio_per_hop,
         max_nodes_per_hop=args.max_nodes_per_hop,
         directed=directed,
-        rw_kwargs=rw_kwargs
+        rw_kwargs=rw_kwargs,
+        device=device
     )
 
     viz = False
@@ -598,7 +600,8 @@ def run_sweal(args):
         ratio_per_hop=args.ratio_per_hop,
         max_nodes_per_hop=args.max_nodes_per_hop,
         directed=directed,
-        rw_kwargs=rw_kwargs
+        rw_kwargs=rw_kwargs,
+        device=device
     )
     dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
     test_dataset = eval(dataset_class)(
@@ -613,7 +616,8 @@ def run_sweal(args):
         ratio_per_hop=args.ratio_per_hop,
         max_nodes_per_hop=args.max_nodes_per_hop,
         directed=directed,
-        rw_kwargs=rw_kwargs
+        rw_kwargs=rw_kwargs,
+        device=device
     )
 
     max_z = 1000  # set a large max_z so that every z has embeddings to look up
