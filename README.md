@@ -1,4 +1,4 @@
-SEAL\_OGB -- An Implementation of SEAL for OGB Link Prediction Tasks
+S[W]EAL\_OGB -- An Implementation of SEAL for OGB Link Prediction Tasks
 ===============================================================================
 
 About
