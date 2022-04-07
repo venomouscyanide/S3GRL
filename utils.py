@@ -465,7 +465,7 @@ class Logger(object):
             print(f'Highest Valid: {result[:, 0].max():.2f}', file=f)
             print(f'Highest Eval Point: {argmax + 1}', file=f)
             print(f'Highest Test: {result[argmax, 1]:.2f}', file=f)
-            print(f'Average Test: {result.T[1].mean():.2f}', file=f)
+            print(f'Average Test: {result.T[1].mean():.2f} ± {result.T[1].std():.2f}', file=f)
         else:
             result = 100 * torch.tensor(self.results)
 
