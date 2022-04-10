@@ -843,6 +843,6 @@ if __name__ == '__main__':
     if args.dataset in ['Cora', 'PubMed', 'CiteSeer'] and any(
             [args.dynamic_train, args.dynamic_test, args.dynamic_val]):
         # Planetoid does not work on GPU in dynamic mode
-        torch.multiprocessing.set_start_method('fork')
+        torch.multiprocessing.set_start_method('fork', force=True)
         device = 'cpu'
     run_sweal(args)
