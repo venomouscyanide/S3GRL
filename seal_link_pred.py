@@ -21,7 +21,7 @@ from torch.nn import BCEWithLogitsLoss
 
 from torch_sparse import coalesce, SparseTensor
 
-from torch_geometric.datasets import Planetoid
+from torch_geometric.datasets import Planetoid, AttributedGraphDataset
 from torch_geometric.data import Dataset, InMemoryDataset
 from torch_geometric.utils import to_undirected
 
@@ -449,6 +449,12 @@ def run_sweal(args):
         dataset = PygLinkPropPredDataset(name=args.dataset)
         split_edge = dataset.get_edge_split()
         data = dataset[0]
+    elif args.dataset.startswith('Facebook'):
+        path = osp.join('dataset', args.dataset)
+        dataset = AttributedGraphDataset(path, args.dataset)
+        split_edge = do_edge_split(dataset, args.fast_split)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
     else:
         path = osp.join('dataset', args.dataset)
         dataset = Planetoid(path, args.dataset)
