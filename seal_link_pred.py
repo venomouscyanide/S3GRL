@@ -166,7 +166,6 @@ class SEALDynamicDataset(Dataset):
         else:
             self.A_csc = None
 
-
     def __len__(self):
         return len(self.links)
 
@@ -773,8 +772,6 @@ def run_sweal(args):
 
 
 if __name__ == '__main__':
-    # torch.multiprocessing.set_start_method('fork')
-
     # Data settings
     parser = argparse.ArgumentParser(description='OGBL (SEAL)')
     parser.add_argument('--dataset', type=str, default='ogbl-collab')
@@ -837,5 +834,15 @@ if __name__ == '__main__':
     parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
     args = parser.parse_args()
 
-    device = 'cpu'
+    device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+
+    if any([args.dynamic_train, args.dynamic_test, args.dynamic_val]) and torch.cuda.is_available():
+        # need to set mp start to work in dynamic mode
+        torch.multiprocessing.set_start_method('spawn')
+
+    if args.dataset in ['Cora', 'PubMed', 'CiteSeer'] and any(
+            [args.dynamic_train, args.dynamic_test, args.dynamic_val]):
+        # Planetoid does not work on GPU in dynamic mode
+        torch.multiprocessing.set_start_method('fork')
+        device = 'cpu'
     run_sweal(args)
