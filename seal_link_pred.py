@@ -5,7 +5,8 @@ import torch
 
 import argparse
 import time
-import os, sys
+import os
+import sys
 import os.path as osp
 from shutil import copy
 import copy as cp
