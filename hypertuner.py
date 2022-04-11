@@ -12,9 +12,9 @@ warnings.filterwarnings(action="ignore")
 
 
 class HyperTuningSearchSpace:
-    m = [2, 3, 5]
+    m = [2, 5]
     M = [5, 50, 100]
-    dropedge = [0.25, 0.50]
+    dropedge = [0.00, 0.25, 0.50]
 
 
 class ManualTuner:
