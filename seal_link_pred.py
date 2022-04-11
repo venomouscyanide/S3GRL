@@ -104,7 +104,8 @@ class SEALDataset(InMemoryDataset):
             "sparse_adj": self.sparse_adj,
             "edge_index": self.data.edge_index,
             "device": self.device,
-            "data": self.data
+            "data": self.data,
+            "calc_ratio": self.rw_kwargs.get('calc_ratio', False)
         }
 
         pos_list = extract_enclosing_subgraphs(
@@ -363,7 +364,7 @@ class SWEALArgumentParser:
                  train_percent, val_percent, test_percent, dynamic_train, dynamic_val, dynamic_test, num_workers,
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
-                 m, M, dropedge):
+                 m, M, dropedge, calc_ratio):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -413,6 +414,7 @@ class SWEALArgumentParser:
         self.m = m
         self.M = M
         self.dropedge = dropedge
+        self.calc_ratio = calc_ratio
 
 
 def run_sweal(args):
@@ -548,7 +550,10 @@ def run_sweal(args):
             "m": args.m,
             "M": args.M
         }
+    if args.calc_ratio:
+        rw_kwargs.update({'calc_ratio': True})
 
+    print("Setting up Train data")
     dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
     train_dataset = eval(dataset_class)(
         path,
@@ -589,6 +594,7 @@ def run_sweal(args):
             f.savefig('tmp_vis.png')
             pdb.set_trace()
 
+    print("Setting up Val data")
     dataset_class = 'SEALDynamicDataset' if args.dynamic_val else 'SEALDataset'
     val_dataset = eval(dataset_class)(
         path,
@@ -605,6 +611,7 @@ def run_sweal(args):
         rw_kwargs=rw_kwargs,
         device=device
     )
+    print("Setting up Test data")
     dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
     test_dataset = eval(dataset_class)(
         path,
@@ -833,6 +840,8 @@ if __name__ == '__main__':
     parser.add_argument('--M', type=int, default=0, help="Set number of rw")
     parser.add_argument('--dropedge', type=float, default=.0, help="Drop Edge Value for initial edge_index")
     parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
+
+    parser.add_argument('--calc_ratio', action='store_true', help="Calculate overall sparsity ratio")
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')

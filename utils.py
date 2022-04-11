@@ -260,20 +260,46 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
     return data
 
 
+def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
+                         max_nodes_per_hop, x, y, directed, A_csc, node_label, rw_kwargs, verbose=False):
+    # calculate the % of nodes/edges in original k-hop vs rw induced graph
+    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                         max_nodes_per_hop, node_features=x, y=y,
+                         directed=directed, A_csc=A_csc)
+
+    data_k_hop = construct_pyg_graph(*tmp, node_label)
+
+    data_rw = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                             max_nodes_per_hop, node_features=x, y=y,
+                             directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+    node_ratio = data_k_hop.num_nodes / data_rw.num_nodes,
+    try:
+        edge_ratio = data_k_hop.num_edges / data_rw.num_edges
+    except ZeroDivisionError:
+        edge_ratio = 0
+
+    if verbose:
+        print(f"\n node ratio: {node_ratio} and edge ratio: {edge_ratio} \n")
+
+    return node_ratio, edge_ratio
+
+
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
                                 ratio_per_hop=1.0, max_nodes_per_hop=None,
                                 directed=False, A_csc=None, rw_kwargs=None):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
-    for src, dst in tqdm(link_index.t().tolist()):
-        # delete
-        # tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-        #                      max_nodes_per_hop, node_features=x, y=y,
-        #                      directed=directed, A_csc=A_csc)
-        #
-        # data_org = construct_pyg_graph(*tmp, node_label)
 
-        # me
+    overall_node_ratio_sum = np.array([], dtype=np.float)
+    overall_edge_ratio_sum = np.array([], dtype=np.float)
+
+    for src, dst in tqdm(link_index.t().tolist()):
+        if rw_kwargs['calc_ratio']:
+            node_ratio, edge_ratio = calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y,
+                                                          directed, A_csc, node_label, rw_kwargs)
+            overall_node_ratio_sum = np.append(overall_node_ratio_sum, node_ratio)
+            overall_edge_ratio_sum = np.append(overall_edge_ratio_sum, edge_ratio)
+
         if not rw_kwargs['rw_m']:
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
@@ -289,6 +315,13 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             draw_graph(to_networkx(data))
         data_list.append(data)
 
+    if rw_kwargs.get('calc_ratio'):
+        print(
+            f"\n Average Sparsity Ratio Calculation Results \n"
+            f"Ratio is calculated as (k_hop[k={num_hops}]/rw[m={rw_kwargs['rw_m']} M={rw_kwargs['rw_M']}])")
+        print(f"y value is set to {y}")
+        print(f'overall_node_ratio: {overall_node_ratio_sum.mean():.2f} ± {overall_node_ratio_sum.std():.2f}')
+        print(f'overall_edge_ratio: {overall_edge_ratio_sum.mean():.2f} ± {overall_edge_ratio_sum.std():.2f}')
     return data_list
 
 

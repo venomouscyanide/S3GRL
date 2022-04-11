@@ -8,8 +8,8 @@ import torch
 from torch.nn import (ModuleList, Linear, Conv1d, MaxPool1d, Embedding, ReLU,
                       Sequential, BatchNorm1d as BN)
 import torch.nn.functional as F
-from torch_geometric.nn import (GCNConv, SAGEConv, GINConv,
-                                global_sort_pool, global_add_pool, global_mean_pool, MLP, global_max_pool)
+from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_sort_pool, global_add_pool, global_mean_pool, MLP, \
+    global_max_pool
 from torch_geometric.utils import dropout_adj
 
 
