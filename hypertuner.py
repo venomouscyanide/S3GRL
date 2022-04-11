@@ -12,7 +12,7 @@ warnings.filterwarnings(action="ignore")
 
 
 class HyperTuningSearchSpace:
-    m = [2, 5]
+    m = [2, 3, 5]
     M = [5, 50, 100]
     dropedge = [0.25, 0.50]
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     device = f"cuda:{args.cuda_device}" if torch.cuda.is_available() else "cpu"
 
     permutations = list(itertools.product(
-        HyperTuningSearchSpace.M, HyperTuningSearchSpace.m, HyperTuningSearchSpace.dropedge
+        HyperTuningSearchSpace.m, HyperTuningSearchSpace.M, HyperTuningSearchSpace.dropedge
     ))
 
     total_combinations = len(permutations)
