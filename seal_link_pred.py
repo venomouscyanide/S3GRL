@@ -420,6 +420,9 @@ class SWEALArgumentParser:
 def run_sweal(args, device):
     if args.save_appendix == '':
         args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S")
+        if args.m and args.M:
+            args.save_appendix += f'_m{args.m}_M{args.M}_dropedge{args.dropedge}'
+            
     if args.data_appendix == '':
         if args.m and args.M:
             args.data_appendix = f'_m{args.m}_M{args.M}_dropedge{args.dropedge}'
@@ -549,7 +552,7 @@ def run_sweal(args, device):
         exit()
 
     # SEAL.
-    path = dataset.root + '_seal_{}'.format(args.data_appendix)
+    path = dataset.root + '_seal{}'.format(args.data_appendix)
     use_coalesce = True if args.dataset == 'ogbl-collab' else False
     if not args.dynamic_train and not args.dynamic_val and not args.dynamic_test:
         args.num_workers = 0
