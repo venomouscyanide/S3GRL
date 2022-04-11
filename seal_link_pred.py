@@ -449,9 +449,10 @@ def run_sweal(args):
         dataset = PygLinkPropPredDataset(name=args.dataset)
         split_edge = dataset.get_edge_split()
         data = dataset[0]
-    elif args.dataset.startswith('Facebook'):
-        path = osp.join('dataset', args.dataset)
-        dataset = AttributedGraphDataset(path, args.dataset)
+    elif args.dataset.startswith('attributed'):
+        dataset_name = args.dataset.split('-')[-1]
+        path = osp.join('dataset', dataset_name)
+        dataset = AttributedGraphDataset(path, dataset_name)
         split_edge = do_edge_split(dataset, args.fast_split)
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
