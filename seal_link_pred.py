@@ -421,10 +421,13 @@ def run_sweal(args, device):
     if args.save_appendix == '':
         args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S")
     if args.data_appendix == '':
-        args.data_appendix = '_h{}_{}_rph{}'.format(
-            args.num_hops, args.node_label, ''.join(str(args.ratio_per_hop).split('.')))
-        if args.max_nodes_per_hop is not None:
-            args.data_appendix += '_mnph{}'.format(args.max_nodes_per_hop)
+        if args.m and args.M:
+            args.data_appendix = f'_m{args.m}_M{args.M}_dropedge{args.dropedge}'
+        else:
+            args.data_appendix = '_h{}_{}_rph{}'.format(
+                args.num_hops, args.node_label, ''.join(str(args.ratio_per_hop).split('.')))
+            if args.max_nodes_per_hop is not None:
+                args.data_appendix += '_mnph{}'.format(args.max_nodes_per_hop)
         if args.use_valedges_as_input:
             args.data_appendix += '_uvai'
 
@@ -546,7 +549,7 @@ def run_sweal(args, device):
         exit()
 
     # SEAL.
-    path = dataset.root + '_seal{}'.format(args.data_appendix)
+    path = dataset.root + '_seal_{}'.format(args.data_appendix)
     use_coalesce = True if args.dataset == 'ogbl-collab' else False
     if not args.dynamic_train and not args.dynamic_val and not args.dynamic_test:
         args.num_workers = 0
