@@ -417,7 +417,7 @@ class SWEALArgumentParser:
         self.calc_ratio = calc_ratio
 
 
-def run_sweal(args):
+def run_sweal(args, device):
     if args.save_appendix == '':
         args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S")
     if args.data_appendix == '':
@@ -855,4 +855,4 @@ if __name__ == '__main__':
         # Planetoid does not work on GPU in dynamic mode
         torch.multiprocessing.set_start_method('fork', force=True)
         device = 'cpu'
-    run_sweal(args)
+    run_sweal(args, device)
