@@ -364,7 +364,7 @@ class SWEALArgumentParser:
                  train_percent, val_percent, test_percent, dynamic_train, dynamic_val, dynamic_test, num_workers,
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
-                 m, M, dropedge, calc_ratio):
+                 m, M, dropedge, calc_ratio, checkpoint_training):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -402,6 +402,7 @@ class SWEALArgumentParser:
         self.use_valedges_as_input = use_valedges_as_input
         self.eval_steps = eval_steps
         self.log_steps = log_steps
+        self.checkpoint_training = checkpoint_training
         self.data_appendix = data_appendix
         self.save_appendix = save_appendix
         self.keep_old = keep_old
@@ -752,7 +753,7 @@ def run_sweal(args, device):
                 for key, result in results.items():
                     loggers[key].add_result(run, result)
 
-                if epoch % args.log_steps == 0:
+                if epoch % args.log_steps == 0 and args.checkpoint_training:
                     model_name = os.path.join(
                         args.res_dir, 'run{}_model_checkpoint{}.pth'.format(run + 1, epoch))
                     optimizer_name = os.path.join(
@@ -835,6 +836,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_valedges_as_input', action='store_true')
     parser.add_argument('--eval_steps', type=int, default=1)
     parser.add_argument('--log_steps', type=int, default=1)
+    parser.add_argument('--checkpoint_training', action='store_true')
     parser.add_argument('--data_appendix', type=str, default='',
                         help="an appendix to the data directory")
     parser.add_argument('--save_appendix', type=str, default='',

@@ -33,7 +33,7 @@ class ManualTuner:
                                            data_appendix=data_appendix, save_appendix=save_appendix, keep_old=False,
                                            continue_from=None,
                                            only_test=False, test_multiple_models=False, use_heuristic=use_heuristic,
-                                           m=m, M=M, dropedge=dropedge, calc_ratio=False)
+                                           m=m, M=M, dropedge=dropedge, calc_ratio=False, checkpoint_training=False)
 
         run_sweal(sweal_parser, device)
 
