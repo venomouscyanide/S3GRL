@@ -753,13 +753,14 @@ def run_sweal(args, device):
                 for key, result in results.items():
                     loggers[key].add_result(run, result)
 
-                if epoch % args.log_steps == 0 and args.checkpoint_training:
-                    model_name = os.path.join(
-                        args.res_dir, 'run{}_model_checkpoint{}.pth'.format(run + 1, epoch))
-                    optimizer_name = os.path.join(
-                        args.res_dir, 'run{}_optimizer_checkpoint{}.pth'.format(run + 1, epoch))
-                    torch.save(model.state_dict(), model_name)
-                    torch.save(optimizer.state_dict(), optimizer_name)
+                if epoch % args.log_steps == 0:
+                    if args.checkpoint_training:
+                        model_name = os.path.join(
+                            args.res_dir, 'run{}_model_checkpoint{}.pth'.format(run + 1, epoch))
+                        optimizer_name = os.path.join(
+                            args.res_dir, 'run{}_optimizer_checkpoint{}.pth'.format(run + 1, epoch))
+                        torch.save(model.state_dict(), model_name)
+                        torch.save(optimizer.state_dict(), optimizer_name)
 
                     for key, result in results.items():
                         valid_res, test_res = result
