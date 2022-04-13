@@ -514,9 +514,10 @@ class Logger(object):
             r = best_result[:, 0]
             print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}', file=f)
             r = best_result[:, 1]
-            r_revised = torch.reshape(result, (self.epochs * self.runs, 2))[:, 1]
             print(f'Highest Test: {r.mean():.2f} ± {r.std():.2f}', file=f)
-            print(f'Average Test: {r_revised.mean():.2f} ± {r_revised.std():.2f}', file=f)
+            if len(result) > 1:
+                r_revised = torch.reshape(result, (self.epochs * self.runs, 2))[:, 1]
+                print(f'Average Test: {r_revised.mean():.2f} ± {r_revised.std():.2f}', file=f)
 
 
 def draw_graph(graph):
