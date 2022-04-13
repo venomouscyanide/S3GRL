@@ -552,7 +552,6 @@ def run_sweal(args, device):
             with open(log_file, 'a') as f:
                 print(key, file=f)
                 loggers[key].print_statistics(f=f)
-        pdb.set_trace()
         exit()
 
     # SEAL.
