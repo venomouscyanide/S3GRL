@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import torch
+import shutil
 
 import argparse
 import time
@@ -435,6 +436,7 @@ def run_sweal(args, device):
         if args.use_valedges_as_input:
             args.data_appendix += '_uvai'
 
+
     args.res_dir = os.path.join('results/{}{}'.format(args.dataset, args.save_appendix))
     print('Results will be saved in ' + args.res_dir)
     if not os.path.exists(args.res_dir):
@@ -791,6 +793,10 @@ def run_sweal(args, device):
     print(f'Total number of parameters is {total_params}')
     print(f'Results are saved in {args.res_dir}')
 
+    if args.delete_dataset:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+
     print("fin.")
 
 
@@ -844,6 +850,8 @@ if __name__ == '__main__':
                         help="an appendix to the save directory")
     parser.add_argument('--keep_old', action='store_true',
                         help="do not overwrite old files in the save directory")
+    parser.add_argument('--delete_dataset', action='store_true',
+                        help="delete existing datasets folder before running new command")
     parser.add_argument('--continue_from', type=int, default=None,
                         help="from which epoch's checkpoint to continue training")
     parser.add_argument('--only_test', action='store_true',
