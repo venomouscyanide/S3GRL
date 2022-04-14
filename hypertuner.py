@@ -20,11 +20,12 @@ class HyperTuningSearchSpace:
 class ManualTuner:
     @staticmethod
     def tune(dataset, model, hidden_channels, use_feature, lr,
-             runs, use_heuristic, m, M, dropedge, save_appendix, data_appendix, device, train_percent, delete_dataset):
+             runs, use_heuristic, m, M, dropedge, save_appendix, data_appendix, device, train_percent, delete_dataset,
+             epochs):
         sweal_parser = SWEALArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
                                            hidden_channels=hidden_channels, batch_size=32, num_hops=1,
                                            ratio_per_hop=1.0, max_nodes_per_hop=None, node_label='drnl',
-                                           use_feature=use_feature, use_edge_weight=False, lr=lr, epochs=50,
+                                           use_feature=use_feature, use_edge_weight=False, lr=lr, epochs=epochs,
                                            runs=runs, train_percent=train_percent, val_percent=100, test_percent=100,
                                            dynamic_train=False,
                                            dynamic_val=False, dynamic_test=False, num_workers=16,
@@ -73,4 +74,4 @@ if __name__ == '__main__':
                          lr=args.lr, runs=args.runs, use_feature=args.use_feature,
                          use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
                          save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
-                         train_percent=args.train_percent, delete_dataset=args.delete_dataset)
+                         train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs)
