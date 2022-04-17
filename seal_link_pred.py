@@ -473,6 +473,17 @@ def run_sweal(args, device):
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
 
+    if args.dataset_stats:
+        print(f'Dataset: {dataset}:')
+        print('======================')
+        print(f'Number of graphs: {len(dataset)}')
+        print(f'Number of features: {dataset.num_features}')
+        print(f'Number of nodes: {data.num_nodes}')
+        print(f'Number of edges: {data.num_edges}')
+        print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
+        print(f'Is undirected: {data.is_undirected()}')
+        exit()
+
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
         directed = True
@@ -860,6 +871,8 @@ if __name__ == '__main__':
                         help="test multiple models together")
     parser.add_argument('--use_heuristic', type=str, default=None,
                         help="test a link prediction heuristic (CN or AA)")
+    parser.add_argument('--dataset_stats', action='store_true',
+                        help="Print dataset statistics")
     parser.add_argument('--m', type=int, default=0, help="Set rw length")
     parser.add_argument('--M', type=int, default=0, help="Set number of rw")
     parser.add_argument('--dropedge', type=float, default=.0, help="Drop Edge Value for initial edge_index")
