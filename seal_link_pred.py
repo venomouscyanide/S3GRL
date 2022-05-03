@@ -1013,7 +1013,8 @@ if __name__ == '__main__':
                         help="Choose to override the BCE loss to pairwise loss functions")
     parser.add_argument('--loss_fn', type=str, help="Choose the loss function")
     parser.add_argument('--neg_ratio', type=int, default=1,
-                        help="Compile neg_ratio times the positive samples for compiling neg_samples(only for Training data)")
+                        help="Compile neg_ratio times the positive samples for compiling neg_samples"
+                             "(only for Training data)")
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
