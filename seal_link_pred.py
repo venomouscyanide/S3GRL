@@ -65,10 +65,7 @@ class SEALDataset(InMemoryDataset):
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
         super(SEALDataset, self).__init__(root)
-        if True:
-            self.data, self.slices = torch.load(self.processed_paths[0])
-        # else:
-        #     self.data = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
     def processed_file_names(self):
