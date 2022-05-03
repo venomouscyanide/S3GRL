@@ -35,7 +35,7 @@ class ManualTuner:
                                            continue_from=None,
                                            only_test=False, test_multiple_models=False, use_heuristic=use_heuristic,
                                            m=m, M=M, dropedge=dropedge, calc_ratio=False, checkpoint_training=False,
-                                           delete_dataset=delete_dataset)
+                                           delete_dataset=delete_dataset, pairwise=False, loss_fn='')
 
         run_sweal(sweal_parser, device)
 
