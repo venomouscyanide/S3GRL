@@ -326,7 +326,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     return data_list
 
 
-def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
+def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1):
     data = dataset[0]
     random.seed(234)
     torch.manual_seed(234)
@@ -336,8 +336,9 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
         edge_index, _ = add_self_loops(data.train_pos_edge_index)
         data.train_neg_edge_index = negative_sampling(
             edge_index, num_nodes=data.num_nodes,
-            num_neg_samples=data.train_pos_edge_index.size(1))
+            num_neg_samples=data.train_pos_edge_index.size(1) * neg_ratio)
     else:
+        raise NotImplementedError('Fast slit is untested and unsupported.')
         num_nodes = data.num_nodes
         row, col = data.edge_index
         # Return upper triangular portion.
@@ -357,7 +358,7 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
         # Negative edges (cannot guarantee (i,j) and (j,i) won't both appear)
         neg_edge_index = negative_sampling(
             data.edge_index, num_nodes=num_nodes,
-            num_neg_samples=row.size(0))
+            num_neg_samples=row.size(0) * neg_ratio)
         data.val_neg_edge_index = neg_edge_index[:, :n_v]
         data.test_neg_edge_index = neg_edge_index[:, n_v:n_v + n_t]
         data.train_neg_edge_index = neg_edge_index[:, n_v + n_t:]
@@ -372,14 +373,14 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
     return split_edge
 
 
-def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
+def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100, neg_ratio=1):
     if 'edge' in split_edge['train']:
         pos_edge = split_edge[split]['edge'].t()
         if split == 'train':
             new_edge_index, _ = add_self_loops(edge_index)
             neg_edge = negative_sampling(
                 new_edge_index, num_nodes=num_nodes,
-                num_neg_samples=pos_edge.size(1))
+                num_neg_samples=pos_edge.size(1) * neg_ratio)
         else:
             neg_edge = split_edge[split]['edge_neg'].t()
         # subsample for pos_edge

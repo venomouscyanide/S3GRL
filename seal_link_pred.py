@@ -43,7 +43,7 @@ class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False):
+                 pos_pairwise=False, neg_ratio=1):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -64,6 +64,7 @@ class SEALDataset(InMemoryDataset):
         self.rw_kwargs = rw_kwargs
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
+        self.neg_ratio = neg_ratio
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -80,7 +81,7 @@ class SEALDataset(InMemoryDataset):
         pos_edge, neg_edge = get_pos_neg_edges(self.split, self.split_edge,
                                                self.data.edge_index,
                                                self.data.num_nodes,
-                                               self.percent)
+                                               self.percent, neg_ratio=self.neg_ratio)
 
         if self.use_coalesce:  # compress mutli-edge into edge with weight
             self.data.edge_index, self.data.edge_weight = coalesce(
@@ -141,7 +142,7 @@ class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, **kwargs):
+                 pos_pairwise=False, neg_ratio=1, **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -161,12 +162,13 @@ class SEALDynamicDataset(Dataset):
             sparse_sizes=(self.N, self.N))
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
+        self.neg_ratio = neg_ratio
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
                                                self.data.edge_index,
                                                self.data.num_nodes,
-                                               self.percent)
+                                               self.percent, neg_ratio=self.neg_ratio)
         if self.pairwise:
             if self.pos_pairwise:
                 self.links = pos_edge.t().tolist()
@@ -277,7 +279,7 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
         neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
                            neg_node_id)
         loss_fn = get_loss(args.loss_fn)
-        loss = loss_fn(pos_logits, neg_logits)
+        loss = loss_fn(pos_logits, neg_logits, args.neg_ratio)
 
         loss.backward()
         optimizer.step()
@@ -438,7 +440,7 @@ class SWEALArgumentParser:
                  train_percent, val_percent, test_percent, dynamic_train, dynamic_val, dynamic_test, num_workers,
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
-                 m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn):
+                 m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -493,6 +495,7 @@ class SWEALArgumentParser:
         self.calc_ratio = calc_ratio
         self.pairwise = pairwise
         self.loss_fn = loss_fn
+        self.neg_ratio = neg_ratio
 
 
 def run_sweal(args, device):
@@ -537,13 +540,13 @@ def run_sweal(args, device):
         dataset_name = args.dataset.split('-')[-1]
         path = osp.join('dataset', dataset_name)
         dataset = AttributedGraphDataset(path, dataset_name)
-        split_edge = do_edge_split(dataset, args.fast_split)
+        split_edge = do_edge_split(dataset, args.fast_split, neg_ratio=args.neg_ratio)
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
     else:
         path = osp.join('dataset', args.dataset)
         dataset = Planetoid(path, args.dataset)
-        split_edge = do_edge_split(dataset, args.fast_split)
+        split_edge = do_edge_split(dataset, args.fast_split, neg_ratio=args.neg_ratio)
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
 
@@ -607,10 +610,10 @@ def run_sweal(args, device):
 
         pos_val_edge, neg_val_edge = get_pos_neg_edges('valid', split_edge,
                                                        data.edge_index,
-                                                       data.num_nodes)
+                                                       data.num_nodes, neg_ratio=args.neg_ratio)
         pos_test_edge, neg_test_edge = get_pos_neg_edges('test', split_edge,
                                                          data.edge_index,
-                                                         data.num_nodes)
+                                                         data.num_nodes, neg_ratio=args.neg_ratio)
         pos_val_pred, pos_val_edge = eval(args.use_heuristic)(A, pos_val_edge)
         neg_val_pred, neg_val_edge = eval(args.use_heuristic)(A, neg_val_edge)
         pos_test_pred, pos_test_edge = eval(args.use_heuristic)(A, pos_test_edge)
@@ -671,6 +674,7 @@ def run_sweal(args, device):
             directed=directed,
             rw_kwargs=rw_kwargs,
             device=device,
+            neg_ratio=args.neg_ratio,
         )
     else:
         pos_path = f'{path}_pos_edges'
@@ -689,7 +693,8 @@ def run_sweal(args, device):
             rw_kwargs=rw_kwargs,
             device=device,
             pairwise=args.pairwise,
-            pos_pairwise=True
+            pos_pairwise=True,
+            neg_ratio=args.neg_ratio,
         )
         neg_path = f'{path}_neg_edges'
         train_negative_dataset = eval(dataset_class)(
@@ -707,7 +712,8 @@ def run_sweal(args, device):
             rw_kwargs=rw_kwargs,
             device=device,
             pairwise=args.pairwise,
-            pos_pairwise=False
+            pos_pairwise=False,
+            neg_ratio=args.neg_ratio,
         )
     viz = False
     if viz:  # visualize some graphs
@@ -772,7 +778,7 @@ def run_sweal(args, device):
     if args.pairwise:
         train_pos_loader = DataLoader(train_positive_dataset, batch_size=args.batch_size,
                                       shuffle=True, num_workers=args.num_workers)
-        train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size,
+        train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size * args.neg_ratio,
                                       shuffle=True, num_workers=args.num_workers)
     else:
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
@@ -1006,6 +1012,8 @@ if __name__ == '__main__':
     parser.add_argument('--pairwise', action='store_true',
                         help="Choose to override the BCE loss to pairwise loss functions")
     parser.add_argument('--loss_fn', type=str, help="Choose the loss function")
+    parser.add_argument('--neg_ratio', type=int, default=1,
+                        help="Compile neg_ratio times the positive samples for compiling neg_samples(only for Training data)")
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
