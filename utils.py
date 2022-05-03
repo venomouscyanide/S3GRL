@@ -5,7 +5,6 @@
 import sys
 import math
 
-from torch_geometric import transforms
 from tqdm import tqdm
 import random
 import numpy as np
