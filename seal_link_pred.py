@@ -140,7 +140,8 @@ class SEALDataset(InMemoryDataset):
 class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
-                 max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False, **kwargs):
+                 max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
+                 pos_pairwise=False, **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -159,14 +160,23 @@ class SEALDynamicDataset(Dataset):
             value=torch.arange(self.E, device=self.device),
             sparse_sizes=(self.N, self.N))
         self.pairwise = pairwise
+        self.pos_pairwise = pos_pairwise
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
                                                self.data.edge_index,
                                                self.data.num_nodes,
                                                self.percent)
-        self.links = torch.cat([pos_edge, neg_edge], 1).t().tolist()
-        self.labels = [1] * pos_edge.size(1) + [0] * neg_edge.size(1)
+        if self.pairwise:
+            if self.pos_pairwise:
+                self.links = pos_edge.t().tolist()
+                self.labels = [1] * pos_edge.size(1)
+            else:
+                self.links = neg_edge.t().tolist()
+                self.labels = [0] * neg_edge.size(1)
+        else:
+            self.links = torch.cat([pos_edge, neg_edge], 1).t().tolist()
+            self.labels = [1] * pos_edge.size(1) + [0] * neg_edge.size(1)
 
         if self.use_coalesce:  # compress mutli-edge into edge with weight
             self.data.edge_index, self.data.edge_weight = coalesce(
