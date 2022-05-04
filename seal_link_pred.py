@@ -39,6 +39,8 @@ from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_
     Logger, AA, CN, PPR
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
+warnings.simplefilter('ignore', FutureWarning)
+warnings.simplefilter('ignore', UserWarning)
 
 
 class SEALDataset(InMemoryDataset):
@@ -954,6 +956,7 @@ def run_sweal(args, device):
             train_dataset_size = get_data_size(train_dataset.data)
             cpu_usage = get_cpu_memory_from_gc()
             gpu_usage = get_gpu_memory_from_gc()
+            print("------------------------------------------")
             print(f"Summarized stats: {summarized_stats}")
             print("------------------------------------------")
             print(f"Model size: {model_size}")
