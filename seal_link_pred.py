@@ -14,7 +14,7 @@ import copy as cp
 
 from torch_geometric.loader import DataLoader
 from torch_geometric.profile import profileit, get_stats_summary, get_model_size, count_parameters, get_data_size, \
-    get_cpu_memory_from_gc
+    get_cpu_memory_from_gc, get_gpu_memory_from_gc
 from tqdm import tqdm
 import pdb
 
@@ -951,13 +951,18 @@ def run_sweal(args, device):
             summarized_stats = get_stats_summary(all_stats)
             model_size = get_model_size(model)
             parameters = count_parameters(model)
-            train_dataset_size = get_data_size(train_dataset)
+            train_dataset_size = get_data_size(train_dataset.data)
             cpu_usage = get_cpu_memory_from_gc()
+            gpu_usage = get_gpu_memory_from_gc()
             print(f"Summarized stats: {summarized_stats}")
+            print("------------------------------------------")
             print(f"Model size: {model_size}")
             print(f"Parameters: {parameters}")
             print(f"Train Dataset Size: {train_dataset_size}")
+            print("------------------------------------------")
             print(f"CPU usage: {cpu_usage}")
+            print(f"GPU usage: {gpu_usage}")
+            print("------------------------------------------")
             print("fin profiling.")
             exit()
 
