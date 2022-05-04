@@ -13,6 +13,7 @@ from shutil import copy
 import copy as cp
 
 from torch_geometric.loader import DataLoader
+from torch_geometric.profile import profileit
 from tqdm import tqdm
 import pdb
 
@@ -228,6 +229,29 @@ class SEALDynamicDataset(Dataset):
                                   y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
 
         return data
+
+
+@profileit()
+def profile_train(model, train_loader, optimizer, device, emb, train_dataset, args):
+    # normal training with BCE logit loss with profiling enabled
+    model.train()
+
+    total_loss = 0
+    pbar = tqdm(train_loader, ncols=70)
+    for data in pbar:
+        data = data.to(device)
+        optimizer.zero_grad()
+        x = data.x if args.use_feature else None
+        edge_weight = data.edge_weight if args.use_edge_weight else None
+        node_id = data.node_id if emb else None
+        num_nodes = data.num_nodes
+        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item() * data.num_graphs
+
+    return total_loss / len(train_dataset)
 
 
 def train(model, train_loader, optimizer, device, emb, train_dataset, args):
@@ -885,6 +909,12 @@ def run_sweal(args, device):
 
         # Training starts
         for epoch in range(start_epoch, start_epoch + args.epochs):
+            if args.profile:
+                # this gives the stats for exactly one training epoch
+                _, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
+                print("fin profiling.")
+                print(stats)
+                exit()
             if not args.pairwise:
                 loss = train(model, train_loader, optimizer, device, emb, train_dataset, args)
             else:
@@ -1015,6 +1045,7 @@ if __name__ == '__main__':
     parser.add_argument('--neg_ratio', type=int, default=1,
                         help="Compile neg_ratio times the positive samples for compiling neg_samples"
                              "(only for Training data)")
+    parser.add_argument('--profile', action='store_true', help="Run the PyG profiler")
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
