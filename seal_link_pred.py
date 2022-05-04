@@ -1059,4 +1059,8 @@ if __name__ == '__main__':
         # Planetoid does not work on GPU in dynamic mode
         torch.multiprocessing.set_start_method('fork', force=True)
         device = 'cpu'
+
+    if args.profile and not torch.cuda.is_available():
+        raise Exception("CUDA needs to be enabled to run PyG profiler")
+    
     run_sweal(args, device)
