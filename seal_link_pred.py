@@ -13,7 +13,8 @@ from shutil import copy
 import copy as cp
 
 from torch_geometric.loader import DataLoader
-from torch_geometric.profile import profileit
+from torch_geometric.profile import profileit, get_stats_summary, get_model_size, count_parameters, get_data_size, \
+    get_cpu_memory_from_gc
 from tqdm import tqdm
 import pdb
 
@@ -908,13 +909,14 @@ def run_sweal(args, device):
             exit()
 
         # Training starts
+        all_stats = []
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
                 _, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 print("fin profiling.")
-                print(stats)
-                exit()
+                all_stats.append(stats)
+                continue
             if not args.pairwise:
                 loss = train(model, train_loader, optimizer, device, emb, train_dataset, args)
             else:
@@ -945,6 +947,19 @@ def run_sweal(args, device):
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
+
+        if args.profile:
+            summarized_stats = get_stats_summary(all_stats)
+            model_size = get_model_size(model)
+            parameters = count_parameters(model)
+            train_dataset_size = get_data_size(train_dataset)
+            cpu_usage = get_cpu_memory_from_gc()
+            print(f"Summarized stats: {summarized_stats}")
+            print(f"Model size: {model_size}")
+            print(f"Parameters: {parameters}")
+            print(f"Train Dataset Size: {train_dataset_size}")
+            print(f"CPU usage: {cpu_usage}")
+            exit()
 
         for key in loggers.keys():
             print(key)
@@ -1062,5 +1077,5 @@ if __name__ == '__main__':
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
-    
+
     run_sweal(args, device)
