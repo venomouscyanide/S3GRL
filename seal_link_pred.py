@@ -914,7 +914,6 @@ def run_sweal(args, device):
             if args.profile:
                 # this gives the stats for exactly one training epoch
                 _, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
-                print("fin profiling.")
                 all_stats.append(stats)
                 continue
             if not args.pairwise:
@@ -959,6 +958,7 @@ def run_sweal(args, device):
             print(f"Parameters: {parameters}")
             print(f"Train Dataset Size: {train_dataset_size}")
             print(f"CPU usage: {cpu_usage}")
+            print("fin profiling.")
             exit()
 
         for key in loggers.keys():
