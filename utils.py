@@ -82,10 +82,13 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         device = rw_kwargs['device']
         data_org = rw_kwargs['data']
 
-        starting_nodes = []
+        if rw_kwargs.get('starting_nodes'):
+            start = rw_kwargs.get('starting_nodes')[(src, dst)]
+        else:
+            starting_nodes = []
 
-        [starting_nodes.extend([src, dst]) for _ in range(rw_M)]
-        start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
+            [starting_nodes.extend([src, dst]) for _ in range(rw_M)]
+            start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
 
         rw = sparse_adj.random_walk(start.flatten(), rw_m)
 

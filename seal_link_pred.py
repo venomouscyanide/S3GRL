@@ -203,6 +203,17 @@ class SEALDynamicDataset(Dataset):
         else:
             self.A_csc = None
 
+        self.starting_nodes = {}
+        if self.rw_kwargs.get('M'):
+            # if in dynamic SWEAL mode, we need to cache and not create starting_nodes in get() due to below error
+            # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
+            # To use CUDA with multiprocessing, you must use the 'spawn' start method
+            for link in self.links:
+                rw_M = self.rw_kwargs.get('M')
+                starting_nodes = []
+                [starting_nodes.extend(link) for _ in range(rw_M)]
+                self.starting_nodes[tuple(link)] = torch.tensor(starting_nodes, dtype=torch.long, device=device)
+
     def __len__(self):
         return len(self.links)
 
@@ -219,7 +230,8 @@ class SEALDynamicDataset(Dataset):
             "sparse_adj": self.sparse_adj,
             "edge_index": self.data.edge_index,
             "device": self.device,
-            "data": self.data
+            "data": self.data,
+            "starting_nodes": self.starting_nodes
         }
 
         if not rw_kwargs['rw_m']:
@@ -1059,16 +1071,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
-
-    if any([args.dynamic_train, args.dynamic_test, args.dynamic_val]) and torch.cuda.is_available():
-        # need to set mp start to work in dynamic mode
-        torch.multiprocessing.set_start_method('spawn')
-
-    if args.dataset in ['Cora', 'PubMed', 'CiteSeer'] and any(
-            [args.dynamic_train, args.dynamic_test, args.dynamic_val]):
-        # Planetoid does not work on GPU in dynamic mode
-        torch.multiprocessing.set_start_method('fork', force=True)
-        device = 'cpu'
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
