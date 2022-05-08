@@ -82,8 +82,8 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         device = rw_kwargs['device']
         data_org = rw_kwargs['data']
 
-        if rw_kwargs.get('starting_nodes'):
-            nodes = rw_kwargs.get('starting_nodes')[(src, dst)]
+        if rw_kwargs.get('unique_nodes'):
+            nodes = rw_kwargs.get('unique_nodes')[(src, dst)]
         else:
             starting_nodes = []
 

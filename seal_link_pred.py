@@ -203,9 +203,9 @@ class SEALDynamicDataset(Dataset):
         else:
             self.A_csc = None
 
-        self.starting_nodes = {}
+        self.unique_nodes = {}
         if self.rw_kwargs.get('M'):
-            # if in dynamic SWEAL mode, we need to cache and not create starting_nodes in get() due to below error
+            # if in dynamic SWEAL mode, need to cache the unique nodes of random walks before get() due to below error
             # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
             # To use CUDA with multiprocessing, you must use the 'spawn' start method
             for link in self.links:
@@ -214,7 +214,7 @@ class SEALDynamicDataset(Dataset):
                 [starting_nodes.extend(link) for _ in range(rw_M)]
                 start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
                 rw = self.sparse_adj.random_walk(start.flatten(), self.rw_kwargs.get('m'))
-                self.starting_nodes[tuple(link)] = torch.unique(rw.flatten()).tolist()
+                self.unique_nodes[tuple(link)] = torch.unique(rw.flatten()).tolist()
 
     def __len__(self):
         return len(self.links)
@@ -233,7 +233,7 @@ class SEALDynamicDataset(Dataset):
             "edge_index": self.data.edge_index,
             "device": self.device,
             "data": self.data,
-            "starting_nodes": self.starting_nodes
+            "unique_nodes": self.unique_nodes
         }
 
         if not rw_kwargs['rw_m']:
