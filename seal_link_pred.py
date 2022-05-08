@@ -1072,6 +1072,10 @@ if __name__ == '__main__':
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
 
+    if any([args.dynamic_train, args.dynamic_test, args.dynamic_val]) and torch.cuda.is_available():
+        # need to set mp start to work in dynamic mode
+        torch.multiprocessing.set_start_method('spawn')
+
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
