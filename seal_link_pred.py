@@ -212,7 +212,9 @@ class SEALDynamicDataset(Dataset):
                 rw_M = self.rw_kwargs.get('M')
                 starting_nodes = []
                 [starting_nodes.extend(link) for _ in range(rw_M)]
-                self.starting_nodes[tuple(link)] = torch.tensor(starting_nodes, dtype=torch.long, device=device)
+                start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
+                rw = self.sparse_adj.random_walk(start.flatten(), self.rw_kwargs.get('m'))
+                self.starting_nodes[tuple(link)] = rw
 
     def __len__(self):
         return len(self.links)
