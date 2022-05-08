@@ -91,7 +91,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
             start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
             rw = sparse_adj.random_walk(start.flatten(), rw_m)
 
-        nodes = list(set(rw.flatten().to('cpu').detach().numpy()))
+        nodes = torch.unique(rw.flatten()).tolist()
 
         # Start of core-logic
         rw_set = nodes
