@@ -83,8 +83,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         data_org = rw_kwargs['data']
 
         if rw_kwargs.get('starting_nodes'):
-            start = rw_kwargs.get('starting_nodes')[(src, dst)]
-            rw = sparse_adj.random_walk(start.flatten(), rw_m)
+            rw = rw_kwargs.get('starting_nodes')[(src, dst)]
         else:
             starting_nodes = []
 
