@@ -7,3 +7,4 @@ pip install matplotlib
 pip install ogb
 pip install networkx
 pip install pytorch_memlab
+pip install class_resolver
