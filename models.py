@@ -35,7 +35,7 @@ class GCN(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge
-        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -64,16 +64,16 @@ class GCN(torch.nn.Module):
         x = self.convs[-1](x, edge_index, edge_weight)
 
         # center pooling
-        # _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-        # x_src = x[center_indices]
-        # x_dst = x[center_indices + 1]
-        # x = (x_src * x_dst)
+        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
+        x_src = x[center_indices]
+        x_dst = x[center_indices + 1]
+        x = (x_src * x_dst)
 
         # sum pool
         # x = global_add_pool(x, batch)
 
         # max pool
-        x = global_max_pool(x, batch)
+        # x = global_max_pool(x, batch)
 
         x = self.mlp(x)
         return x
@@ -100,7 +100,7 @@ class SAGE(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge
-        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -126,14 +126,12 @@ class SAGE(torch.nn.Module):
             x = F.relu(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.convs[-1](x, edge_index)
-        if False:  # center pooling
+        if True:  # center pooling
             _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
             x_src = x[center_indices]
             x_dst = x[center_indices + 1]
             x = (x_src * x_dst)
-            x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = self.lin2(x)
+            x = self.mlp(x)
         else:  # max pooling
             x = global_max_pool(x, batch)
             x = self.mlp(x)
@@ -268,10 +266,9 @@ class GIN(torch.nn.Module):
 
         self.dropout = dropout
         if self.jk:
-            self.lin1 = Linear(num_layers * hidden_channels, hidden_channels)
-            self.mlp = MLP([num_layers * hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=True)
+            self.mlp = MLP([num_layers * hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=False)
         else:
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=True)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=False)
 
         self.dropedge = dropedge
 
