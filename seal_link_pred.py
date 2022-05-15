@@ -485,7 +485,7 @@ class SWEALArgumentParser:
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
-                 profile):
+                 profile, split_val_ratio, split_test_ratio):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -542,6 +542,8 @@ class SWEALArgumentParser:
         self.loss_fn = loss_fn
         self.neg_ratio = neg_ratio
         self.profile = profile
+        self.split_val_ratio = split_val_ratio
+        self.split_test_ratio = split_test_ratio
 
 
 def run_sweal(args, device):
@@ -586,13 +588,15 @@ def run_sweal(args, device):
         dataset_name = args.dataset.split('-')[-1]
         path = osp.join('dataset', dataset_name)
         dataset = AttributedGraphDataset(path, dataset_name)
-        split_edge = do_edge_split(dataset, args.fast_split, neg_ratio=args.neg_ratio)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
     else:
         path = osp.join('dataset', args.dataset)
         dataset = Planetoid(path, args.dataset)
-        split_edge = do_edge_split(dataset, args.fast_split, neg_ratio=args.neg_ratio)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
 
@@ -1072,6 +1076,8 @@ if __name__ == '__main__':
                         help="Compile neg_ratio times the positive samples for compiling neg_samples"
                              "(only for Training data)")
     parser.add_argument('--profile', action='store_true', help="Run the PyG profiler")
+    parser.add_argument('--split_val_ratio', type=float, default=0.05)
+    parser.add_argument('--split_test_ratio', type=float, default=0.1)
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')

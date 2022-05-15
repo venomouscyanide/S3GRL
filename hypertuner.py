@@ -21,7 +21,7 @@ class ManualTuner:
     @staticmethod
     def tune(dataset, model, hidden_channels, use_feature, lr,
              runs, use_heuristic, m, M, dropedge, save_appendix, data_appendix, device, train_percent, delete_dataset,
-             epochs):
+             epochs, split_val_ratio, split_test_ratio):
         sweal_parser = SWEALArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
                                            hidden_channels=hidden_channels, batch_size=32, num_hops=1,
                                            ratio_per_hop=1.0, max_nodes_per_hop=None, node_label='drnl',
@@ -36,7 +36,8 @@ class ManualTuner:
                                            only_test=False, test_multiple_models=False, use_heuristic=use_heuristic,
                                            m=m, M=M, dropedge=dropedge, calc_ratio=False, checkpoint_training=False,
                                            delete_dataset=delete_dataset, pairwise=False, loss_fn='', neg_ratio=1,
-                                           profile=False)
+                                           profile=False, split_val_ratio=split_val_ratio,
+                                           split_test_ratio=split_test_ratio)
 
         run_sweal(sweal_parser, device)
 
@@ -58,6 +59,8 @@ if __name__ == '__main__':
     parser.add_argument('--data_appendix', type=str)
     parser.add_argument('--train_percent', type=float)
     parser.add_argument('--cuda_device', type=int, default=0, help="Only set available the passed GPU")
+    parser.add_argument('--split_val_ratio', type=float, default=0.05)
+    parser.add_argument('--split_test_ratio', type=float, default=0.1)
 
     args = parser.parse_args()
     device = f"cuda:{args.cuda_device}" if torch.cuda.is_available() else "cpu"
@@ -75,4 +78,5 @@ if __name__ == '__main__':
                          lr=args.lr, runs=args.runs, use_feature=args.use_feature,
                          use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
                          save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
-                         train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs)
+                         train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
+                         split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio)
