@@ -3,7 +3,7 @@
 cd SEAL_OGB/
 python seal_link_pred.py --dataset Cora --num_hops 3 --use_feature --hidden_channels 256 --runs 5 --profile
 cd ../SWEAL_OGB/
-pythonseal_link_pred.py --dataset Cora --use_feature --hidden_channels 256 --runs 5 --model DGCNN --m 5 --M 50 --profile
+python seal_link_pred.py --dataset Cora --use_feature --hidden_channels 256 --runs 5 --model DGCNN --m 5 --M 50 --profile
 # CiteSeer
 cd ../SEAL_OGB/
 python seal_link_pred.py --dataset CiteSeer --num_hops 3 --hidden_channels 256 --runs 5 --profile
