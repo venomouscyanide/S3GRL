@@ -615,12 +615,12 @@ def run_sweal(args, device):
             print(f"Run {run + 1} of {args.runs}")
             if not args.dataset.startswith('ogbl'):
                 accuracy_scores.append(
-                    train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs)
+                    train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs) * 100
                 )
             else:
                 accuracy_scores.append(
                     train_mlp_ogbl(train, train_edges, test_edges, device, args.lr, args.dropout, args.epochs,
-                                   args.dataset)
+                                   args.dataset) * 100
                 )
         accuracy_scores = np.array(accuracy_scores)
         print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
