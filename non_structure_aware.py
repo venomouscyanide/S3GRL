@@ -35,7 +35,7 @@ def train_mlp(train, test_data, device, lr, dropout, epochs, dim=256):
         train.new_edge_label_index = edge_label_index
 
         out = mlp(train.x)
-        link_embedding = out[train.new_edge_label_index][0] * out[train.new_edge_label_index][1]  # hadamard product
+        link_embedding = out[train.new_edge_label_index[0]] * out[train.new_edge_label_index[1]]  # hadamard product
 
         loss = criterion(link_embedding.sum(dim=-1), edge_label)
         if epoch % 5 == 0:
@@ -46,7 +46,7 @@ def train_mlp(train, test_data, device, lr, dropout, epochs, dim=256):
     # forward pass on test data
     mlp.eval()
     out = mlp(test_data.x)
-    link_embedding = out[test_data.edge_label_index][0] * out[test_data.edge_label_index][1]
+    link_embedding = out[test_data.edge_label_index[0]] * out[test_data.edge_label_index[1]]
     test_roc = roc_auc_score(test_data.edge_label.detach().cpu().numpy(), link_embedding.detach().cpu().numpy())
     print(f"Test AUC: {test_roc}")
 
