@@ -595,7 +595,6 @@ def run_sweal(args, device):
 
         if args.dataset.startswith('ogbl'):
             dataset = PygLinkPropPredDataset(name=args.dataset)
-            dataset.to(device)
             split_edge = dataset.get_edge_split()
             train_edges, _, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
             train = dataset[0]
