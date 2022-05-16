@@ -9,6 +9,7 @@ def train_mlp(train, test_data, device, lr, dropout, epochs, dim=256):
     Train for link prediction downstream task
     """
     mlp = MLP(channel_list=[train.x.size(1), dim, dim, dim], dropout=dropout, batch_norm=False).to(device)
+    mlp.reset_parameters()
     optimizer = torch.optim.Adam(params=mlp.parameters(), lr=lr)
     criterion = torch.nn.BCEWithLogitsLoss()
 
