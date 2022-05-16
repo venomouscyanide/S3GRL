@@ -594,6 +594,7 @@ def run_sweal(args, device):
         transform = T.Compose(transforms)
 
         if args.dataset.startswith('ogbl'):
+            device = 'cpu'  # non batched, hence will not fit into GPU
             dataset = PygLinkPropPredDataset(name=args.dataset)
             split_edge = dataset.get_edge_split()
             train_edges, _, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
