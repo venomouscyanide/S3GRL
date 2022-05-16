@@ -594,7 +594,6 @@ def run_sweal(args, device):
         transform = T.Compose(transforms)
 
         if args.dataset.startswith('ogbl'):
-            # broken, fix me
             dataset = PygLinkPropPredDataset(name=args.dataset, transform=transform)
             train, _, test_data = dataset[0]
         elif args.dataset.startswith('attributed'):
