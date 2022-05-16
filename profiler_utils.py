@@ -5,7 +5,7 @@ from torch_geometric.profile import get_stats_summary, get_model_size, count_par
 from torch_geometric.profile.utils import byte_to_megabyte
 
 
-def profile_helper(all_stats, model, train_dataset):
+def profile_helper(all_stats, model, train_dataset, stats_suffix):
     summarized_stats = get_stats_summary(all_stats)
     model_size = get_model_size(model)
     parameters = count_parameters(model)
@@ -51,6 +51,6 @@ def profile_helper(all_stats, model, train_dataset):
     print(f"GPU usage: {gpu_usage}")
 
     print("------------------------------------------")
-    with open('stats.json', 'w') as stats_file:
+    with open(f'stats_{stats_suffix}.json', 'w') as stats_file:
         json.dump(stats, stats_file)
     print("fin profiling.")

@@ -938,14 +938,15 @@ def run_sweal(args, device):
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
-                _, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
+                loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
-                continue
-            if not args.pairwise:
-                loss = train(model, train_loader, optimizer, device, emb, train_dataset, args)
             else:
-                loss = train_pairwise(model, train_pos_loader, train_neg_loader, optimizer, device, emb, train_dataset,
-                                      args)
+                if not args.pairwise:
+                    loss = train(model, train_loader, optimizer, device, emb, train_dataset, args)
+                else:
+                    loss = train_pairwise(model, train_pos_loader, train_neg_loader, optimizer, device, emb,
+                                          train_dataset,
+                                          args)
 
             if epoch % args.eval_steps == 0:
                 results = test(evaluator, model, val_loader, device, emb, test_loader, args)
@@ -973,8 +974,8 @@ def run_sweal(args, device):
                             print(to_print, file=f)
 
         if args.profile:
-            profile_helper(all_stats, model, train_dataset)
-            exit()
+            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}'
+            profile_helper(all_stats, model, train_dataset, stats_suffix)
 
         for key in loggers.keys():
             print(key)
