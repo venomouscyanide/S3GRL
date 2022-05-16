@@ -118,8 +118,17 @@ def train_mlp_ogbl(train, train_edges, test_edges, device, lr, dropout, epochs, 
         loss.backward()
         optimizer.step()
 
+        if epoch % 5 == 0:
+            hits = test_mlp_ogbl(mlp, train, device, test_edges, dataset)
+            print(f"epoch: {epoch}, hits@50: {hits}")
+
+    hits = test_mlp_ogbl(mlp, train, device, test_edges, dataset)
+    return hits
+
+
+@torch.no_grad()
+def test_mlp_ogbl(mlp, train, device, test_edges, dataset):
     # forward pass on test data
-    mlp.eval()
     out = mlp(train.x)
 
     evaluator = Evaluator(name=dataset)
@@ -139,13 +148,9 @@ def train_mlp_ogbl(train, train_edges, test_edges, device, lr, dropout, epochs, 
     link_embedding = out[edge_label_index[0]] * out[edge_label_index[1]]
     link_embedding = link_embedding.sum(dim=-1)
 
-    test_pred, test_true = link_embedding, edge_label
-    pos_test_pred = test_pred[test_true == 1]
-    neg_test_pred = test_pred[test_true == 0]
-
     test_hits = evaluator.eval({
-        'y_pred_pos': pos_test_pred,
-        'y_pred_neg': neg_test_pred,
+        'y_pred_pos': link_embedding[:len(test_edges['edge'])],
+        'y_pred_neg': link_embedding[len(test_edges['edge_neg']):],
     })
     test_hits = test_hits['hits@50']
     print(f"Test HITS@50: {test_hits}")
