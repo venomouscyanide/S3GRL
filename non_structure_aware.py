@@ -15,6 +15,8 @@ def train_mlp(train, test_data, device, lr, dropout, epochs, dim=256):
     criterion = torch.nn.BCEWithLogitsLoss()
 
     mlp.train()
+    train.to(device)
+    test_data.to(device)
     for epoch in range(epochs):
         # perform new round of neg sampling per epoch
         neg_edge_index = negative_sampling(
@@ -84,7 +86,7 @@ def train_mlp_ogbl(train, train_edges, test_edges, device, lr, dropout, epochs, 
     mlp.reset_parameters()
     optimizer = torch.optim.Adam(params=mlp.parameters(), lr=lr)
     criterion = torch.nn.BCEWithLogitsLoss()
-
+    train.to(device)
     mlp.train()
     for epoch in range(epochs):
         # perform new round of neg sampling per epoch
