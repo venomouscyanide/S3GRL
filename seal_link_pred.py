@@ -36,7 +36,7 @@ from scipy.sparse import SparseEfficiencyWarning
 
 from custom_losses import auc_loss, hinge_auc_loss
 from models import SAGE, DGCNN, GCN, GIN
-from non_structure_aware import train_mlp
+from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR
@@ -594,8 +594,11 @@ def run_sweal(args, device):
         transform = T.Compose(transforms)
 
         if args.dataset.startswith('ogbl'):
-            dataset = PygLinkPropPredDataset(name=args.dataset, transform=transform)
-            train, _, test_data = dataset[0]
+            dataset = PygLinkPropPredDataset(name=args.dataset)
+            split_edge = dataset.get_edge_split()
+            train_edges, _, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
+            train = dataset[0]
+
         elif args.dataset.startswith('attributed'):
             dataset_name = args.dataset.split('-')[-1]
             path = osp.join('dataset', dataset_name)
@@ -606,13 +609,20 @@ def run_sweal(args, device):
             dataset = Planetoid(path, args.dataset, transform=transform)
             train, _, test_data = dataset[0]
 
-        auc_scores = []
+        accuracy_scores = []
         for run in range(args.runs):
             print(f"Run {run + 1} of {args.runs}")
-            auc_scores.append(train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs))
-
-        auc_scores = np.array(auc_scores)
-        print(f'Average Test: {auc_scores.mean():.2f} ± {auc_scores.std():.2f}')
+            if not args.dataset.startswith('ogbl'):
+                accuracy_scores.append(
+                    train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs)
+                )
+            else:
+                accuracy_scores.append(
+                    train_mlp_ogbl(train, train_edges, test_edges, device, args.lr, args.dropout, args.epochs,
+                                   args.dataset)
+                )
+        accuracy_scores = np.array(accuracy_scores)
+        print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
         exit()
 
     else:
