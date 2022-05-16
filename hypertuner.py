@@ -37,7 +37,7 @@ class ManualTuner:
                                            m=m, M=M, dropedge=dropedge, calc_ratio=False, checkpoint_training=False,
                                            delete_dataset=delete_dataset, pairwise=False, loss_fn='', neg_ratio=1,
                                            profile=False, split_val_ratio=split_val_ratio,
-                                           split_test_ratio=split_test_ratio)
+                                           split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50)
 
         run_sweal(sweal_parser, device)
 
