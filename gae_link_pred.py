@@ -5,11 +5,11 @@ from torch_geometric.utils import negative_sampling
 
 
 class Net(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, layer):
+    def __init__(self, in_channels, hidden_channels1, hidden_channels2, out_channels, layer):
         super().__init__()
-        self.conv1 = layer(in_channels, hidden_channels)
-        self.conv2 = layer(hidden_channels, out_channels)
-        self.conv3 = layer(hidden_channels, hidden_channels)
+        self.conv1 = layer(in_channels, hidden_channels1)
+        self.conv2 = layer(hidden_channels1, hidden_channels2)
+        self.conv3 = layer(hidden_channels2, out_channels)
 
     def encode(self, x, edge_index):
         x = self.conv1(x, edge_index).relu()
@@ -60,7 +60,7 @@ def test(data, model):
 
 
 def gae_train_helper(dataset, device, train_data, val_data, test_data, lr, epochs, layer):
-    model = Net(dataset.num_features, 256, 256, layer).to(device)
+    model = Net(dataset.num_features, 256, 256, 256, layer).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
     criterion = torch.nn.BCEWithLogitsLoss()
 
