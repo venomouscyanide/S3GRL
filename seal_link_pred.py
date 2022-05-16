@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import numpy as np
 import torch
 import shutil
 
@@ -27,6 +27,7 @@ from torch_sparse import coalesce, SparseTensor
 from torch_geometric.datasets import Planetoid, AttributedGraphDataset
 from torch_geometric.data import Dataset, InMemoryDataset
 from torch_geometric.utils import to_undirected
+from torch_geometric import transforms as T
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
@@ -35,6 +36,7 @@ from scipy.sparse import SparseEfficiencyWarning
 
 from custom_losses import auc_loss, hinge_auc_loss
 from models import SAGE, DGCNN, GCN, GIN
+from non_structure_aware import train_mlp
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR
@@ -580,25 +582,59 @@ def run_sweal(args, device):
     with open(log_file, 'a') as f:
         f.write('\n' + cmd_input)
 
-    if args.dataset.startswith('ogbl'):
-        dataset = PygLinkPropPredDataset(name=args.dataset)
-        split_edge = dataset.get_edge_split()
-        data = dataset[0]
-    elif args.dataset.startswith('attributed'):
-        dataset_name = args.dataset.split('-')[-1]
-        path = osp.join('dataset', dataset_name)
-        dataset = AttributedGraphDataset(path, dataset_name)
-        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
-                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
-        data = dataset[0]
-        data.edge_index = split_edge['train']['edge'].t()
+    if args.train_mlp:
+        transforms = []
+        transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
+                                            neg_sampling_ratio=1.0,
+                                            num_test=args.split_test_ratio,
+                                            is_undirected=True,
+                                            add_negative_train_samples=False, split_labels=False))
+        transform = T.Compose(transforms)
+
+        if args.dataset.startswith('ogbl'):
+            # broken, fix me
+            dataset = PygLinkPropPredDataset(name=args.dataset, transform=transform)
+            train, _, test_data = dataset[0]
+        elif args.dataset.startswith('attributed'):
+            dataset_name = args.dataset.split('-')[-1]
+            path = osp.join('dataset', dataset_name)
+            dataset = AttributedGraphDataset(path, dataset_name, transform=transform)
+            train, _, test_data = dataset[0]
+        else:
+            path = osp.join('dataset', args.dataset)
+            dataset = Planetoid(path, args.dataset, transform=transform)
+            train, _, test_data = dataset[0]
+
+        auc_scores = []
+        for run in range(args.runs):
+            print(f"Run {run + 1} of {args.runs}")
+            auc_scores.append(train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs))
+
+        auc_scores = np.array(auc_scores)
+        print(f'Average Test: {auc_scores.mean():.2f} ± {auc_scores.std():.2f}')
+        exit()
+
     else:
-        path = osp.join('dataset', args.dataset)
-        dataset = Planetoid(path, args.dataset)
-        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
-                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
-        data = dataset[0]
-        data.edge_index = split_edge['train']['edge'].t()
+        # S[W]EAL Dataset prep Flow
+        if args.dataset.startswith('ogbl'):
+            dataset = PygLinkPropPredDataset(name=args.dataset)
+            split_edge = dataset.get_edge_split()
+            data = dataset[0]
+        elif args.dataset.startswith('attributed'):
+            dataset_name = args.dataset.split('-')[-1]
+            path = osp.join('dataset', dataset_name)
+            dataset = AttributedGraphDataset(path, dataset_name)
+            split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                       test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+            data = dataset[0]
+            data.edge_index = split_edge['train']['edge'].t()
+        else:
+            path = osp.join('dataset', args.dataset)
+            dataset = Planetoid(path, args.dataset)
+            split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                       test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+            data = dataset[0]
+            data.edge_index = split_edge['train']['edge'].t()
 
     if args.dataset_stats:
         print(f'Dataset: {dataset}:')
@@ -1079,6 +1115,9 @@ if __name__ == '__main__':
     parser.add_argument('--profile', action='store_true', help="Run the PyG profiler")
     parser.add_argument('--split_val_ratio', type=float, default=0.05)
     parser.add_argument('--split_test_ratio', type=float, default=0.1)
+    parser.add_argument('--train_mlp', action='store_true',
+                        help="Train using structure unaware mlp")
+    parser.add_argument('--dropout', type=float, default=0.5)
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
