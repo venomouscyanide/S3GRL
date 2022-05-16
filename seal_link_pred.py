@@ -14,6 +14,7 @@ from shutil import copy
 import copy as cp
 
 from torch_geometric.loader import DataLoader
+from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit
 from tqdm import tqdm
 import pdb
@@ -35,6 +36,7 @@ import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
 from custom_losses import auc_loss, hinge_auc_loss
+from gae_link_pred import gae_train_helper
 from models import SAGE, DGCNN, GCN, GIN
 from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
@@ -585,6 +587,7 @@ def run_sweal(args, device):
         f.write('\n' + cmd_input)
 
     if args.train_mlp:
+        # MLP Dataprep + Training flow
         transforms = []
         transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
                                             neg_sampling_ratio=1.0,
@@ -625,9 +628,48 @@ def run_sweal(args, device):
         accuracy_scores = np.array(accuracy_scores)
         print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
         exit()
+    elif args.train_gae:
+        # GAE dataprep + training flow
+        transforms = []
+        transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
+                                            neg_sampling_ratio=1.0,
+                                            num_test=args.split_test_ratio,
+                                            is_undirected=True,
+                                            add_negative_train_samples=False, split_labels=False))
+        transform = T.Compose(transforms)
 
+        if args.dataset.startswith('ogbl'):
+            # TODO: broken for sure
+            dataset = PygLinkPropPredDataset(name=args.dataset)
+            split_edge = dataset.get_edge_split()
+            train_edges, val_edges, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
+            train = dataset[0]
+            train_data, val_data, test_data = []
+
+        elif args.dataset.startswith('attributed'):
+            dataset_name = args.dataset.split('-')[-1]
+            path = osp.join('dataset', dataset_name)
+            dataset = AttributedGraphDataset(path, dataset_name, transform=transform)
+            train_data, val_data, test_data = dataset[0]
+        else:
+            path = osp.join('dataset', args.dataset)
+            dataset = Planetoid(path, args.dataset, transform=transform)
+            train_data, val_data, test_data = dataset[0]
+
+        gae_layer = SAGEConv if args.base_gae == 'SAGE' else GCNConv
+        accuracy_scores = []
+        for run in range(args.runs):
+            print(f"Run {run + 1} of {args.runs}")
+            accuracy_scores.append(
+                gae_train_helper(dataset, device, train_data, val_data, test_data, args.lr, args.epochs,
+                                 gae_layer) * 100
+            )
+        accuracy_scores = np.array(accuracy_scores)
+
+        print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
+        exit()
     else:
-        # S[W]EAL Dataset prep Flow
+        # S[W]EAL Dataset prep + Training Flow
         if args.dataset.startswith('ogbl'):
             dataset = PygLinkPropPredDataset(name=args.dataset)
             split_edge = dataset.get_edge_split()
@@ -1129,6 +1171,9 @@ if __name__ == '__main__':
     parser.add_argument('--split_test_ratio', type=float, default=0.1)
     parser.add_argument('--train_mlp', action='store_true',
                         help="Train using structure unaware mlp")
+    parser.add_argument('--train_gae', action='store_true', help="Train GAE on the dataset")
+    parser.add_argument('--base_gae', type=str, default='', help='Choose base GAE model', choices=['GCN', 'SAGE'])
+
     parser.add_argument('--dropout', type=float, default=0.5)
     args = parser.parse_args()
 
