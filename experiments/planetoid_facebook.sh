@@ -18,4 +18,4 @@ python seal_link_pred.py --dataset PubMed --runs 5 --model DGCNN --m 5 --M 50 --
 cd ../SEAL_OGB/
 python seal_link_pred.py --dataset attributed-Facebook --num_hops 1 --use_feature --hidden_channels 256 --split_test_ratio 0.50 --model DGCNN --runs 5 --profile
 cd ../SWEAL_OGB/
-python seal_link_pred.py --dataset attributed-Facebook --use_feature --hidden_channels 256 --runs 5 --model DGCNN --m 2 --M 50 --split_test_ratio 0.50 --profile
+python seal_link_pred.py --dataset attributed-Facebook --use_feature --hidden_channels 256 --runs 5 --model DGCNN --m 2 --M 5 --split_test_ratio 0.50 --profile
