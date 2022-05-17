@@ -1,5 +1,4 @@
 #!/bin/sh
-cd SWEAL_OGB/collab_exp
 # ogbl-collab MLP
 python mlp_collab.py --lr 0.0001 --dropout 0.5 --epochs 500 --runs 5
 # ogbl-collab GCN
