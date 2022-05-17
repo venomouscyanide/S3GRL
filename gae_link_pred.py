@@ -25,7 +25,7 @@ class Net(torch.nn.Module):
         return (prob_adj > 0).nonzero(as_tuple=False).t()
 
 
-def train(model, optimizer, train_data, criterion):
+def train(model, optimizer, train_data, criterion, device):
     model.train()
     optimizer.zero_grad()
     z = model.encode(train_data.x, train_data.edge_index)
@@ -33,16 +33,16 @@ def train(model, optimizer, train_data, criterion):
     # We perform a new round of negative sampling for every training epoch:
     neg_edge_index = negative_sampling(
         edge_index=train_data.edge_index, num_nodes=train_data.num_nodes,
-        num_neg_samples=train_data.edge_label_index.size(1), method='sparse')
+        num_neg_samples=train_data.edge_label_index.size(1), method='sparse').to(device)
 
     edge_label_index = torch.cat(
         [train_data.edge_label_index, neg_edge_index],
         dim=-1,
-    )
+    ).to(device)
     edge_label = torch.cat([
         train_data.edge_label,
         train_data.edge_label.new_zeros(neg_edge_index.size(1))
-    ], dim=0)
+    ], dim=0).to(device)
 
     out = model.decode(z, edge_label_index).view(-1)
     loss = criterion(out, edge_label)
@@ -63,10 +63,11 @@ def gae_train_helper(dataset, device, train_data, val_data, test_data, lr, epoch
     model = Net(dataset.num_features, 256, 256, 256, layer).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
     criterion = torch.nn.BCEWithLogitsLoss()
+    train_data.to(device)
 
     best_val_auc = final_test_auc = 0
     for epoch in range(1, epochs):
-        loss = train(model, optimizer, train_data, criterion)
+        loss = train(model, optimizer, train_data, criterion, device)
         val_auc = test(val_data, model)
         test_auc = test(test_data, model)
         if val_auc > best_val_auc:
