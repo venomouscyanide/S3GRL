@@ -63,7 +63,10 @@ def gae_train_helper(dataset, device, train_data, val_data, test_data, lr, epoch
     model = Net(dataset.num_features, 256, 256, 256, layer).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
     criterion = torch.nn.BCEWithLogitsLoss()
+
     train_data.to(device)
+    val_data.to(device)
+    test_data.to(device)
 
     best_val_auc = final_test_auc = 0
     for epoch in range(1, epochs):
