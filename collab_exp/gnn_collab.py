@@ -10,7 +10,7 @@ from torch_geometric.nn import GCNConv, SAGEConv
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
-from logger import Logger
+from collab_exp.logger import Logger
 
 # Taken from https://github.com/snap-stanford/ogb/blob/master/examples/linkproppred/collab/gnn.py
 class GCN(torch.nn.Module):

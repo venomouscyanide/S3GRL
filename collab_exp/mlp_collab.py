@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
-from logger import Logger
+from collab_exp.logger import Logger
 
 # Taken from https://github.com/snap-stanford/ogb/blob/master/examples/linkproppred/collab/mlp.py
 class LinkPredictor(torch.nn.Module):
