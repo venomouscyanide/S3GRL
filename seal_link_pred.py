@@ -37,6 +37,7 @@ from scipy.sparse import SparseEfficiencyWarning
 
 from custom_losses import auc_loss, hinge_auc_loss
 from gae_link_pred import gae_train_helper
+from gae_link_pred_ogbl import gae_train_helper_ogbl
 from models import SAGE, DGCNN, GCN, GIN
 from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
@@ -621,6 +622,7 @@ def run_sweal(args, device):
                     train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs) * 100
                 )
             else:
+                raise NotImplementedError("Currently broken")
                 accuracy_scores.append(
                     train_mlp_ogbl(train, train_edges, test_edges, device, args.lr, args.dropout, args.epochs,
                                    args.dataset) * 100
@@ -639,12 +641,10 @@ def run_sweal(args, device):
         transform = T.Compose(transforms)
 
         if args.dataset.startswith('ogbl'):
-            # TODO: broken for sure
             dataset = PygLinkPropPredDataset(name=args.dataset)
             split_edge = dataset.get_edge_split()
             train_edges, val_edges, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
             train = dataset[0]
-            train_data, val_data, test_data = []
 
         elif args.dataset.startswith('attributed'):
             dataset_name = args.dataset.split('-')[-1]
@@ -660,10 +660,17 @@ def run_sweal(args, device):
         accuracy_scores = []
         for run in range(args.runs):
             print(f"Run {run + 1} of {args.runs}")
-            accuracy_scores.append(
-                gae_train_helper(dataset, device, train_data, val_data, test_data, args.lr, args.epochs,
-                                 gae_layer) * 100
-            )
+            if not args.dataset.startswith('ogbl'):
+                accuracy_scores.append(
+                    gae_train_helper(dataset, device, train_data, val_data, test_data, args.lr, args.epochs,
+                                     gae_layer) * 100
+                )
+            else:
+                raise NotImplementedError("Currently broken")
+                accuracy_scores.append(
+                    gae_train_helper_ogbl(dataset, device, train, train_edges, val_edges, test_edges, args.lr,
+                                          args.epochs, gae_layer) * 100
+                )
         accuracy_scores = np.array(accuracy_scores)
 
         print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
