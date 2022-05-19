@@ -279,7 +279,7 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
     return total_loss / len(train_dataset)
 
 
-def train(model, train_loader, optimizer, device, emb, train_dataset, args):
+def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
     # normal training with BCE logit loss
     model.train()
 
@@ -1039,7 +1039,7 @@ def run_sweal(args, device):
                 all_stats.append(stats)
             else:
                 if not args.pairwise:
-                    loss = train(model, train_loader, optimizer, device, emb, train_dataset, args)
+                    loss = train_bce(model, train_loader, optimizer, device, emb, train_dataset, args)
                 else:
                     loss = train_pairwise(model, train_pos_loader, train_neg_loader, optimizer, device, emb,
                                           train_dataset,
