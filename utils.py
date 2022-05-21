@@ -339,7 +339,7 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1, neg
             edge_index, num_nodes=data.num_nodes,
             num_neg_samples=data.train_pos_edge_index.size(1) * neg_ratio)
     else:
-        raise NotImplementedError('Fast slit is untested and unsupported.')
+        raise NotImplementedError('Fast split is untested and unsupported.')
         num_nodes = data.num_nodes
         row, col = data.edge_index
         # Return upper triangular portion.
