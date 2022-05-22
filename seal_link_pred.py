@@ -76,7 +76,7 @@ class SEALDataset(InMemoryDataset):
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
         super(SEALDataset, self).__init__(root)
-        if not args.calc_ratio:
+        if not self.rw_kwargs.get('calc_ratio', False):
             self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
@@ -497,7 +497,7 @@ class SWEALArgumentParser:
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
-                 profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae):
+                 profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -560,6 +560,7 @@ class SWEALArgumentParser:
         self.dropout = dropout
         self.train_gae = train_gae
         self.base_gae = base_gae
+        self.dataset_stats = dataset_stats
 
 
 def run_sweal(args, device):

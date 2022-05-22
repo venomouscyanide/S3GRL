@@ -1,2 +1,2 @@
 #!/bin/sh
-python hypertuner.py --dataset Cora --use_feature --hidden_channels 256 --runs 1 --model DGCNN --profile --lr 0.0001 --save_appendix Cora --data_appendix Cora_data --train_percent 1.0 --delete_dataset --epochs 50
+python hypertuner.py --dataset Cora --use_feature --hidden_channels 256 --runs 1 --model DGCNN --profile --lr 0.0001 --save_appendix Cora --data_appendix Cora_data --train_percent 100 --delete_dataset --epochs 50

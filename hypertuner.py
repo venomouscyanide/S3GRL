@@ -37,7 +37,8 @@ class ManualTuner:
                                            m=m, M=M, dropedge=dropedge, calc_ratio=False, checkpoint_training=False,
                                            delete_dataset=delete_dataset, pairwise=False, loss_fn='', neg_ratio=1,
                                            profile=profile, split_val_ratio=split_val_ratio,
-                                           split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50, train_gae=False, base_gae="")
+                                           split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50,
+                                           train_gae=False, base_gae="", dataset_stats=False)
 
         run_sweal(sweal_parser, device)
 
@@ -80,6 +81,5 @@ if __name__ == '__main__':
                          use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
                          save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
                          train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
-                         split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio, profile=args.profile)
-
-
+                         split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,
+                         profile=args.profile)
