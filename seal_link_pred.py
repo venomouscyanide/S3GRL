@@ -76,7 +76,8 @@ class SEALDataset(InMemoryDataset):
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
         super(SEALDataset, self).__init__(root)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        if not args.calc_ratio:
+            self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
     def processed_file_names(self):
@@ -124,11 +125,11 @@ class SEALDataset(InMemoryDataset):
         }
 
         if self.rw_kwargs.get('calc_ratio', False):
-            # TODO: this is pretty messy. You still need to create the pos and neg subgraphs.
             print(f"Calculating preprocessing stats for {self.split}")
             calc_ratio_helper(pos_edge, neg_edge, A, self.data.x, -1, self.num_hops, self.node_label,
                               self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
                               args.dataset)
+            return
 
         if not self.pairwise:
             pos_list = extract_enclosing_subgraphs(
