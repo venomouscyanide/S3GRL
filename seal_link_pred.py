@@ -42,7 +42,7 @@ from models import SAGE, DGCNN, GCN, GIN
 from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR
+    Logger, AA, CN, PPR, calc_ratio_helper
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -121,8 +121,14 @@ class SEALDataset(InMemoryDataset):
             "edge_index": self.data.edge_index,
             "device": self.device,
             "data": self.data,
-            "calc_ratio": self.rw_kwargs.get('calc_ratio', False)
         }
+
+        if self.rw_kwargs.get('calc_ratio', False):
+            # TODO: this is pretty messy. You still need to create the pos and neg subgraphs.
+            print(f"Calculating preprocessing stats for {self.split}")
+            calc_ratio_helper(pos_edge, neg_edge, A, self.data.x, -1, self.num_hops, self.node_label,
+                              self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
+                              args.dataset)
 
         if not self.pairwise:
             pos_list = extract_enclosing_subgraphs(
@@ -919,6 +925,10 @@ def run_sweal(args, device):
         rw_kwargs=rw_kwargs,
         device=device
     )
+
+    if args.calc_ratio:
+        print("Finished calculating ratio of datasets.")
+        exit()
 
     max_z = 1000  # set a large max_z so that every z has embeddings to look up
 

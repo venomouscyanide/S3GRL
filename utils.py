@@ -1,9 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import json
 import sys
 import math
+from pprint import pprint
 
 from tqdm import tqdm
 import random
@@ -274,7 +275,7 @@ def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
     data_rw = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                              max_nodes_per_hop, node_features=x, y=y,
                              directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
-    node_ratio = data_k_hop.num_nodes / data_rw.num_nodes,
+    node_ratio = data_k_hop.num_nodes / data_rw.num_nodes
     try:
         edge_ratio = data_k_hop.num_edges / data_rw.num_edges
     except ZeroDivisionError:
@@ -283,7 +284,63 @@ def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
     if verbose:
         print(f"\n node ratio: {node_ratio} and edge ratio: {edge_ratio} \n")
 
-    return node_ratio, edge_ratio
+    num_nodes_seal = data_k_hop.num_nodes
+    num_nodes_sweal = data_rw.num_nodes
+
+    num_edges_seal = data_k_hop.num_edges
+    num_edges_sweal = data_rw.num_edges
+
+    return node_ratio, edge_ratio, num_nodes_seal, num_nodes_sweal, num_edges_seal, num_edges_sweal
+
+
+def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_label='drnl',
+                      ratio_per_hop=1.0, max_nodes_per_hop=None,
+                      directed=False, A_csc=None, rw_kwargs=None, split='train', dataset_name=''):
+    stats_dict = {}
+
+    # calculate sparsity of subgraphs of seal vs sweal for the split
+    overall_node_ratio_storage = np.array([], dtype=np.float)
+    overall_edge_ratio_storage = np.array([], dtype=np.float)
+
+    overall_seal_node_storage = np.array([], dtype=np.float)
+    overall_sweal_node_storage = np.array([], dtype=np.float)
+
+    overall_seal_edge_storage = np.array([], dtype=np.float)
+    overall_sweal_edge_storage = np.array([], dtype=np.float)
+
+    link_index = torch.cat((link_index_pos, link_index_neg), dim=-1)
+
+    for src, dst in tqdm(link_index.t().tolist()):
+        node_ratio, edge_ratio, num_nodes_seal, num_nodes_sweal, num_edges_seal, num_edges_sweal = calc_node_edge_ratio(
+            src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, node_label, rw_kwargs)
+
+        overall_seal_node_storage = np.append(overall_seal_node_storage, num_nodes_seal)
+        overall_sweal_node_storage = np.append(overall_sweal_node_storage, num_nodes_sweal)
+
+        overall_seal_edge_storage = np.append(overall_seal_edge_storage, num_edges_seal)
+        overall_sweal_edge_storage = np.append(overall_sweal_edge_storage, num_edges_sweal)
+
+        overall_node_ratio_storage = np.append(overall_node_ratio_storage, node_ratio)
+        overall_edge_ratio_storage = np.append(overall_edge_ratio_storage, edge_ratio)
+
+    stats_dict[split] = {
+
+        'SEAL average no of nodes': f'{overall_seal_node_storage.mean():.2f} ± {overall_seal_node_storage.std():.2f}',
+        'SWEAL average no of nodes': f'{overall_sweal_node_storage.mean():.2f} ± {overall_sweal_node_storage.std():.2f}',
+
+        'SEAL average no of edges': f'{overall_seal_edge_storage.mean():.2f} ± {overall_seal_edge_storage.std():.2f}',
+        'SWEAL average no of edges': f'{overall_sweal_edge_storage.mean():.2f} ± {overall_sweal_edge_storage.std():.2f}',
+
+        'average node ratio': f'{overall_node_ratio_storage.mean():.2f} ± {overall_node_ratio_storage.std():.2f}',
+        'average edge ratio': f'{overall_edge_ratio_storage.mean():.2f} ± {overall_edge_ratio_storage.std():.2f}',
+
+    }
+    print("--------------------------------------------------------------")
+    pprint(stats_dict, sort_dicts=False)
+    print("--------------------------------------------------------------")
+
+    with open(f'preprocessing_stats_{dataset_name}_{split}.json', 'w') as stats_file:
+        json.dump(stats_dict, stats_file)
 
 
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
@@ -292,16 +349,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
 
-    overall_node_ratio_sum = np.array([], dtype=np.float)
-    overall_edge_ratio_sum = np.array([], dtype=np.float)
-
     for src, dst in tqdm(link_index.t().tolist()):
-        if rw_kwargs['calc_ratio']:
-            node_ratio, edge_ratio = calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y,
-                                                          directed, A_csc, node_label, rw_kwargs)
-            overall_node_ratio_sum = np.append(overall_node_ratio_sum, node_ratio)
-            overall_edge_ratio_sum = np.append(overall_edge_ratio_sum, edge_ratio)
-
         if not rw_kwargs['rw_m']:
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
@@ -317,13 +365,6 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             draw_graph(to_networkx(data))
         data_list.append(data)
 
-    if rw_kwargs.get('calc_ratio'):
-        print(
-            f"\n Average Sparsity Ratio Calculation Results \n"
-            f"Ratio is calculated as (k_hop[k={num_hops}]/rw[m={rw_kwargs['rw_m']} M={rw_kwargs['rw_M']}])")
-        print(f"y value is set to {y}")
-        print(f'overall_node_ratio: {overall_node_ratio_sum.mean():.2f} ± {overall_node_ratio_sum.std():.2f}')
-        print(f'overall_edge_ratio: {overall_edge_ratio_sum.mean():.2f} ± {overall_edge_ratio_sum.std():.2f}')
     return data_list
 
 
