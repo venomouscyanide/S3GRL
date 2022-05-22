@@ -265,6 +265,7 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
 
 def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, x, y, directed, A_csc, node_label, rw_kwargs, verbose=False):
+    # TODO: reuse *.num_nodes and .num_edges
     # calculate the % of nodes/edges in original k-hop vs rw induced graph
     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, node_features=x, y=y,
