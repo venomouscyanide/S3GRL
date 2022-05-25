@@ -47,7 +47,8 @@ from models import SAGE, DGCNN, GCN, GIN
 from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split, set_random_seed
+    Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
+
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -572,16 +573,16 @@ class SWEALArgumentParser:
 
 def run_sweal(args, device):
     if args.save_appendix == '':
-        args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S")
+        args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S") + f'_seed{args.seed}'
         if args.m and args.M:
-            args.save_appendix += f'_m{args.m}_M{args.M}_dropedge{args.dropedge}'
+            args.save_appendix += f'_m{args.m}_M{args.M}_dropedge{args.dropedge}_seed{args.seed}'
 
     if args.data_appendix == '':
         if args.m and args.M:
-            args.data_appendix = f'_m{args.m}_M{args.M}_dropedge{args.dropedge}'
+            args.data_appendix = f'_m{args.m}_M{args.M}_dropedge{args.dropedge}_seed{args.seed}'
         else:
-            args.data_appendix = '_h{}_{}_rph{}'.format(
-                args.num_hops, args.node_label, ''.join(str(args.ratio_per_hop).split('.')))
+            args.data_appendix = '_h{}_{}_rph{}_seed{}'.format(
+                args.num_hops, args.node_label, ''.join(str(args.ratio_per_hop).split('.')), args.seed)
             if args.max_nodes_per_hop is not None:
                 args.data_appendix += '_mnph{}'.format(args.max_nodes_per_hop)
         if args.use_valedges_as_input:
@@ -1245,7 +1246,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
-    set_random_seed(args.seed)
+    from torch_geometric import seed_everything
+    seed_everything(args.seed)
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")

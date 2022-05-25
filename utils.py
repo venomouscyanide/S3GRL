@@ -588,15 +588,3 @@ def draw_graph(graph):
     nx.draw(graph, with_labels=True, pos=nx.spring_layout(graph))
     plt.show()  # check if same as in the doc visually
     f.savefig("input_graph.pdf", bbox_inches='tight')
-
-
-def set_random_seed(seed):
-    # set global random seed
-    print(f"Setting global seed of: {seed}")
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
