@@ -15,7 +15,7 @@ import copy as cp
 
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv
-from torch_geometric.profile import profileit
+from torch_geometric.profile import profileit, timeit
 from tqdm import tqdm
 import pdb
 
@@ -36,13 +36,14 @@ import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
 from custom_losses import auc_loss, hinge_auc_loss
+from data_utils import load_splitted_data
 from gae_link_pred import gae_train_helper
 from gae_link_pred_ogbl import gae_train_helper_ogbl
 from models import SAGE, DGCNN, GCN, GIN
 from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR, calc_ratio_helper
+    Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split, set_random_seed
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -598,6 +599,7 @@ def run_sweal(args, device):
         f.write('\n' + cmd_input)
 
     if args.train_mlp:
+        raise Exception("Not recommended. Run baselines instead.")
         # MLP Dataprep + Training flow
         transforms = []
         transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
@@ -632,7 +634,6 @@ def run_sweal(args, device):
                     train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs) * 100
                 )
             else:
-                raise NotImplementedError("Currently broken")
                 accuracy_scores.append(
                     train_mlp_ogbl(train, train_edges, test_edges, device, args.lr, args.dropout, args.epochs,
                                    args.dataset) * 100
@@ -641,6 +642,7 @@ def run_sweal(args, device):
         print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
         exit()
     elif args.train_gae:
+        raise Exception("Not recommended. Run baselines instead.")
         # GAE dataprep + training flow
         transforms = []
         transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
@@ -676,7 +678,6 @@ def run_sweal(args, device):
                                      gae_layer) * 100
                 )
             else:
-                raise NotImplementedError("Currently broken")
                 accuracy_scores.append(
                     gae_train_helper_ogbl(dataset, device, train, train_edges, val_edges, test_edges, args.lr,
                                           args.epochs, gae_layer) * 100
@@ -699,13 +700,35 @@ def run_sweal(args, device):
                                        test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
             data = dataset[0]
             data.edge_index = split_edge['train']['edge'].t()
-        else:
+
+        elif args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
             path = osp.join('dataset', args.dataset)
             dataset = Planetoid(path, args.dataset)
             split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                        test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
             data = dataset[0]
             data.edge_index = split_edge['train']['edge'].t()
+        elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
+            # We consume the dataset split index as well
+            data = load_splitted_data(data_name=args.dataset, data_split_num=args.dataset_split_num,
+                                      test_ratio=args.split_test_ratio, val_ratio=args.split_val_ratio)
+            split_edge = do_seal_edge_split(data)
+
+            # backward compatibility
+            class DummyDataset:
+                def __init__(self, root):
+                    self.root = root
+                    self.num_features = 0
+
+                def __repr__(self):
+                    return args.dataset
+
+            dataset = DummyDataset(root=f'SEALDataset_{args.dataset}')
+
+            data.edge_index = split_edge['train']['edge'].t()
+            print("Finish reading from file")
+        else:
+            raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
 
     if args.dataset_stats:
         print(f'Dataset: {dataset}:')
@@ -1085,7 +1108,7 @@ def run_sweal(args, device):
                             print(to_print, file=f)
 
         if args.profile:
-            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}'
+            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}'
             profile_helper(all_stats, model, train_dataset, stats_suffix)
 
         for key in loggers.keys():
@@ -1111,6 +1134,11 @@ def run_sweal(args, device):
             shutil.rmtree(path)
 
     print("fin.")
+
+
+@timeit()
+def run_sweal_with_run_profiling(args, device):
+    run_sweal(args, device)
 
 
 if __name__ == '__main__':
@@ -1187,7 +1215,7 @@ if __name__ == '__main__':
     parser.add_argument('--neg_ratio', type=int, default=1,
                         help="Compile neg_ratio times the positive samples for compiling neg_samples"
                              "(only for Training data)")
-    parser.add_argument('--profile', action='store_true', help="Run the PyG profiler")
+    parser.add_argument('--profile', action='store_true', help="Run the PyG profiler for each epoch")
     parser.add_argument('--split_val_ratio', type=float, default=0.05)
     parser.add_argument('--split_test_ratio', type=float, default=0.1)
     parser.add_argument('--train_mlp', action='store_true',
@@ -1196,11 +1224,17 @@ if __name__ == '__main__':
     parser.add_argument('--base_gae', type=str, default='', help='Choose base GAE model', choices=['GCN', 'SAGE'])
 
     parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--seed', type=int, default=1)  # we can set this to value in dataset_split_num as well
+    parser.add_argument('--dataset_split_num', type=int, default=1)  # only used with SEAL datasets
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+    set_random_seed(args.seed)
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
-    run_sweal(args, device)
+    if args.profile:
+        run_sweal_with_run_profiling(args, device)
+    else:
+        run_sweal(args, device)

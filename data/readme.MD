@@ -1,0 +1,1 @@
+This data is consumed from the WalkPooling paper GitHub Repo: https://github.com/DaDaCheng/WalkPooling

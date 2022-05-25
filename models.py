@@ -189,7 +189,7 @@ class DGCNN(torch.nn.Module):
 
         dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
         self.dropedge = dropedge
-        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=True)
+        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=False)
 
     def forward(self, num_nodes, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
         edge_index, _ = dropout_adj(edge_index, p=self.dropedge,

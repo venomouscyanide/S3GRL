@@ -4,6 +4,7 @@
 import json
 import sys
 import math
+import os
 from pprint import pprint
 
 from tqdm import tqdm
@@ -369,10 +370,19 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     return data_list
 
 
+def do_seal_edge_split(data):
+    split_edge = {'train': {}, 'valid': {}, 'test': {}}
+    split_edge['train']['edge'] = data.train_pos.t()
+    split_edge['train']['edge_neg'] = data.train_neg.t()
+    split_edge['valid']['edge'] = data.val_pos.t()
+    split_edge['valid']['edge_neg'] = data.val_neg.t()
+    split_edge['test']['edge'] = data.test_pos.t()
+    split_edge['test']['edge_neg'] = data.test_neg.t()
+    return split_edge
+
+
 def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1):
     data = dataset[0]
-    random.seed(234)
-    torch.manual_seed(234)
 
     if not fast_split:
         data = train_test_split_edges(data, val_ratio, test_ratio)
@@ -427,13 +437,11 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100, neg
         else:
             neg_edge = split_edge[split]['edge_neg'].t()
         # subsample for pos_edge
-        np.random.seed(123)
         num_pos = pos_edge.size(1)
         perm = np.random.permutation(num_pos)
         perm = perm[:int(percent / 100 * num_pos)]
         pos_edge = pos_edge[:, perm]
         # subsample for neg_edge
-        np.random.seed(123)
         num_neg = neg_edge.size(1)
         perm = np.random.permutation(num_neg)
         perm = perm[:int(percent / 100 * num_neg)]
@@ -449,7 +457,6 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100, neg
         else:
             target_neg = split_edge[split]['target_node_neg']
         # subsample
-        np.random.seed(123)
         num_source = source.size(0)
         perm = np.random.permutation(num_source)
         perm = perm[:int(percent / 100 * num_source)]
@@ -573,3 +580,15 @@ def draw_graph(graph):
     nx.draw(graph, with_labels=True, pos=nx.spring_layout(graph))
     plt.show()  # check if same as in the doc visually
     f.savefig("input_graph.pdf", bbox_inches='tight')
+
+
+def set_random_seed(seed):
+    # set global random seed
+    print(f"Setting global seed of: {seed}")
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
