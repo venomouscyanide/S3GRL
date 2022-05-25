@@ -716,7 +716,7 @@ def run_sweal(args, device):
             data.edge_index = split_edge['train']['edge'].t()
         elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
             # We consume the dataset split index as well
-            file_name = os.path.join('data', 'link_prediction', args.dataset)
+            file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
             node_id_mapping = read_label(file_name)
             edges = read_edges(file_name, node_id_mapping)
 
