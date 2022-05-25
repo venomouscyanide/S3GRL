@@ -739,7 +739,7 @@ def run_sweal(args, device):
                 def __len__(self):
                     return 1
 
-            dataset = DummyDataset(root=f'SEALDataset_{args.dataset}')
+            dataset = DummyDataset(root=f'dataset/SEALDataset_{args.dataset}')
             print("Finish reading from file")
         else:
             raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
