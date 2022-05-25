@@ -51,6 +51,6 @@ def profile_helper(all_stats, model, train_dataset, stats_suffix):
     print(f"GPU usage: {gpu_usage}")
 
     print("------------------------------------------")
-    with open(f'stats_{stats_suffix}.json', 'w') as stats_file:
+    with open(f'stats/stats_{stats_suffix}.json', 'w') as stats_file:
         json.dump(stats, stats_file)
     print("fin profiling.")
