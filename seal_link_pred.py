@@ -1,6 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from timeit import default_timer
+
 import numpy as np
 import torch
 import shutil
@@ -1149,7 +1151,10 @@ def run_sweal(args, device):
 
 @timeit()
 def run_sweal_with_run_profiling(args, device):
+    start = default_timer()
     run_sweal(args, device)
+    end = default_timer()
+    print(f"Time taken for run: {end - start} seconds")
 
 
 if __name__ == '__main__':
@@ -1236,7 +1241,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--seed', type=int, default=1)  # we can set this to value in dataset_split_num as well
-    parser.add_argument('--dataset_split_num', type=int, default=1)  # only used with SEAL datasets
+    parser.add_argument('--dataset_split_num', type=int, default=1)  # This is maintained for WalkPool Datasets only
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
