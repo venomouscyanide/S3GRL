@@ -1,4 +1,5 @@
 import json
+import os
 
 from torch_geometric.profile import get_stats_summary, get_model_size, count_parameters, get_data_size, \
     get_cpu_memory_from_gc, get_gpu_memory_from_gc
@@ -51,6 +52,7 @@ def profile_helper(all_stats, model, train_dataset, stats_suffix):
     print(f"GPU usage: {gpu_usage}")
 
     print("------------------------------------------")
+    os.makedirs('stats', exist_ok=True)
     with open(f'stats/stats_{stats_suffix}.json', 'w') as stats_file:
         json.dump(stats, stats_file)
     print("fin profiling.")
