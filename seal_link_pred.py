@@ -13,6 +13,8 @@ import os.path as osp
 from shutil import copy
 import copy as cp
 
+import torch_geometric.utils
+from networkx import Graph
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit, timeit
@@ -26,7 +28,7 @@ from torch.nn import BCEWithLogitsLoss
 from torch_sparse import coalesce, SparseTensor
 
 from torch_geometric.datasets import Planetoid, AttributedGraphDataset
-from torch_geometric.data import Dataset, InMemoryDataset
+from torch_geometric.data import Dataset, InMemoryDataset, Data
 from torch_geometric.utils import to_undirected
 from torch_geometric import transforms as T
 
@@ -36,7 +38,7 @@ import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
 from custom_losses import auc_loss, hinge_auc_loss
-from data_utils import load_splitted_data
+from data_utils import load_splitted_data, read_label, read_edges
 from gae_link_pred import gae_train_helper
 from gae_link_pred_ogbl import gae_train_helper_ogbl
 from models import SAGE, DGCNN, GCN, GIN
@@ -133,9 +135,11 @@ class SEALDataset(InMemoryDataset):
             return
 
         if not self.pairwise:
+            print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
+            print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
@@ -710,9 +714,15 @@ def run_sweal(args, device):
             data.edge_index = split_edge['train']['edge'].t()
         elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
             # We consume the dataset split index as well
-            data = load_splitted_data(data_name=args.dataset, data_split_num=args.dataset_split_num,
-                                      test_ratio=args.split_test_ratio, val_ratio=args.split_val_ratio)
-            split_edge = do_seal_edge_split(data)
+            file_name = os.path.join('data', 'link_prediction', args.dataset)
+            node_id_mapping = read_label(file_name)
+            edges = read_edges(file_name, node_id_mapping)
+
+            G = Graph(edges)
+            data = torch_geometric.utils.from_networkx(G)
+            split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
+                                       test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
+            data.edge_index = split_edge['train']['edge'].t()
 
             # backward compatibility
             class DummyDataset:
@@ -723,9 +733,10 @@ def run_sweal(args, device):
                 def __repr__(self):
                     return args.dataset
 
-            dataset = DummyDataset(root=f'SEALDataset_{args.dataset}')
+                def __len__(self):
+                    return 1
 
-            data.edge_index = split_edge['train']['edge'].t()
+            dataset = DummyDataset(root=f'SEALDataset_{args.dataset}')
             print("Finish reading from file")
         else:
             raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')

@@ -1,4 +1,3 @@
-# this is adapted from WalkPooling: https://github.com/DaDaCheng/WalkPooling
 import torch
 import os
 
@@ -8,6 +7,8 @@ from torch_geometric.data import Data
 import numpy as np
 
 
+# floor(), load_splitted_data() and  load_unsplitted_data()
+# are adapted from WalkPooling: https://github.com/DaDaCheng/WalkPooling
 def floor(x):
     return torch.div(x, 1, rounding_mode='trunc')
 
@@ -69,3 +70,24 @@ def load_unsplitted_data(args):
         data.edge_index = to_undirected(data.edge_index)
     data.num_nodes = torch.max(data.edge_index) + 1
     return data
+
+
+# read_edges() and read_label() are adapted from DE: https://github.com/snap-stanford/distance-encoding/
+def read_edges(seal_ds_path, node_id_mapping):
+    edges = []
+    fin_edges = open(os.path.join(seal_ds_path, 'edges.txt'))
+    for line in fin_edges.readlines():
+        node1, node2 = line.strip().split()[:2]
+        edges.append([node_id_mapping[node1], node_id_mapping[node2]])
+    fin_edges.close()
+    return edges
+
+
+def read_label(seal_ds_path):
+    nodes = []
+    with open(os.path.join(seal_ds_path, 'edges.txt')) as ef:
+        for line in ef.readlines():
+            nodes.extend(line.strip().split()[:2])
+    nodes = sorted(list(set(nodes)))
+    node_id_mapping = {old_id: new_id for new_id, old_id in enumerate(nodes)}
+    return node_id_mapping

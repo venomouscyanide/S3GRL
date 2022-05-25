@@ -16,8 +16,7 @@ import torch
 
 from torch_geometric.loader import DataLoader
 from torch_geometric.data import Data
-from torch_geometric.utils import (negative_sampling, add_self_loops,
-                                   train_test_split_edges, to_networkx)
+from torch_geometric.utils import negative_sampling, add_self_loops, train_test_split_edges, to_networkx, subgraph
 import matplotlib.pyplot as plt
 import networkx as nx
 from torch_geometric.utils import to_scipy_sparse_matrix
@@ -96,8 +95,12 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         # Start of core-logic
         rw_set = nodes
-        sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(
-            rw_set, 0, edge_index, relabel_nodes=True)
+        # import torch_geometric
+        # edge_index_new, edge_attr_new = torch_geometric.utils.subgraph(subset=rw_set, edge_index=edge_index,
+        #                                                                relabel_nodes=True)
+
+        sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index, relabel_nodes=True,
+                                                                   num_nodes=data_org.num_nodes)
 
         # adj_saint, _ = sparse_adj.saint_subgraph(rw.view( -1))  # not used.
 
@@ -371,6 +374,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
 
 def do_seal_edge_split(data):
+    # this is for datasets involving the WalkPooling paper
     split_edge = {'train': {}, 'valid': {}, 'test': {}}
     split_edge['train']['edge'] = data.train_pos.t()
     split_edge['train']['edge_neg'] = data.train_neg.t()
@@ -381,8 +385,12 @@ def do_seal_edge_split(data):
     return split_edge
 
 
-def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1):
-    data = dataset[0]
+def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1, data_passed=False):
+    if not data_passed:
+        data = dataset[0]
+    else:
+        # for flow involving SEAL datasets, we pass data in dataset arg directly
+        data = dataset
 
     if not fast_split:
         data = train_test_split_edges(data, val_ratio, test_ratio)
