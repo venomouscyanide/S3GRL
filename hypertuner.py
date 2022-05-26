@@ -10,10 +10,14 @@ from seal_link_pred import SWEALArgumentParser, run_sweal
 
 warnings.filterwarnings(action="ignore")
 
+from torch_geometric import seed_everything
+
+seed_everything(1)
+
 
 class HyperTuningSearchSpace:
-    m = [1, 2, 5, 10]
-    M = [5, 10, 20, 50, 100]
+    m = [1, 2, 5]  # the length of rw sequences
+    M = [2, 5]  # the number of rw sequences
     dropedge = [0.00]
 
 
@@ -21,7 +25,7 @@ class ManualTuner:
     @staticmethod
     def tune(dataset, model, hidden_channels, use_feature, lr,
              runs, use_heuristic, m, M, dropedge, save_appendix, data_appendix, device, train_percent, delete_dataset,
-             epochs, split_val_ratio, split_test_ratio, profile):
+             epochs, split_val_ratio, split_test_ratio, profile, seed):
         sweal_parser = SWEALArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
                                            hidden_channels=hidden_channels, batch_size=32, num_hops=1,
                                            ratio_per_hop=1.0, max_nodes_per_hop=None, node_label='drnl',
@@ -38,7 +42,8 @@ class ManualTuner:
                                            delete_dataset=delete_dataset, pairwise=False, loss_fn='', neg_ratio=1,
                                            profile=profile, split_val_ratio=split_val_ratio,
                                            split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50,
-                                           train_gae=False, base_gae="", dataset_stats=False)
+                                           train_gae=False, base_gae="", dataset_stats=False, seed=seed,
+                                           dataset_split_num=1)
 
         run_sweal(sweal_parser, device)
 
@@ -63,6 +68,7 @@ if __name__ == '__main__':
     parser.add_argument('--split_val_ratio', type=float, default=0.05)
     parser.add_argument('--split_test_ratio', type=float, default=0.1)
     parser.add_argument('--profile', action='store_true')
+    parser.add_argument('--seed', type=int)  # no point in setting here, check start of script
 
     args = parser.parse_args()
     device = f"cuda:{args.cuda_device}" if torch.cuda.is_available() else "cpu"
@@ -82,4 +88,4 @@ if __name__ == '__main__':
                          save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
                          train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
                          split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,
-                         profile=args.profile)
+                         profile=args.profile, seed=args.seed)

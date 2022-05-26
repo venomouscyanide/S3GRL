@@ -504,7 +504,8 @@ class SWEALArgumentParser:
                  train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
-                 profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats):
+                 profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
+                 seed, dataset_split_num):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -568,6 +569,8 @@ class SWEALArgumentParser:
         self.train_gae = train_gae
         self.base_gae = base_gae
         self.dataset_stats = dataset_stats
+        self.seed = seed
+        self.dataset_split_num = dataset_split_num
 
 
 def run_sweal(args, device):
