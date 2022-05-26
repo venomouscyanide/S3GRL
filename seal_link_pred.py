@@ -16,6 +16,7 @@ from shutil import copy
 import copy as cp
 
 import torch_geometric.utils
+from torch_geometric import seed_everything
 from networkx import Graph
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv
@@ -1001,6 +1002,7 @@ def run_sweal(args, device):
     else:
         emb = None
 
+    seed_everything(args.seed)  # reset rng for model weights
     for run in range(args.runs):
         if args.pairwise:
             train_dataset = train_positive_dataset
@@ -1251,7 +1253,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
-    from torch_geometric import seed_everything
 
     seed_everything(args.seed)
 

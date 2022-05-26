@@ -12,8 +12,6 @@ warnings.filterwarnings(action="ignore")
 
 from torch_geometric import seed_everything
 
-seed_everything(1)
-
 
 class HyperTuningSearchSpace:
     m = [1, 2, 5]  # the length of rw sequences
@@ -68,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--split_val_ratio', type=float, default=0.05)
     parser.add_argument('--split_test_ratio', type=float, default=0.1)
     parser.add_argument('--profile', action='store_true')
-    parser.add_argument('--seed', type=int)  # no point in setting here, check start of script
+    parser.add_argument('--seed', type=int)
 
     args = parser.parse_args()
     device = f"cuda:{args.cuda_device}" if torch.cuda.is_available() else "cpu"
@@ -82,6 +80,7 @@ if __name__ == '__main__':
 
     for perm in perms:
         print(f"Running for m:{perm[0]}, M:{perm[1]}, dropedge:{perm[2]}")
+        seed_everything(args.seed)
         ManualTuner.tune(dataset=args.dataset, model=args.model, hidden_channels=args.hidden_channels,
                          lr=args.lr, runs=args.runs, use_feature=args.use_feature,
                          use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
