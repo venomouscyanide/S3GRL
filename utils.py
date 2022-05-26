@@ -7,6 +7,7 @@ import math
 import os
 from pprint import pprint
 
+import torch_geometric.utils
 from tqdm import tqdm
 import random
 import numpy as np
@@ -40,6 +41,7 @@ def neighbors(fringe, A, outgoing=True):
 def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
                    max_nodes_per_hop=None, node_features=None,
                    y=1, directed=False, A_csc=None, rw_kwargs=None):
+    debug = False  # set True manually to debug using matplotlib and gephi
     # Extract the k-hop enclosing subgraph around link (src, dst) from A.
     if not rw_kwargs:
         nodes = [src, dst]
@@ -86,11 +88,14 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         if rw_kwargs.get('unique_nodes'):
             nodes = rw_kwargs.get('unique_nodes')[(src, dst)]
         else:
-            starting_nodes = []
-
-            [starting_nodes.extend([src, dst]) for _ in range(rw_M)]
-            start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
-            rw = sparse_adj.random_walk(start.flatten(), rw_m)
+            row, col, _ = sparse_adj.csr()
+            starting_nodes = torch.tensor([src, dst], dtype=torch.long)
+            start = starting_nodes.repeat(rw_M)
+            rw = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)[0]
+            if debug:
+                from networkx import write_gexf
+                draw_graph(to_networkx(data_org))
+                write_gexf(torch_geometric.utils.to_networkx(data_org), path='gephi.gexf')
             nodes = torch.unique(rw.flatten()).tolist()
 
         # Start of core-logic
@@ -98,13 +103,12 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         # import torch_geometric
         # edge_index_new, edge_attr_new = torch_geometric.utils.subgraph(subset=rw_set, edge_index=edge_index,
         #                                                                relabel_nodes=True)
+        # subgraph api is same as org_k_hop_subgraph
 
         sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index, relabel_nodes=True,
                                                                    num_nodes=data_org.num_nodes)
 
-        # adj_saint, _ = sparse_adj.saint_subgraph(rw.view( -1))  # not used.
-
-        src_index = rw_set.index(src)  # TODO: Maybe opt??
+        src_index = rw_set.index(src)
         dst_index = rw_set.index(dst)
         mapping_list = mapping.tolist()
         src, dst = mapping_list[src_index], mapping_list[dst_index]
@@ -584,7 +588,7 @@ class Logger(object):
 
 def draw_graph(graph):
     # helps draw a graph object and save it as a png file
-    f = plt.figure(1, figsize=(16, 16))
+    f = plt.figure(1, figsize=(48, 48))
     nx.draw(graph, with_labels=True, pos=nx.spring_layout(graph))
     plt.show()  # check if same as in the doc visually
     f.savefig("input_graph.pdf", bbox_inches='tight')
