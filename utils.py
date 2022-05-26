@@ -89,7 +89,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
             nodes = rw_kwargs.get('unique_nodes')[(src, dst)]
         else:
             row, col, _ = sparse_adj.csr()
-            starting_nodes = torch.tensor([src, dst], dtype=torch.long)
+            starting_nodes = torch.tensor([src, dst], dtype=torch.long, device=device)
             start = starting_nodes.repeat(rw_M)
             rw = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)[0]
             if debug:
