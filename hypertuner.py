@@ -1,5 +1,6 @@
 import itertools
 import warnings
+from timeit import default_timer
 
 import torch
 import argparse
@@ -81,6 +82,9 @@ if __name__ == '__main__':
     for perm in perms:
         print(f"Running for m:{perm[0]}, M:{perm[1]}, dropedge:{perm[2]}")
         seed_everything(args.seed)
+
+        start = default_timer()
+        run_sweal(args, device)
         ManualTuner.tune(dataset=args.dataset, model=args.model, hidden_channels=args.hidden_channels,
                          lr=args.lr, runs=args.runs, use_feature=args.use_feature,
                          use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
@@ -88,3 +92,6 @@ if __name__ == '__main__':
                          train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
                          split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,
                          profile=args.profile, seed=args.seed)
+        end = default_timer()
+
+        print(f'Time taken for run with m:{perm[0]}, M:{perm[1]}: {end - start:.2f} seconds')
