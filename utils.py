@@ -78,6 +78,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         return nodes, subgraph, dists, node_features, y
     else:
+        # Start of core-logic for S.C.A.L.E.D.
         rw_m = rw_kwargs['rw_m']
         rw_M = rw_kwargs['rw_M']
         sparse_adj = rw_kwargs['sparse_adj']
@@ -98,7 +99,6 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
                 write_gexf(torch_geometric.utils.to_networkx(data_org), path='gephi.gexf')
             nodes = torch.unique(rw.flatten()).tolist()
 
-        # Start of core-logic
         rw_set = nodes
         # import torch_geometric
         # edge_index_new, edge_attr_new = torch_geometric.utils.subgraph(subset=rw_set, edge_index=edge_index,
@@ -118,24 +118,20 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         sub_edge_index_revised = sub_edge_index[:, mask1 & mask2]
 
         # Calculate node labeling.
-        # original z before removing the link to be predicted
-        # z = py_g_drnl_node_labeling(sub_edge_index, src, dst,
-        #                             num_nodes=sub_nodes.size(0))
         z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
                                             num_nodes=sub_nodes.size(0))
-        # new_mapping = {k: v for k, v in zip(rw_set, list(mapping.detach().numpy()))}
 
         y = torch.tensor([y], dtype=torch.int)
-        # data = Data(x=data_org.x[sub_nodes], z=z, edge_index=sub_edge_index, y=y)
         x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
         data_revised = Data(x=x, z=z_revised,
                             edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
                             num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
-        # end of core-logic
+        # end of core-logic for S.C.A.L.E.D.
         return data_revised
 
 
 def py_g_drnl_node_labeling(edge_index, src, dst, num_nodes=None):
+    # adapted from: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/seal_link_pred.py
     # Double-radius node labeling (DRNL).
     src, dst = (dst, src) if src > dst else (src, dst)
     adj = to_scipy_sparse_matrix(edge_index, num_nodes=num_nodes).tocsr()
@@ -164,8 +160,6 @@ def py_g_drnl_node_labeling(edge_index, src, dst, num_nodes=None):
     z[src] = 1.
     z[dst] = 1.
     z[torch.isnan(z)] = 0.
-
-    # self._max_z = max(int(z.max()), self._max_z) # this is used to one hot encode. Not needed in my case?
 
     return z.to(torch.long)
 
