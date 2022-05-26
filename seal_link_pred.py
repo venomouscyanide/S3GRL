@@ -49,7 +49,6 @@ from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
 
-
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
 warnings.simplefilter('ignore', UserWarning)
@@ -721,8 +720,11 @@ def run_sweal(args, device):
             node_id_mapping = read_label(file_name)
             edges = read_edges(file_name, node_id_mapping)
 
-            G = Graph(edges)
-            data = torch_geometric.utils.from_networkx(G)
+            edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
+            data = Data(edge_index=edges_coo.view(2, -1))
+            data.edge_index = to_undirected(data.edge_index)
+            data.num_nodes = torch.max(data.edge_index) + 1
+
             split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
                                        test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
             data.edge_index = split_edge['train']['edge'].t()
@@ -739,7 +741,7 @@ def run_sweal(args, device):
                 def __len__(self):
                     return 1
 
-            dataset = DummyDataset(root=f'dataset/SEALDataset_{args.dataset}')
+            dataset = DummyDataset(root=f'dataset/{args.dataset}/SEALDataset_{args.dataset}')
             print("Finish reading from file")
         else:
             raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
@@ -1247,6 +1249,7 @@ if __name__ == '__main__':
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
     from torch_geometric import seed_everything
+
     seed_everything(args.seed)
 
     if args.profile and not torch.cuda.is_available():
