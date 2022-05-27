@@ -24,7 +24,7 @@ from torch_geometric.profile import profileit, timeit
 from tqdm import tqdm
 import pdb
 
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, average_precision_score
 import scipy.sparse as ssp
 from torch.nn import BCEWithLogitsLoss
 
@@ -405,6 +405,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
 
 @torch.no_grad()
 def test_multiple_models(models, val_loader, device, emb, test_loader, evaluator, args):
+    raise NotImplementedError("This is untested for SCALED")
     for m in models:
         m.eval()
 
@@ -490,10 +491,17 @@ def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evalu
 
 
 def evaluate_auc(val_pred, val_true, test_pred, test_true):
+    # this also evaluates AP, but the function is not renamed as such
     valid_auc = roc_auc_score(val_true, val_pred)
     test_auc = roc_auc_score(test_true, test_pred)
+
+    valid_ap = average_precision_score(val_true, val_pred)
+    test_ap = average_precision_score(test_true, test_pred)
+
     results = {}
+
     results['AUC'] = (valid_auc, test_auc)
+    results['AP'] = (valid_ap, test_ap)
 
     return results
 
@@ -795,6 +803,7 @@ def run_sweal(args, device):
     elif args.eval_metric == 'auc':
         loggers = {
             'AUC': Logger(args.runs, args),
+            'AP': Logger(args.runs, args)
         }
 
     if args.use_heuristic:

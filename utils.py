@@ -342,7 +342,7 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
     pprint(stats_dict, sort_dicts=False)
     print("--------------------------------------------------------------")
 
-    with open(f'preprocessing_stats_{dataset_name}_{split}.json', 'w') as stats_file:
+    with open(f'calc_ratio/preprocessing_stats_{dataset_name}_{split}.json', 'w') as stats_file:
         json.dump(stats_dict, stats_file)
 
 
