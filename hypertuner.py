@@ -84,7 +84,6 @@ if __name__ == '__main__':
         seed_everything(args.seed)
 
         start = default_timer()
-        run_sweal(args, device)
         ManualTuner.tune(dataset=args.dataset, model=args.model, hidden_channels=args.hidden_channels,
                          lr=args.lr, runs=args.runs, use_feature=args.use_feature,
                          use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
