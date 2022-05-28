@@ -20,7 +20,6 @@ from torch_geometric.data import Data
 from torch_geometric.utils import negative_sampling, add_self_loops, train_test_split_edges, to_networkx, subgraph
 import matplotlib.pyplot as plt
 import networkx as nx
-from torch_geometric.utils import to_scipy_sparse_matrix
 from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 
 
@@ -569,7 +568,7 @@ class Logger(object):
 
             best_result = torch.tensor(best_results)
 
-            print(f'\n\nAll runs:', file=f)
+            print(f'All runs:', file=f)
             r = best_result[:, 0]
             print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}', file=f)
             r = best_result[:, 1]
@@ -579,7 +578,6 @@ class Logger(object):
                 # logger won't have epochs while running heuristic models
                 r_revised = torch.reshape(result, (self.epochs * self.runs, 2))[:, 1]
                 print(f'Average Test: {r_revised.mean():.2f} ± {r_revised.std():.2f}', file=f)
-            print("\n\n")
 
 
 def draw_graph(graph):

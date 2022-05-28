@@ -32,7 +32,7 @@ from torch_sparse import coalesce, SparseTensor
 
 from torch_geometric.datasets import Planetoid, AttributedGraphDataset
 from torch_geometric.data import Dataset, InMemoryDataset, Data
-from torch_geometric.utils import to_undirected
+from torch_geometric.utils import to_undirected, from_scipy_sparse_matrix
 from torch_geometric import transforms as T
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
