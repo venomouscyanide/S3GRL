@@ -74,7 +74,7 @@ def train(model, optimizer, train_data, criterion, split_edge, dropout, device):
         num_neg_samples=pos_edge.size(1), method='sparse')
 
     edge_label_index = torch.cat(
-        [pos_edge, neg_edge_index],
+        [pos_edge.to(device), neg_edge_index.to(device)],
         dim=-1,
     ).to(device)
     edge_label = torch.cat([
@@ -94,7 +94,7 @@ def test(eval_edge_index, eval_neg_edge_index, model, data, dropout, device):
     model.eval()
     z = model.encode(data.x, data.edge_index, dropout)
 
-    eval_concat_edge_index = torch.cat([eval_edge_index, eval_neg_edge_index], dim=-1).to(device)
+    eval_concat_edge_index = torch.cat([eval_edge_index.to(device), eval_neg_edge_index.to(device)], dim=-1).to(device)
     eval_labels = torch.cat([
         torch.ones(eval_edge_index.size(1)),
         torch.zeros(eval_neg_edge_index.size(1))
