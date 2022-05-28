@@ -20,6 +20,7 @@ from torch_geometric.data import Data
 from torch_geometric.utils import negative_sampling, add_self_loops, train_test_split_edges, to_networkx, subgraph
 import matplotlib.pyplot as plt
 import networkx as nx
+from torch_geometric.utils import to_scipy_sparse_matrix
 from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 
 
