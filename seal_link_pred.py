@@ -40,6 +40,7 @@ from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
+from baselines.gnn_link_pred import train_gnn
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import load_splitted_data, read_label, read_edges
 from gae_link_pred import gae_train_helper
@@ -616,147 +617,58 @@ def run_sweal(args, device):
     with open(log_file, 'a') as f:
         f.write('\n' + cmd_input)
 
-    if args.train_mlp:
-        raise Exception("Not recommended. Run baselines instead.")
-        # MLP Dataprep + Training flow
-        transforms = []
-        transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
-                                            neg_sampling_ratio=1.0,
-                                            num_test=args.split_test_ratio,
-                                            is_undirected=True,
-                                            add_negative_train_samples=False, split_labels=False))
-        transform = T.Compose(transforms)
+    # S[W]EAL Dataset prep + Training Flow
+    if args.dataset.startswith('ogbl'):
+        dataset = PygLinkPropPredDataset(name=args.dataset)
+        split_edge = dataset.get_edge_split()
+        data = dataset[0]
+    elif args.dataset.startswith('attributed'):
+        dataset_name = args.dataset.split('-')[-1]
+        path = osp.join('dataset', dataset_name)
+        dataset = AttributedGraphDataset(path, dataset_name)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
 
-        if args.dataset.startswith('ogbl'):
-            device = 'cpu'  # non batched, hence will not fit into GPU
-            dataset = PygLinkPropPredDataset(name=args.dataset)
-            split_edge = dataset.get_edge_split()
-            train_edges, _, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
-            train = dataset[0]
+    elif args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
+        path = osp.join('dataset', args.dataset)
+        dataset = Planetoid(path, args.dataset)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
+    elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
+        # We consume the dataset split index as well
+        file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
+        node_id_mapping = read_label(file_name)
+        edges = read_edges(file_name, node_id_mapping)
 
-        elif args.dataset.startswith('attributed'):
-            dataset_name = args.dataset.split('-')[-1]
-            path = osp.join('dataset', dataset_name)
-            dataset = AttributedGraphDataset(path, dataset_name, transform=transform)
-            train, _, test_data = dataset[0]
-        else:
-            path = osp.join('dataset', args.dataset)
-            dataset = Planetoid(path, args.dataset, transform=transform)
-            train, _, test_data = dataset[0]
+        edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
+        data = Data(edge_index=edges_coo.view(2, -1))
+        data.edge_index = to_undirected(data.edge_index)
+        data.num_nodes = torch.max(data.edge_index) + 1
 
-        accuracy_scores = []
-        for run in range(args.runs):
-            print(f"Run {run + 1} of {args.runs}")
-            if not args.dataset.startswith('ogbl'):
-                accuracy_scores.append(
-                    train_mlp(train, test_data, device, args.lr, args.dropout, args.epochs) * 100
-                )
-            else:
-                accuracy_scores.append(
-                    train_mlp_ogbl(train, train_edges, test_edges, device, args.lr, args.dropout, args.epochs,
-                                   args.dataset) * 100
-                )
-        accuracy_scores = np.array(accuracy_scores)
-        print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
-        exit()
-    elif args.train_gae:
-        raise Exception("Not recommended. Run baselines instead.")
-        # GAE dataprep + training flow
-        transforms = []
-        transforms.append(T.RandomLinkSplit(num_val=args.split_val_ratio,
-                                            neg_sampling_ratio=1.0,
-                                            num_test=args.split_test_ratio,
-                                            is_undirected=True,
-                                            add_negative_train_samples=False, split_labels=False))
-        transform = T.Compose(transforms)
+        split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
+        data.edge_index = split_edge['train']['edge'].t()
 
-        if args.dataset.startswith('ogbl'):
-            dataset = PygLinkPropPredDataset(name=args.dataset)
-            split_edge = dataset.get_edge_split()
-            train_edges, val_edges, test_edges = split_edge["train"], split_edge["valid"], split_edge["test"]
-            train = dataset[0]
+        # backward compatibility
+        class DummyDataset:
+            def __init__(self, root):
+                self.root = root
+                self.num_features = 0
 
-        elif args.dataset.startswith('attributed'):
-            dataset_name = args.dataset.split('-')[-1]
-            path = osp.join('dataset', dataset_name)
-            dataset = AttributedGraphDataset(path, dataset_name, transform=transform)
-            train_data, val_data, test_data = dataset[0]
-        else:
-            path = osp.join('dataset', args.dataset)
-            dataset = Planetoid(path, args.dataset, transform=transform)
-            train_data, val_data, test_data = dataset[0]
+            def __repr__(self):
+                return args.dataset
 
-        gae_layer = SAGEConv if args.base_gae == 'SAGE' else GCNConv
-        accuracy_scores = []
-        for run in range(args.runs):
-            print(f"Run {run + 1} of {args.runs}")
-            if not args.dataset.startswith('ogbl'):
-                accuracy_scores.append(
-                    gae_train_helper(dataset, device, train_data, val_data, test_data, args.lr, args.epochs,
-                                     gae_layer) * 100
-                )
-            else:
-                accuracy_scores.append(
-                    gae_train_helper_ogbl(dataset, device, train, train_edges, val_edges, test_edges, args.lr,
-                                          args.epochs, gae_layer) * 100
-                )
-        accuracy_scores = np.array(accuracy_scores)
+            def __len__(self):
+                return 1
 
-        print(f'Average Test: {accuracy_scores.mean():.2f} ± {accuracy_scores.std():.2f}')
-        exit()
+        dataset = DummyDataset(root=f'dataset/{args.dataset}/SEALDataset_{args.dataset}')
+        print("Finish reading from file")
     else:
-        # S[W]EAL Dataset prep + Training Flow
-        if args.dataset.startswith('ogbl'):
-            dataset = PygLinkPropPredDataset(name=args.dataset)
-            split_edge = dataset.get_edge_split()
-            data = dataset[0]
-        elif args.dataset.startswith('attributed'):
-            dataset_name = args.dataset.split('-')[-1]
-            path = osp.join('dataset', dataset_name)
-            dataset = AttributedGraphDataset(path, dataset_name)
-            split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
-                                       test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
-            data = dataset[0]
-            data.edge_index = split_edge['train']['edge'].t()
-
-        elif args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
-            path = osp.join('dataset', args.dataset)
-            dataset = Planetoid(path, args.dataset)
-            split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
-                                       test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
-            data = dataset[0]
-            data.edge_index = split_edge['train']['edge'].t()
-        elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
-            # We consume the dataset split index as well
-            file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
-            node_id_mapping = read_label(file_name)
-            edges = read_edges(file_name, node_id_mapping)
-
-            edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
-            data = Data(edge_index=edges_coo.view(2, -1))
-            data.edge_index = to_undirected(data.edge_index)
-            data.num_nodes = torch.max(data.edge_index) + 1
-
-            split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
-                                       test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
-            data.edge_index = split_edge['train']['edge'].t()
-
-            # backward compatibility
-            class DummyDataset:
-                def __init__(self, root):
-                    self.root = root
-                    self.num_features = 0
-
-                def __repr__(self):
-                    return args.dataset
-
-                def __len__(self):
-                    return 1
-
-            dataset = DummyDataset(root=f'dataset/{args.dataset}/SEALDataset_{args.dataset}')
-            print("Finish reading from file")
-        else:
-            raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
+        raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
 
     if args.dataset_stats:
         print(f'Dataset: {dataset}:')
@@ -866,64 +778,65 @@ def run_sweal(args, device):
     if args.calc_ratio:
         rw_kwargs.update({'calc_ratio': True})
 
-    print("Setting up Train data")
-    dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
-    if not args.pairwise:
-        train_dataset = eval(dataset_class)(
-            path,
-            data,
-            split_edge,
-            num_hops=args.num_hops,
-            percent=args.train_percent,
-            split='train',
-            use_coalesce=use_coalesce,
-            node_label=args.node_label,
-            ratio_per_hop=args.ratio_per_hop,
-            max_nodes_per_hop=args.max_nodes_per_hop,
-            directed=directed,
-            rw_kwargs=rw_kwargs,
-            device=device,
-            neg_ratio=args.neg_ratio,
-        )
-    else:
-        pos_path = f'{path}_pos_edges'
-        train_positive_dataset = eval(dataset_class)(
-            pos_path,
-            data,
-            split_edge,
-            num_hops=args.num_hops,
-            percent=args.train_percent,
-            split='train',
-            use_coalesce=use_coalesce,
-            node_label=args.node_label,
-            ratio_per_hop=args.ratio_per_hop,
-            max_nodes_per_hop=args.max_nodes_per_hop,
-            directed=directed,
-            rw_kwargs=rw_kwargs,
-            device=device,
-            pairwise=args.pairwise,
-            pos_pairwise=True,
-            neg_ratio=args.neg_ratio,
-        )
-        neg_path = f'{path}_neg_edges'
-        train_negative_dataset = eval(dataset_class)(
-            neg_path,
-            data,
-            split_edge,
-            num_hops=args.num_hops,
-            percent=args.train_percent,
-            split='train',
-            use_coalesce=use_coalesce,
-            node_label=args.node_label,
-            ratio_per_hop=args.ratio_per_hop,
-            max_nodes_per_hop=args.max_nodes_per_hop,
-            directed=directed,
-            rw_kwargs=rw_kwargs,
-            device=device,
-            pairwise=args.pairwise,
-            pos_pairwise=False,
-            neg_ratio=args.neg_ratio,
-        )
+    if not args.train_gae:
+        print("Setting up Train data")
+        dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
+        if not args.pairwise:
+            train_dataset = eval(dataset_class)(
+                path,
+                data,
+                split_edge,
+                num_hops=args.num_hops,
+                percent=args.train_percent,
+                split='train',
+                use_coalesce=use_coalesce,
+                node_label=args.node_label,
+                ratio_per_hop=args.ratio_per_hop,
+                max_nodes_per_hop=args.max_nodes_per_hop,
+                directed=directed,
+                rw_kwargs=rw_kwargs,
+                device=device,
+                neg_ratio=args.neg_ratio,
+            )
+        else:
+            pos_path = f'{path}_pos_edges'
+            train_positive_dataset = eval(dataset_class)(
+                pos_path,
+                data,
+                split_edge,
+                num_hops=args.num_hops,
+                percent=args.train_percent,
+                split='train',
+                use_coalesce=use_coalesce,
+                node_label=args.node_label,
+                ratio_per_hop=args.ratio_per_hop,
+                max_nodes_per_hop=args.max_nodes_per_hop,
+                directed=directed,
+                rw_kwargs=rw_kwargs,
+                device=device,
+                pairwise=args.pairwise,
+                pos_pairwise=True,
+                neg_ratio=args.neg_ratio,
+            )
+            neg_path = f'{path}_neg_edges'
+            train_negative_dataset = eval(dataset_class)(
+                neg_path,
+                data,
+                split_edge,
+                num_hops=args.num_hops,
+                percent=args.train_percent,
+                split='train',
+                use_coalesce=use_coalesce,
+                node_label=args.node_label,
+                ratio_per_hop=args.ratio_per_hop,
+                max_nodes_per_hop=args.max_nodes_per_hop,
+                directed=directed,
+                rw_kwargs=rw_kwargs,
+                device=device,
+                pairwise=args.pairwise,
+                pos_pairwise=False,
+                neg_ratio=args.neg_ratio,
+            )
     viz = False
     if viz:  # visualize some graphs
         import networkx as nx
@@ -947,40 +860,41 @@ def run_sweal(args, device):
             f.savefig('tmp_vis.png')
             pdb.set_trace()
 
-    print("Setting up Val data")
-    dataset_class = 'SEALDynamicDataset' if args.dynamic_val else 'SEALDataset'
-    val_dataset = eval(dataset_class)(
-        path,
-        data,
-        split_edge,
-        num_hops=args.num_hops,
-        percent=args.val_percent,
-        split='valid',
-        use_coalesce=use_coalesce,
-        node_label=args.node_label,
-        ratio_per_hop=args.ratio_per_hop,
-        max_nodes_per_hop=args.max_nodes_per_hop,
-        directed=directed,
-        rw_kwargs=rw_kwargs,
-        device=device
-    )
-    print("Setting up Test data")
-    dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
-    test_dataset = eval(dataset_class)(
-        path,
-        data,
-        split_edge,
-        num_hops=args.num_hops,
-        percent=args.test_percent,
-        split='test',
-        use_coalesce=use_coalesce,
-        node_label=args.node_label,
-        ratio_per_hop=args.ratio_per_hop,
-        max_nodes_per_hop=args.max_nodes_per_hop,
-        directed=directed,
-        rw_kwargs=rw_kwargs,
-        device=device
-    )
+    if not args.train_gae:
+        print("Setting up Val data")
+        dataset_class = 'SEALDynamicDataset' if args.dynamic_val else 'SEALDataset'
+        val_dataset = eval(dataset_class)(
+            path,
+            data,
+            split_edge,
+            num_hops=args.num_hops,
+            percent=args.val_percent,
+            split='valid',
+            use_coalesce=use_coalesce,
+            node_label=args.node_label,
+            ratio_per_hop=args.ratio_per_hop,
+            max_nodes_per_hop=args.max_nodes_per_hop,
+            directed=directed,
+            rw_kwargs=rw_kwargs,
+            device=device
+        )
+        print("Setting up Test data")
+        dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
+        test_dataset = eval(dataset_class)(
+            path,
+            data,
+            split_edge,
+            num_hops=args.num_hops,
+            percent=args.test_percent,
+            split='test',
+            use_coalesce=use_coalesce,
+            node_label=args.node_label,
+            ratio_per_hop=args.ratio_per_hop,
+            max_nodes_per_hop=args.max_nodes_per_hop,
+            directed=directed,
+            rw_kwargs=rw_kwargs,
+            device=device
+        )
 
     if args.calc_ratio:
         print("Finished calculating ratio of datasets.")
@@ -988,19 +902,20 @@ def run_sweal(args, device):
 
     max_z = 1000  # set a large max_z so that every z has embeddings to look up
 
-    if args.pairwise:
-        train_pos_loader = DataLoader(train_positive_dataset, batch_size=args.batch_size,
+    if not args.train_gae:
+        if args.pairwise:
+            train_pos_loader = DataLoader(train_positive_dataset, batch_size=args.batch_size,
+                                          shuffle=True, num_workers=args.num_workers)
+            train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size * args.neg_ratio,
+                                          shuffle=True, num_workers=args.num_workers)
+        else:
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                       shuffle=True, num_workers=args.num_workers)
-        train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size * args.neg_ratio,
-                                      shuffle=True, num_workers=args.num_workers)
-    else:
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                  shuffle=True, num_workers=args.num_workers)
 
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
-                            num_workers=args.num_workers)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size,
-                             num_workers=args.num_workers)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
+                                num_workers=args.num_workers)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size,
+                                 num_workers=args.num_workers)
 
     if args.train_node_embedding:
         emb = torch.nn.Embedding(data.num_nodes, args.hidden_channels).to(device)
@@ -1015,6 +930,9 @@ def run_sweal(args, device):
     for run in range(args.runs):
         if args.pairwise:
             train_dataset = train_positive_dataset
+        if args.train_gae:
+            train_gnn(device, args)
+            exit()
         if args.model == 'DGCNN':
             model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k,
                           train_dataset, args.dynamic_train, use_feature=args.use_feature,
