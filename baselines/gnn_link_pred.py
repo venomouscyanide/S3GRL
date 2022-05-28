@@ -126,7 +126,8 @@ def _dataset_creator(args, one_hot_encode):
         one_hot = OneHotDegree(max_degree=1024)
         data = one_hot(data)
     else:
-        data.x = torch.ones(size=(data.num_nodes, 128))
+        # if no features, we simply set x to be identity matrix as seen in GAE paper
+        data.x = torch.eye(data.num_nodes)
 
     val_data = split_edge['valid']['edge'].t()
     val_neg = split_edge['valid']['edge_neg'].t()
@@ -137,7 +138,7 @@ def _dataset_creator(args, one_hot_encode):
     return data, split_edge, val_data, val_neg, test_data, test_neg
 
 
-def train_gnn(device, args, one_hot_encode=True):
+def train_gnn(device, args, one_hot_encode=False):
     log_file = os.path.join(args.res_dir, 'log.txt')
 
     loggers = {
