@@ -62,7 +62,7 @@ class Net(torch.nn.Module):
             conv.reset_parameters()
 
 
-def train(model, optimizer, train_data, criterion, split_edge, dropout):
+def train(model, optimizer, train_data, criterion, split_edge, dropout, device):
     model.train()
     optimizer.zero_grad()
     z = model.encode(train_data.x, train_data.edge_index, dropout)
@@ -76,11 +76,11 @@ def train(model, optimizer, train_data, criterion, split_edge, dropout):
     edge_label_index = torch.cat(
         [pos_edge, neg_edge_index],
         dim=-1,
-    )
+    ).to(device)
     edge_label = torch.cat([
         torch.ones(pos_edge.size(1)),
         torch.zeros(neg_edge_index.size(1))
-    ], dim=0)
+    ], dim=0).to(device)
 
     out = model.decode(z, edge_label_index).view(-1)
     loss = criterion(out, edge_label)
@@ -90,15 +90,15 @@ def train(model, optimizer, train_data, criterion, split_edge, dropout):
 
 
 @torch.no_grad()
-def test(eval_edge_index, eval_neg_edge_index, model, data, dropout):
+def test(eval_edge_index, eval_neg_edge_index, model, data, dropout, device):
     model.eval()
     z = model.encode(data.x, data.edge_index, dropout)
 
-    eval_concat_edge_index = torch.cat([eval_edge_index, eval_neg_edge_index], dim=-1)
+    eval_concat_edge_index = torch.cat([eval_edge_index, eval_neg_edge_index], dim=-1).to(device)
     eval_labels = torch.cat([
         torch.ones(eval_edge_index.size(1)),
         torch.zeros(eval_neg_edge_index.size(1))
-    ], dim=0)
+    ], dim=0).to(device)
 
     out = model.decode(z, eval_concat_edge_index).view(-1).sigmoid()
 
@@ -149,17 +149,18 @@ def train_gnn(device, args, one_hot_encode=True):
     for run in range(args.runs):
         seed_everything(run * args.seed)
         data, split_edge, val_data, val_neg, test_data, test_neg = _dataset_creator(args, one_hot_encode)
+        data.to(device)
 
         model = Net(data.x.size(-1), args.hidden_channels, args.hidden_channels, layer=args.model).to(device)
         model.reset_parameters()
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
         for epoch in range(1, 1 + args.epochs):
-            loss = train(model, optimizer, data, criterion, split_edge, args.dropout)
+            loss = train(model, optimizer, data, criterion, split_edge, args.dropout, device)
 
             if epoch % args.eval_steps == 0:
-                val_ap, val_auc = test(val_data, val_neg, model, data, args.dropout)
-                test_ap, test_auc = test(test_data, test_neg, model, data, args.dropout)
+                val_ap, val_auc = test(val_data, val_neg, model, data, args.dropout, device)
+                test_ap, test_auc = test(test_data, test_neg, model, data, args.dropout, device)
 
                 results = {}
 
