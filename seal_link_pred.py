@@ -926,8 +926,10 @@ def run_sweal(args, device):
     else:
         emb = None
 
-    seed_everything(args.seed)  # reset rng for model weights
     for run in range(args.runs):
+        new_seed = run * args.seed
+        print(f"Resetting seed to {new_seed} for run {run}")
+        seed_everything(new_seed)  # reset rng for model weights
         if args.pairwise:
             train_dataset = train_positive_dataset
         if args.train_gae:
