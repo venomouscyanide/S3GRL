@@ -569,15 +569,17 @@ class Logger(object):
 
             best_result = torch.tensor(best_results)
 
-            print(f'All runs:', file=f)
+            print(f'\n\nAll runs:', file=f)
             r = best_result[:, 0]
             print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}', file=f)
             r = best_result[:, 1]
             print(f'Highest Test: {r.mean():.2f} ± {r.std():.2f}', file=f)
+            print(f'\n(Precision of 5)Highest Test: {r.mean():.5f} ± {r.std():.5f}\n', file=f)
             if hasattr(self, 'epochs'):
                 # logger won't have epochs while running heuristic models
                 r_revised = torch.reshape(result, (self.epochs * self.runs, 2))[:, 1]
                 print(f'Average Test: {r_revised.mean():.2f} ± {r_revised.std():.2f}', file=f)
+            print("\n\n")
 
 
 def draw_graph(graph):
