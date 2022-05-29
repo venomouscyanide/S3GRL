@@ -144,7 +144,7 @@ def train_gnn(device, args, one_hot_encode=False):
     criterion = torch.nn.BCEWithLogitsLoss()
 
     for run in range(args.runs):
-        seed_everything(run * args.seed)
+        seed_everything(args.seed)
         data, split_edge, val_data, val_neg, test_data, test_neg = _dataset_creator(args, one_hot_encode)
         data.to(device)
 
