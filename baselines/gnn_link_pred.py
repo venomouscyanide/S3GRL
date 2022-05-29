@@ -31,16 +31,12 @@ class Net(torch.nn.Module):
                 ReLU(),
                 Linear(hidden_channels, hidden_channels),
                 ReLU(),
-                BatchNorm1d(hidden_channels),
-
             ), train_eps=False)
             self.conv2 = GINConv(Sequential(
                 Linear(hidden_channels, hidden_channels),
                 ReLU(),
                 Linear(hidden_channels, hidden_channels),
                 ReLU(),
-                BatchNorm1d(hidden_channels),
-
             ), train_eps=False)
         else:
             raise NotImplementedError(f"Layer {layer} not supported")
