@@ -696,8 +696,8 @@ def run_sweal(args, device):
             print(f'Number of features: {dataset.num_features}')
             print(f'Number of nodes: {data.num_nodes}')
             print(f'Number of edges: {G.number_of_edges()}')
-            degrees = [x[1] for x in G.degree]
             print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
+            print(f'Average clustering coeffiecient: {nx.average_clustering(G)}')
             print(f'Is undirected: {data.is_undirected()}')
             exit()
 
