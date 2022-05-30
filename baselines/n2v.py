@@ -97,7 +97,7 @@ def link_examples_to_features(link_examples, model, hidden_channels):
 
 def get_link_emb(src, dst, model, hidden_channels):
     had = model(src) * model(dst)
-    return had.reshape(hidden_channels).detach().numpy()
+    return had.reshape(hidden_channels).cpu().numpy()
 
 
 def link_prediction_classifier():
