@@ -4,6 +4,7 @@
 from timeit import default_timer
 
 import numpy as np
+import networkx as nx
 import torch
 import shutil
 
@@ -638,12 +639,17 @@ def run_sweal(args, device):
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
         data.edge_index = split_edge['train']['edge'].t()
+        import networkx as nx
+        G = nx.Graph()
+        G.add_edges_from(data.edge_index.T.detach().numpy())
     elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
         # We consume the dataset split index as well
         file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
         node_id_mapping = read_label(file_name)
         edges = read_edges(file_name, node_id_mapping)
 
+        import networkx as nx
+        G = nx.Graph(edges)
         edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
         data = Data(edge_index=edges_coo.view(2, -1))
         data.edge_index = to_undirected(data.edge_index)
@@ -671,15 +677,29 @@ def run_sweal(args, device):
         raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
 
     if args.dataset_stats:
-        print(f'Dataset: {dataset}:')
-        print('======================')
-        print(f'Number of graphs: {len(dataset)}')
-        print(f'Number of features: {dataset.num_features}')
-        print(f'Number of nodes: {data.num_nodes}')
-        print(f'Number of edges: {data.num_edges}')
-        print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
-        print(f'Is undirected: {data.is_undirected()}')
-        exit()
+        if args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
+            print(f'Dataset: {dataset}:')
+            print('======================')
+            print(f'Number of graphs: {len(dataset)}')
+            print(f'Number of features: {dataset.num_features}')
+            print(f'Number of nodes: {G.number_of_nodes()}')
+            print(f'Number of edges: {G.number_of_edges()}')
+            degrees = [x[1] for x in G.degree]
+            print(f'Average node degree: {sum(degrees) / len(G.nodes):.2f}')
+            print(f'Average clustering coeffiecient: {nx.average_clustering(G)}')
+            print(f'Is undirected: {data.is_undirected()}')
+            exit()
+        else:
+            print(f'Dataset: {dataset}:')
+            print('======================')
+            print(f'Number of graphs: {len(dataset)}')
+            print(f'Number of features: {dataset.num_features}')
+            print(f'Number of nodes: {data.num_nodes}')
+            print(f'Number of edges: {G.number_of_edges()}')
+            degrees = [x[1] for x in G.degree]
+            print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
+            print(f'Is undirected: {data.is_undirected()}')
+            exit()
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
