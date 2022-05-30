@@ -42,6 +42,7 @@ import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
 from baselines.gnn_link_pred import train_gnn
+from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import load_splitted_data, read_label, read_edges
 from gae_link_pred import gae_train_helper
@@ -516,7 +517,7 @@ class SWEALArgumentParser:
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
-                 seed, dataset_split_num):
+                 seed, dataset_split_num, train_n2v):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -582,6 +583,7 @@ class SWEALArgumentParser:
         self.dataset_stats = dataset_stats
         self.seed = seed
         self.dataset_split_num = dataset_split_num
+        self.train_n2v = train_n2v
 
 
 def run_sweal(args, device):
@@ -953,6 +955,10 @@ def run_sweal(args, device):
         if args.train_gae:
             train_gnn(device, args)
             exit()
+        if args.train_n2v:
+            run_n2v(device, data, split_edge, args.epochs, args.lr, args.hidden_channels, args.neg_ratio,
+                    args.batch_size, args.num_workers, args)
+            exit()
         if args.model == 'DGCNN':
             model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k,
                           train_dataset, args.dynamic_train, use_feature=args.use_feature,
@@ -1197,6 +1203,9 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--seed', type=int, default=1)  # we can set this to value in dataset_split_num as well
     parser.add_argument('--dataset_split_num', type=int, default=1)  # This is maintained for WalkPool Datasets only
+
+    parser.add_argument('--train_n2v', action='store_true', help="Train node2vec on the dataset")
+
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')

@@ -9,3 +9,4 @@ pip install networkx
 pip install pytorch_memlab
 pip install class_resolver
 pip install fast-pagerank
+pip install sklearn
