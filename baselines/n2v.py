@@ -82,6 +82,7 @@ def run_n2v(device, data, split_edge, epochs, lr, hidden_channels, neg_ratio, ba
 
 @torch.no_grad()
 def get_auc(edges, labels, model, hidden_channels):
+    labels = labels.cpu().numpy()
     clf = link_prediction_classifier()
     link_features = link_examples_to_features(edges, model, hidden_channels)
     clf.fit(link_features, labels)
