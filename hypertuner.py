@@ -57,6 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float)
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--runs', type=int)
+    parser.add_argument('--hyper_runs', type=int)
     parser.add_argument('--use_heuristic', action='store_true')
     parser.add_argument('--delete_dataset', action='store_true',
                         help="delete existing datasets folder before running new command")
@@ -80,17 +81,19 @@ if __name__ == '__main__':
     perms = tqdm(permutations, ncols=140)
 
     for perm in perms:
-        print(f"Running for m:{perm[0]}, M:{perm[1]}, dropedge:{perm[2]}")
-        seed_everything(args.seed)
+        for hyper_run in range(args.hyper_runs):
+            seed_set = hyper_run + args.seed
+            seed_everything(seed_set)  # goes like 1, 2, .. 5
+            print(f"Running for hyper_run {hyper_run} m:{perm[0]}, M:{perm[1]}, dropedge:{perm[2]} seed: {seed_set}")
 
-        start = default_timer()
-        ManualTuner.tune(dataset=args.dataset, model=args.model, hidden_channels=args.hidden_channels,
-                         lr=args.lr, runs=args.runs, use_feature=args.use_feature,
-                         use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
-                         save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
-                         train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
-                         split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,
-                         profile=args.profile, seed=args.seed)
-        end = default_timer()
+            start = default_timer()
+            ManualTuner.tune(dataset=args.dataset, model=args.model, hidden_channels=args.hidden_channels,
+                             lr=args.lr, runs=args.runs, use_feature=args.use_feature,
+                             use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
+                             save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
+                             train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
+                             split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,
+                             profile=args.profile, seed=args.seed)
+            end = default_timer()
 
-        print(f'Time taken for run with m:{perm[0]}, M:{perm[1]}: {end - start:.2f} seconds')
+            print(f'Time taken for hyper_run {hyper_run} with m:{perm[0]}, M:{perm[1]}: {end - start:.2f} seconds')
