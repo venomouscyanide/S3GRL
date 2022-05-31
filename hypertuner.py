@@ -93,7 +93,7 @@ if __name__ == '__main__':
                              save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
                              train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
                              split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,
-                             profile=args.profile, seed=args.seed)
+                             profile=args.profile, seed=seed_set)
             end = default_timer()
 
             print(f'Time taken for hyper_run {hyper_run} with m:{perm[0]}, M:{perm[1]}: {end - start:.2f} seconds')
