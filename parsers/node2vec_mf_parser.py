@@ -3,7 +3,7 @@ import json
 
 import numpy as np
 
-node2vec_dict = \
+node2vec_mf_dict = \
     {
         'USAir':
             {
@@ -47,7 +47,7 @@ node2vec_dict = \
             }
     }
 
-def parse_n2vec(file_name):
+def parse_n2vec_mf(file_name, method_type):
     with open(file_name, 'r') as hyper_file:
         results = hyper_file.readlines()
 
@@ -70,20 +70,20 @@ def parse_n2vec(file_name):
                     line = results[index]
                     ap_score = float(line.split("(Precision of 5)Highest Test: ")[-1].split("± nan")[0].strip())
 
-                    node2vec_dict[dataset]['AUC'].append(auc_score)
-                    node2vec_dict[dataset]['AP'].append(ap_score)
+                    node2vec_mf_dict[dataset]['AUC'].append(auc_score)
+                    node2vec_mf_dict[dataset]['AP'].append(ap_score)
                     index += 1
                     break
         index += 1
     print("Done reading file")
 
-    for dataset in node2vec_dict.keys():
-        auc = np.array(node2vec_dict[dataset]['AUC'])
-        ap = np.array(node2vec_dict[dataset]['AP'])
-        node2vec_dict[dataset]['AUC Mean'] = f'{auc.mean():.2f} ± {auc.std():.2f}'
-        node2vec_dict[dataset]['AP Mean'] = f'{ap.mean():.2f} ± {ap.std():.2f}'
-    with open(f'n2vec-result.json', 'w', encoding='utf-8') as fp:
-        json.dump(node2vec_dict, fp, ensure_ascii=False)
+    for dataset in node2vec_mf_dict.keys():
+        auc = np.array(node2vec_mf_dict[dataset]['AUC'])
+        ap = np.array(node2vec_mf_dict[dataset]['AP'])
+        node2vec_mf_dict[dataset]['AUC Mean'] = f'{auc.mean():.2f} ± {auc.std():.2f}'
+        node2vec_mf_dict[dataset]['AP Mean'] = f'{ap.mean():.2f} ± {ap.std():.2f}'
+    with open(f'{method_type}-result.json', 'w', encoding='utf-8') as fp:
+        json.dump(node2vec_mf_dict, fp, ensure_ascii=False)
 
 
 if __name__ == '__main__':
@@ -91,6 +91,7 @@ if __name__ == '__main__':
         description="Read the results from heuristics and gae methods to record baselines"
     )
     parser.add_argument('--file_name', type=str)
+    parser.add_argument('--method_type', type=str)
     args = parser.parse_args()
 
-    parse_n2vec(args.file_name)
+    parse_n2vec_mf(args.file_name, args.method_type)
