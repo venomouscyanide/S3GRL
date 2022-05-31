@@ -138,8 +138,8 @@ class SEALDataset(InMemoryDataset):
             print(f"Calculating preprocessing stats for {self.split}")
             calc_ratio_helper(pos_edge, neg_edge, A, self.data.x, -1, self.num_hops, self.node_label,
                               self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
-                              args.dataset)
-            return
+                              args.dataset, args.seed)
+            exit()
 
         if not self.pairwise:
             print("Setting up Positive Subgraphs")
