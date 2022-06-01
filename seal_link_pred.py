@@ -1225,4 +1225,7 @@ if __name__ == '__main__':
     if args.profile:
         run_sweal_with_run_profiling(args, device)
     else:
+        start = default_timer()
         run_sweal(args, device)
+        end = default_timer()
+        print(f"Time taken for run: {end - start:.2f} seconds")
