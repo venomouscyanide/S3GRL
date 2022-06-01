@@ -4,3 +4,6 @@
 # the parsed data is placed inside plot.py to create the graphs
 # Cora
 python hypertuner.py --model DGCNN --dataset Cora --use_feature --hidden_channels 32 --lr 0.0001 --epochs 5 --runs 1 --hyper_runs 5 --save_appendix "" --data_appendix "" --train_percent 100 --seed 1
+
+# CiteSeer
+python hypertuner.py --model DGCNN --dataset CiteSeer --use_feature --hidden_channels 32 --lr 0.0001 --epochs 5 --runs 1 --hyper_runs 5 --save_appendix "" --data_appendix "" --train_percent 100 --seed 1
