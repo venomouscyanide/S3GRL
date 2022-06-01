@@ -302,25 +302,27 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
     # calculate sparsity of subgraphs of seal vs sweal for the split
     stats_dict = {}
 
+    overall_seal_node_storage = []
+    overall_sweal_node_storage = []
+
+    overall_seal_edge_storage = []
+    overall_sweal_edge_storage = []
+
     if seed == 1:
-        overall_node_ratio_storage = np.array([], dtype=np.float)
-        overall_edge_ratio_storage = np.array([], dtype=np.float)
+        overall_average_seal_node_storage = np.array([], dtype=np.float)
+        overall_average_sweal_node_storage = np.array([], dtype=np.float)
 
-        overall_seal_node_storage = np.array([], dtype=np.float)
-        overall_sweal_node_storage = np.array([], dtype=np.float)
+        overall_average_seal_edge_storage = np.array([], dtype=np.float)
+        overall_average_sweal_edge_storage = np.array([], dtype=np.float)
 
-        overall_seal_edge_storage = np.array([], dtype=np.float)
-        overall_sweal_edge_storage = np.array([], dtype=np.float)
     else:
         saved_npz = np.load(f'saved_calc_ratio{dataset_name}.npz')
-        overall_node_ratio_storage = saved_npz['overall_node_ratio_storage']
-        overall_edge_ratio_storage = saved_npz['overall_edge_ratio_storage']
 
-        overall_seal_node_storage = saved_npz['overall_seal_node_storage']
-        overall_sweal_node_storage = saved_npz['overall_sweal_node_storage']
+        overall_average_seal_node_storage = saved_npz['overall_average_seal_node_storage']
+        overall_average_sweal_node_storage = saved_npz['overall_average_sweal_node_storage']
 
-        overall_seal_edge_storage = saved_npz['overall_seal_edge_storage']
-        overall_sweal_edge_storage = saved_npz['overall_sweal_edge_storage']
+        overall_average_seal_edge_storage = saved_npz['overall_average_seal_edge_storage']
+        overall_average_sweal_edge_storage = saved_npz['overall_average_sweal_edge_storage']
 
     link_index = torch.cat((link_index_pos, link_index_neg), dim=-1)
 
@@ -334,31 +336,29 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
         overall_seal_edge_storage = np.append(overall_seal_edge_storage, num_edges_seal)
         overall_sweal_edge_storage = np.append(overall_sweal_edge_storage, num_edges_sweal)
 
-        overall_node_ratio_storage = np.append(overall_node_ratio_storage, node_ratio)
-        overall_edge_ratio_storage = np.append(overall_edge_ratio_storage, edge_ratio)
+    overall_average_seal_node_storage = np.append(overall_average_seal_node_storage, overall_seal_node_storage.mean())
+    overall_average_sweal_node_storage = np.append(overall_average_sweal_node_storage, overall_sweal_node_storage.mean())
 
-    assert seed * len(link_index[0]) == len(overall_seal_node_storage) == len(overall_sweal_node_storage) == len(
-        overall_seal_edge_storage) == len(overall_sweal_edge_storage) == len(overall_node_ratio_storage) == len(
-        overall_edge_ratio_storage), "Error in saving to npz"  # sanity check
+    overall_average_seal_edge_storage = np.append(overall_average_seal_edge_storage, overall_seal_edge_storage.mean())
+    overall_average_sweal_edge_storage = np.append(overall_average_sweal_edge_storage,
+                                                   overall_sweal_edge_storage.mean())
 
-    np.savez(f'saved_calc_ratio{dataset_name}.npz', overall_seal_node_storage=overall_seal_node_storage,
-             overall_sweal_node_storage=overall_sweal_node_storage,
-             overall_seal_edge_storage=overall_seal_edge_storage,
-             overall_sweal_edge_storage=overall_sweal_edge_storage,
-             overall_node_ratio_storage=overall_node_ratio_storage,
-             overall_edge_ratio_storage=overall_edge_ratio_storage)
+    assert seed == len(overall_average_seal_node_storage) == len(overall_average_sweal_node_storage) == len(
+        overall_average_seal_edge_storage) == len(overall_average_sweal_edge_storage), "Error in saving to npz"  # sanity check
+
+    np.savez(f'saved_calc_ratio{dataset_name}.npz', overall_average_seal_node_storage=overall_average_seal_node_storage,
+             overall_average_sweal_node_storage=overall_average_sweal_node_storage,
+             overall_average_seal_edge_storage=overall_average_seal_edge_storage,
+             overall_average_sweal_edge_storage=overall_average_sweal_edge_storage)
 
     if seed == 5:
         stats_dict[split] = {
 
-            'SEAL average no of nodes': f'{overall_seal_node_storage.mean():.2f} ± {overall_seal_node_storage.std():.2f}',
-            'SWEAL average no of nodes': f'{overall_sweal_node_storage.mean():.2f} ± {overall_sweal_node_storage.std():.2f}',
+            'SEAL average no of nodes': f'{overall_average_seal_node_storage.mean():.2f}',
+            'SWEAL average no of nodes': f'{overall_average_sweal_node_storage.mean():.2f}',
 
-            'SEAL average no of edges': f'{overall_seal_edge_storage.mean():.2f} ± {overall_seal_edge_storage.std():.2f}',
-            'SWEAL average no of edges': f'{overall_sweal_edge_storage.mean():.2f} ± {overall_sweal_edge_storage.std():.2f}',
-
-            'average node ratio': f'{overall_node_ratio_storage.mean():.2f} ± {overall_node_ratio_storage.std():.2f}',
-            'average edge ratio': f'{overall_edge_ratio_storage.mean():.2f} ± {overall_edge_ratio_storage.std():.2f}',
+            'SEAL average no of edges': f'{overall_average_seal_edge_storage.mean():.2f}',
+            'SWEAL average no of edges': f'{overall_average_sweal_edge_storage.mean():.2f}'
 
         }
         print("--------------------------------------------------------------")
