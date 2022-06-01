@@ -11,7 +11,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -20,7 +19,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -29,7 +27,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -38,7 +35,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -47,7 +43,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -56,7 +51,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -65,7 +59,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -74,7 +67,6 @@ seal_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              }
@@ -87,7 +79,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -96,7 +87,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -105,7 +95,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -114,7 +103,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -123,7 +111,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -132,7 +119,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -141,7 +127,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              },
@@ -150,7 +135,6 @@ scaled_dict = \
              'AP': [],
              'Time taken (per run)': [],
              'Max allocated CUDA': [],
-             'Max Nvidia Smi used CUDA': [],
              'Model size': [],
              'Parameters': []
              }
@@ -179,7 +163,6 @@ def parse_non_attributed_results(file_name, method_type):
                     max_allocated_cuda = float(line.split("max_allocated_cuda=")[-1].split(f',')[0].strip())
                     max_nvidia_smi_cuda = float(line.split("max_nvidia_smi_used_cuda=")[-1].split(f')')[0].strip())
                     result_dict[dataset]['Max allocated CUDA'].append(max_allocated_cuda)
-                    result_dict[dataset]['Max Nvidia Smi used CUDA'].append(max_nvidia_smi_cuda)
                     index += 1
                 if line.startswith("Model size"):
                     model_size = float(line.split("Model size: ")[-1])
@@ -214,17 +197,14 @@ def parse_non_attributed_results(file_name, method_type):
         ap = np.array(result_key['AP'])
         time_per_run = np.array(result_key['Time taken (per run)'])
         allocated_cuda = np.array(result_key['Max allocated CUDA'])
-        max_nvidia_smi_cuda = np.array(result_key['Max Nvidia Smi used CUDA'])
         model_size = np.array(result_key['Model size'])
         parameters = np.array(result_key['Parameters'])
-        result_key['AUC Mean'] = f'{auc.mean():.2f} ± {auc.std():.2f}'
-        result_key['AP Mean'] = f'{ap.mean():.2f} ± {ap.std():.2f}'
-        result_key['Time taken (per run) Mean'] = f'{time_per_run.mean():.2f} ± {time_per_run.std():.2f}'
-        result_key['Max allocated CUDA Mean'] = f'{allocated_cuda.mean():.2f} ± {allocated_cuda.std():.2f}'
-        result_key[
-            'Max Nvidia Smi used CUDA Mean'] = f'{max_nvidia_smi_cuda.mean():.2f} ± {max_nvidia_smi_cuda.std():.2f}'
-        result_key['Model size Mean'] = f'{model_size.mean():.2f} ± {model_size.std():.2f}'
-        result_key['Parameters Mean'] = f'{parameters.mean():.2f} ± {parameters.std():.2f}'
+        result_key['AUC Mean'] = f'{round(auc.mean())}'
+        result_key['AP Mean'] = f'{round(ap.mean())}'
+        result_key['Time taken (per run) Mean'] = f'{round(time_per_run.mean())}'
+        result_key['Max allocated CUDA Mean'] = f'{round(allocated_cuda.mean())}'
+        result_key['Model size Mean'] = f'{model_size.mean():.2f}'
+        result_key['Parameters Mean'] = f'{round(parameters.mean())}'
     with open(f'non-attributed-{method_type}-result.json', 'w', encoding='utf-8') as fp:
         json.dump(result_dict, fp, ensure_ascii=False)
 
