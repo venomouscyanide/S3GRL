@@ -2,17 +2,16 @@ import os
 
 import torch
 from sklearn.metrics import roc_auc_score, average_precision_score
-from torch.nn import Linear, ReLU, BatchNorm1d, Sequential
+from torch.nn import Linear, ReLU, Sequential
 from torch_geometric import seed_everything
-from torch_geometric.data import Data
+
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv
-from torch_geometric.utils import negative_sampling, to_undirected
+from torch_geometric.utils import negative_sampling
 
 from torch_geometric.transforms import OneHotDegree
 
-from data_utils import read_label, read_edges
-from utils import Logger, do_edge_split
+from utils import Logger
 
 
 class Net(torch.nn.Module):
@@ -104,37 +103,7 @@ def test(eval_edge_index, eval_neg_edge_index, model, data, dropout, device):
     return precision_score, auc_score
 
 
-def _dataset_creator(args, one_hot_encode):
-    file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
-    node_id_mapping = read_label(file_name)
-    edges = read_edges(file_name, node_id_mapping)
-
-    edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
-    data = Data(edge_index=edges_coo.view(2, -1))
-    data.edge_index = to_undirected(data.edge_index)
-    data.num_nodes = torch.max(data.edge_index) + 1
-
-    split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
-                               test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
-    data.edge_index = split_edge['train']['edge'].t()
-
-    if one_hot_encode:
-        one_hot = OneHotDegree(max_degree=1024)
-        data = one_hot(data)
-    else:
-        # if no features, we simply set x to be identity matrix as seen in GAE paper
-        data.x = torch.eye(data.num_nodes)
-
-    val_data = split_edge['valid']['edge'].t()
-    val_neg = split_edge['valid']['edge_neg'].t()
-
-    test_data = split_edge['test']['edge'].t()
-    test_neg = split_edge['test']['edge_neg'].t()
-
-    return data, split_edge, val_data, val_neg, test_data, test_neg
-
-
-def train_gnn(device, args, one_hot_encode=False):
+def train_gnn(device, data, split_edge, args, one_hot_encode=False):
     log_file = os.path.join(args.res_dir, 'log.txt')
 
     loggers = {
@@ -143,9 +112,21 @@ def train_gnn(device, args, one_hot_encode=False):
     }
     criterion = torch.nn.BCEWithLogitsLoss()
 
+    if not args.use_feature:
+        if one_hot_encode:
+            one_hot = OneHotDegree(max_degree=1024)
+            data = one_hot(data)
+        else:
+            # if no features, we simply set x to be identity matrix as seen in GAE paper
+            data.x = torch.eye(data.num_nodes)
+
+    val_data = split_edge['valid']['edge'].t()
+    val_neg = split_edge['valid']['edge_neg'].t()
+    test_data = split_edge['test']['edge'].t()
+    test_neg = split_edge['test']['edge_neg'].t()
+
     for run in range(args.runs):
         seed_everything(args.seed)
-        data, split_edge, val_data, val_neg, test_data, test_neg = _dataset_creator(args, one_hot_encode)
         data.to(device)
 
         model = Net(data.x.size(-1), args.hidden_channels, args.hidden_channels, layer=args.model).to(device)

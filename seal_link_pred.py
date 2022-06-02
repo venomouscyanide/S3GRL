@@ -955,7 +955,7 @@ def run_sweal(args, device):
         if args.pairwise:
             train_dataset = train_positive_dataset
         if args.train_gae:
-            train_gnn(device, args)
+            train_gnn(device, data, split_edge, args)
             exit()
         if args.train_n2v:
             run_n2v(device, data, split_edge, args.epochs, args.lr, args.hidden_channels, args.neg_ratio,
