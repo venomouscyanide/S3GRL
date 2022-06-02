@@ -4,6 +4,8 @@ import json
 import numpy as np
 from torch_geometric.profile.utils import byte_to_megabyte
 
+from utils import human_format
+
 seal_dict = \
     {
         'USAir':
@@ -199,12 +201,12 @@ def parse_non_attributed_results(file_name, method_type):
         allocated_cuda = np.array(result_key['Max allocated CUDA'])
         model_size = np.array(result_key['Model size'])
         parameters = np.array(result_key['Parameters'])
-        result_key['AUC Mean'] = f'{round(auc.mean())}'
-        result_key['AP Mean'] = f'{round(ap.mean())}'
+        result_key['AUC Mean'] = f'{auc.mean():.2f} ± {auc.std():.2f}'
+        result_key['AP Mean'] = f'{ap.mean():.2f} ± {ap.std():.2f}'
         result_key['Time taken (per run) Mean'] = f'{round(time_per_run.mean())}'
         result_key['Max allocated CUDA Mean'] = f'{round(allocated_cuda.mean())}'
         result_key['Model size Mean'] = f'{model_size.mean():.2f}'
-        result_key['Parameters Mean'] = f'{round(parameters.mean())}'
+        result_key['Parameters Mean'] = f'{human_format(parameters.mean())}'
     with open(f'non-attributed-{method_type}-result.json', 'w', encoding='utf-8') as fp:
         json.dump(result_dict, fp, ensure_ascii=False)
 

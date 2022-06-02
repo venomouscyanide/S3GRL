@@ -337,14 +337,16 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
         overall_sweal_edge_storage = np.append(overall_sweal_edge_storage, num_edges_sweal)
 
     overall_average_seal_node_storage = np.append(overall_average_seal_node_storage, overall_seal_node_storage.mean())
-    overall_average_sweal_node_storage = np.append(overall_average_sweal_node_storage, overall_sweal_node_storage.mean())
+    overall_average_sweal_node_storage = np.append(overall_average_sweal_node_storage, overall_sweal_node_storage.mean()
+                                                   )
 
     overall_average_seal_edge_storage = np.append(overall_average_seal_edge_storage, overall_seal_edge_storage.mean())
     overall_average_sweal_edge_storage = np.append(overall_average_sweal_edge_storage,
                                                    overall_sweal_edge_storage.mean())
 
+    # sanity check
     assert seed == len(overall_average_seal_node_storage) == len(overall_average_sweal_node_storage) == len(
-        overall_average_seal_edge_storage) == len(overall_average_sweal_edge_storage), "Error in saving to npz"  # sanity check
+        overall_average_seal_edge_storage) == len(overall_average_sweal_edge_storage), "Error in saving to npz"
 
     np.savez(f'saved_calc_ratio{dataset_name}.npz', overall_average_seal_node_storage=overall_average_seal_node_storage,
              overall_average_sweal_node_storage=overall_average_sweal_node_storage,
@@ -354,11 +356,11 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
     if seed == 5:
         stats_dict[split] = {
 
-            'SEAL average no of nodes': f'{overall_average_seal_node_storage.mean():.2f}',
-            'SWEAL average no of nodes': f'{overall_average_sweal_node_storage.mean():.2f}',
+            'SEAL average no of nodes': f'{round(overall_average_seal_node_storage.mean())}',
+            'SWEAL average no of nodes': f'{round(overall_average_sweal_node_storage.mean())}',
 
-            'SEAL average no of edges': f'{overall_average_seal_edge_storage.mean():.2f}',
-            'SWEAL average no of edges': f'{overall_average_sweal_edge_storage.mean():.2f}'
+            'SEAL average no of edges': f'{round(overall_average_seal_edge_storage.mean())}',
+            'SWEAL average no of edges': f'{round(overall_average_sweal_edge_storage.mean())}'
 
         }
         print("--------------------------------------------------------------")
@@ -613,3 +615,13 @@ def draw_graph(graph):
     nx.draw(graph, with_labels=True, pos=nx.spring_layout(graph))
     plt.show()  # check if same as in the doc visually
     f.savefig("input_graph.pdf", bbox_inches='tight')
+
+
+# https://stackoverflow.com/a/45846841/12918863
+def human_format(num):
+    num = float('{:.3g}'.format(num))
+    magnitude = 0
+    while abs(num) >= 1000:
+        magnitude += 1
+        num /= 1000.0
+    return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 'T'][magnitude])
