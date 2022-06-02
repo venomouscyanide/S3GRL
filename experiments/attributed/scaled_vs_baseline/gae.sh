@@ -1,5 +1,5 @@
 #!/bin/bash
-# this will help reproduce scaled vs baselines results for GAE models(with base GCN, SAGE and GIN) on all 8 SEAL datasets
+# this will help reproduce scaled vs baselines results for GAE models(with base GCN, SAGE and GIN) for Cora, CiteSeer
 # all runs are on 5 different seeds(1 run each of every seed). Different seed ensure different set of initial weight and dataset splits
 
 # GCN on Cora

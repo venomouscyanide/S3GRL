@@ -1,5 +1,5 @@
 #!/bin/bash
-# run n2v to get results vs ScaLed
+# run n2v to get results vs ScaLed on Cora and CiteSeer
 
 # Cora
 for SEED in 1 2 3 4 5; do

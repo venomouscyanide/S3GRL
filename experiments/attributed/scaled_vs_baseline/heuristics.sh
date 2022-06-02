@@ -1,6 +1,6 @@
 #!/bin/bash
-# this will help reproduce scaled vs baselines results for heuristics; AA, CN and PPR on all 8 SEAL datasets
-# all runs are on 5 different seeds(1 run each of every seed). Different seed ensure different set of initial weight and dataset splits
+# this will help reproduce scaled vs baselines results for heuristics; AA, CN and PPR on Cora and CiteSeer
+# all runs are on 5 different seeds(1 run each of every seed).
 
 # Cora
 for SEED in 1 2 3 4 5; do
