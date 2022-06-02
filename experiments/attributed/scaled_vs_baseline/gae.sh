@@ -4,30 +4,30 @@
 
 # GCN on Cora
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset Cora --train_gae --model GCN --epochs 50 --seed $SEED --use_feature
+  python seal_link_pred.py --dataset Cora --train_gae --model GCN --epochs 50 --seed $SEED --use_feature --lr 0.01
 done
 
 # SAGE on Cora
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset Cora --train_gae --model SAGE --epochs 50 --seed $SEED --use_feature
+  python seal_link_pred.py --dataset Cora --train_gae --model SAGE --epochs 50 --seed $SEED --use_feature --lr 0.01
 done
 
 # GIN on Cora
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset Cora --train_gae --model GIN --epochs 50 --seed $SEED --use_feature
+  python seal_link_pred.py --dataset Cora --train_gae --model GIN --epochs 50 --seed $SEED --use_feature --lr 0.01
 done
 
 # GCN on CiteSeer
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset CiteSeer --train_gae --model GCN --epochs 50 --seed $SEED --use_feature
+  python seal_link_pred.py --dataset CiteSeer --train_gae --model GCN --epochs 50 --seed $SEED --use_feature --lr 0.01
 done
 
 # SAGE on CiteSeer
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset CiteSeer --train_gae --model SAGE --epochs 50 --seed $SEED --use_feature
+  python seal_link_pred.py --dataset CiteSeer --train_gae --model SAGE --epochs 50 --seed $SEED --use_feature --lr 0.01
 done
 
 # GIN on CiteSeer
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset CiteSeer --train_gae --model GIN --epochs 50 --seed $SEED --use_feature
+  python seal_link_pred.py --dataset CiteSeer --train_gae --model GIN --epochs 50 --seed $SEED --use_feature --lr 0.01
 done
