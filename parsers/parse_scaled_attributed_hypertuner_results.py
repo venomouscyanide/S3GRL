@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 
 
+# TODO: this ideally should be just one file for attributed and non-attributed.
 def parse_hyper_tuner_results(file_name):
     with open(file_name, 'r') as hyper_file:
         results = hyper_file.readlines()
@@ -11,12 +12,12 @@ def parse_hyper_tuner_results(file_name):
     index = 0
 
     parsed_mean = {
-        "PB": {
+        "Cora": {
             "AUC_MEAN": [],
             "AP_MEAN": [],
             "Time_MEAN": []
         },
-        "Ecoli": {
+        "CiteSeer": {
             "AUC_MEAN": [],
             "AP_MEAN": [],
             "Time_MEAN": []
@@ -24,7 +25,7 @@ def parse_hyper_tuner_results(file_name):
     }
 
     parsed_results = {
-        "PB": {
+        "Cora": {
             "AUC": {
                 (2, 2): [],
                 (2, 5): [],
@@ -80,7 +81,7 @@ def parse_hyper_tuner_results(file_name):
                 (7, 20): []
             },
         },
-        "Ecoli": {
+        "CiteSeer": {
 
             "AUC": {
                 (2, 2): [],
@@ -142,7 +143,7 @@ def parse_hyper_tuner_results(file_name):
     while index < max_lines:
         line = results[index]
         if line.startswith("Command line input:"):
-            dataset = line.split("--dataset")[-1].split("--hidden_channels")[0].strip()
+            dataset = line.split("--dataset")[-1].split("--use_feature")[0].strip()
             while 1:
                 index += 1
                 line = results[index]
@@ -178,6 +179,7 @@ def parse_hyper_tuner_results(file_name):
                 values = np.array(values)
                 parsed_mean[dataset][f'{metric}_MEAN'].append(values.mean())
 
+    breakpoint()  # use this breakpoint to transfer data to plots
     print("Done reading file")
 
 
