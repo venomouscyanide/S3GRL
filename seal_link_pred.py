@@ -802,7 +802,7 @@ def run_sweal(args, device):
     if args.calc_ratio:
         rw_kwargs.update({'calc_ratio': True})
 
-    if not args.train_gae:
+    if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Train data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
         if not args.pairwise:
@@ -884,7 +884,7 @@ def run_sweal(args, device):
             f.savefig('tmp_vis.png')
             pdb.set_trace()
 
-    if not args.train_gae:
+    if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Val data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_val else 'SEALDataset'
         val_dataset = eval(dataset_class)(
@@ -926,7 +926,7 @@ def run_sweal(args, device):
 
     max_z = 1000  # set a large max_z so that every z has embeddings to look up
 
-    if not args.train_gae:
+    if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
             train_pos_loader = DataLoader(train_positive_dataset, batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
