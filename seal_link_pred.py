@@ -46,10 +46,7 @@ from baselines.mf import train_mf
 from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import load_splitted_data, read_label, read_edges
-from gae_link_pred import gae_train_helper
-from gae_link_pred_ogbl import gae_train_helper_ogbl
 from models import SAGE, DGCNN, GCN, GIN
-from non_structure_aware import train_mlp, train_mlp_ogbl
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
