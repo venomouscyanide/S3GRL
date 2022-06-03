@@ -4,8 +4,25 @@ import numpy as np
 
 # omit EColi for paper
 class HyperTunerResults:
-    M = [2, 5, 10, 20]
+    M = [2, 5, 10, 20, 40]
     m = [2, 3, 5, 7]
+
+    FORTY_PB = {
+        "AUC": {
+
+            (2, 40): np.array([94.11859, 94.28474, 94.23653, 95.03088, 94.76138]),
+            (3, 40): np.array([94.07773, 93.92130, 94.10495, 94.92669, 94.84912]),
+            (5, 40): np.array([93.66491, 93.69224, 94.09836, 94.99459, 94.71765]),
+            (7, 40): np.array([93.51725, 93.44888, 93.89214, 94.54632, 94.36539]),
+        },
+        "Time": {
+            (2, 40): np.array([354.85, 346.33, 355.40, 339.88, 341.98]),
+            (3, 40): np.array([363.43, 377.71, 380.09, 379.95, 380.80]),
+            (5, 40): np.array([458.56, 451.25, 445.56, 457.68, 467.25]),
+            (7, 40): np.array([527.39, 534.95, 533.01, 540.11, 548.43]),
+        }
+    }
+
     RESULTS_NON = {
         'PB': {'AUC_MEAN': [86.945668, 91.9308, 93.505176, 94.19305, 88.125528, 92.15618, 93.876566, 94.22434000000001,
                             89.76083999999999, 92.71959, 93.891646, 94.09972200000001, 90.51021, 92.900018, 93.81096,
@@ -75,11 +92,15 @@ if __name__ == '__main__':
     plt.ylim(84)
     for index, (dataset, results) in enumerate(HyperTunerResults.RESULTS_NON.items()):
         # SEAL line
-        auc_SEAL_results = HyperTunerResults.SEAL[dataset]['AUC_MEAN'] * 4
+        auc_SEAL_results = HyperTunerResults.SEAL[dataset]['AUC_MEAN'] * 5
         plt.plot(default_x_ticks, auc_SEAL_results, label=f"SEAL h=2", color=seal_colors[index],
                  linestyle='-', linewidth=2, markersize=10)
 
-        auc_m_results = results['auc_m_results']
+        for custom_index in range(len(HyperTunerResults.m)):
+            auc_m_results = results['auc_m_results']
+            mean_40 = np.mean(list(HyperTunerResults.FORTY_PB['AUC'].items())[custom_index][-1])
+            auc_m_results[custom_index].append(mean_40)
+
         for inner_index, m_values in enumerate(auc_m_results):
             plt.plot(default_x_ticks, m_values, label=f"ScaLed h={HyperTunerResults.m[inner_index]}",
                      color=slicedCM[index][inner_index],
@@ -100,11 +121,16 @@ if __name__ == '__main__':
     plt.ylim(0)
     for index, (dataset, results) in enumerate(HyperTunerResults.RESULTS_NON.items()):
         # SEAL line
-        auc_SEAL_results = HyperTunerResults.SEAL[dataset]['Time_MEAN'] * 4
+        auc_SEAL_results = HyperTunerResults.SEAL[dataset]['Time_MEAN'] * 5
         plt.plot(default_x_ticks, auc_SEAL_results, label=f"SEAL h=2", color=seal_colors[index],
                  linestyle='-', linewidth=2, markersize=10)
 
         auc_m_results = results['time_m_results']
+        for custom_index in range(len(HyperTunerResults.m)):
+            auc_m_results = results['time_m_results']
+            mean_40 = np.mean(list(HyperTunerResults.FORTY_PB['Time'].items())[custom_index][-1])
+            auc_m_results[custom_index].append(mean_40)
+
         for inner_index, m_values in enumerate(auc_m_results):
             plt.plot(default_x_ticks, m_values, label=f"ScaLed h={HyperTunerResults.m[inner_index]}",
                      color=slicedCM[index][inner_index],

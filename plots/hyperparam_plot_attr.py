@@ -6,6 +6,23 @@ import numpy as np
 class HyperTunerResults:
     M = [2, 5, 10, 20]
     m = [2, 3, 5, 7]
+
+    FORTY_Cora = {
+        "AUC": {
+
+            (2, 40): np.array([]),
+            (3, 40): np.array([]),
+            (5, 40): np.array([]),
+            (7, 40): np.array([]),
+        },
+        "Time": {
+            (2, 40): np.array([]),
+            (3, 40): np.array([]),
+            (5, 40): np.array([]),
+            (7, 40): np.array([]),
+        }
+    }
+
     RESULTS_NON = {
         'Cora': {
             'AUC_MEAN': [82.76017199999998, 87.487588, 88.65829599999999, 90.11079, 84.747722, 87.780028, 90.22709,
