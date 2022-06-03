@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+# omit EColi for paper
 class HyperTunerResults:
     M = [2, 5, 10, 20]
     m = [2, 3, 5, 7]
@@ -15,17 +16,17 @@ class HyperTunerResults:
                'Time_MEAN': [290.698, 294.626, 290.906, 309.61199999999997, 275.72400000000005, 285.98, 297.166,
                              316.832, 280.38, 296.38, 314.068, 354.9599999999999, 286.71999999999997, 304.926,
                              334.34000000000003, 394.342]},
-        'Ecoli': {
-            'AUC_MEAN': [92.348424, 95.381552, 96.081864, 96.192442, 93.24523599999999, 95.84468199999999, 96.43089,
-                         96.46211000000001, 93.97460199999999, 95.785326, 96.30825, 96.34476, 94.19044799999999,
-                         95.69772799999998, 95.98449, 96.18316],
-            'AP_MEAN': [93.73167799999999, 96.26543799999999, 96.884578, 97.044354, 94.49142400000001,
-                        96.64835000000002, 97.122936, 97.18846599999999, 95.175422, 96.6814, 97.03465, 97.151016,
-                        95.417498, 96.70021, 96.947914, 97.073784],
-            'Time_MEAN': [246.69800000000004, 243.28199999999998, 246.87800000000001, 257.756, 238.28199999999998,
-                          246.208, 253.98600000000002, 271.98, 242.526, 255.08800000000002, 262.96400000000006,
-                          305.126,
-                          247.73000000000002, 260.618, 282.308, 361.218]}
+        # 'Ecoli': {
+        #     'AUC_MEAN': [92.348424, 95.381552, 96.081864, 96.192442, 93.24523599999999, 95.84468199999999, 96.43089,
+        #                  96.46211000000001, 93.97460199999999, 95.785326, 96.30825, 96.34476, 94.19044799999999,
+        #                  95.69772799999998, 95.98449, 96.18316],
+        #     'AP_MEAN': [93.73167799999999, 96.26543799999999, 96.884578, 97.044354, 94.49142400000001,
+        #                 96.64835000000002, 97.122936, 97.18846599999999, 95.175422, 96.6814, 97.03465, 97.151016,
+        #                 95.417498, 96.70021, 96.947914, 97.073784],
+        #     'Time_MEAN': [246.69800000000004, 243.28199999999998, 246.87800000000001, 257.756, 238.28199999999998,
+        #                   246.208, 253.98600000000002, 271.98, 242.526, 255.08800000000002, 262.96400000000006,
+        #                   305.126,
+        #                   247.73000000000002, 260.618, 282.308, 361.218]}
     }
 
     SEAL = {
@@ -33,11 +34,11 @@ class HyperTunerResults:
             'AUC_MEAN': [94.43],
             'AP_MEAN': [94.07],
             'Time_MEAN': [896.0559999999999]},
-        'Ecoli': {
-            'AUC_MEAN': [96.67],
-            'AP_MEAN': [97.38],
-            'Time_MEAN': [907.384]
-        }
+        # 'Ecoli': {
+        #     'AUC_MEAN': [96.67],
+        #     'AP_MEAN': [97.38],
+        #     'Time_MEAN': [907.384]
+        # }
     }
 
 
@@ -45,11 +46,11 @@ if __name__ == '__main__':
     # multi-line graph plots for hyperparameter tuning results
     slice_length = len(HyperTunerResults.m)
     # colors = ['b', 'g', 'r', 'm', 'c', 'y', 'k', 'w']
-    cmap = [plt.cm.get_cmap("OrRd"), plt.cm.get_cmap("BuGn")]
-    slicedCM = [cmap[0](np.linspace(0.5, 1, slice_length)), cmap[1](np.linspace(0.5, 1, slice_length))]
+    cmap = [plt.cm.get_cmap("Reds"), plt.cm.get_cmap("Greens")]
+    slicedCM = [cmap[0](np.linspace(0.4, 0.75, slice_length)), cmap[1](np.linspace(0.5, 0.8, slice_length))]
     line_style = ['solid', 'dotted', 'dashed', 'dashdot']
     marker_style = ['D', 's', 'o', '^']
-    seal_colors = ['b', 'm']
+    seal_colors = ['midnightblue', 'darkgreen', ]
 
     for dataset, results in HyperTunerResults.RESULTS_NON.items():
         all_auc = results['AUC_MEAN']
@@ -68,43 +69,49 @@ if __name__ == '__main__':
     f = plt.figure()
     x = HyperTunerResults.M
     default_x_ticks = range(len(x))
+    plt.rcParams.update({'font.size': 16.5})
     plt.xticks(default_x_ticks, x)
+    plt.yticks(np.arange(0, 96, 1))
+    plt.ylim(84)
     for index, (dataset, results) in enumerate(HyperTunerResults.RESULTS_NON.items()):
         # SEAL line
         auc_SEAL_results = HyperTunerResults.SEAL[dataset]['AUC_MEAN'] * 4
-        plt.plot(default_x_ticks, auc_SEAL_results, label=f"{dataset} SEAL", color=seal_colors[index], linestyle='-')
+        plt.plot(default_x_ticks, auc_SEAL_results, label=f"SEAL h=2", color=seal_colors[index],
+                 linestyle='-', linewidth=2, markersize=10)
 
         auc_m_results = results['auc_m_results']
         for inner_index, m_values in enumerate(auc_m_results):
-            plt.plot(default_x_ticks, m_values, label=f"{dataset} h={HyperTunerResults.m[inner_index]}",
+            plt.plot(default_x_ticks, m_values, label=f"ScaLed h={HyperTunerResults.m[inner_index]}",
                      color=slicedCM[index][inner_index],
-                     linestyle=line_style[inner_index], marker=marker_style[inner_index])
+                     linestyle=line_style[inner_index], marker=marker_style[inner_index], linewidth=2, markersize=10)
 
-    plt.ylabel('AUC Scores on testing split')
-    plt.xlabel('k: Number of walks')
-    plt.legend(loc="lower right")
-    plt.title(f"Non Attributed Datasets AUC vs. (h, k)")
+    plt.ylabel('AUC Scores')
+    plt.xlabel('k: Number of Walks')
+    plt.legend(loc="lower right", ncol=2, borderpad=0.2, labelspacing=0.25, borderaxespad=0.25)
     plt.show()
     f.savefig("hypertuner_non_attr_auc.pdf", bbox_inches='tight')
 
     f = plt.figure()
     x = HyperTunerResults.M
     default_x_ticks = range(len(x))
+    plt.rcParams.update({'font.size': 16.5})
     plt.xticks(default_x_ticks, x)
+    plt.yticks(np.arange(0, 1050, 75))
+    plt.ylim(0)
     for index, (dataset, results) in enumerate(HyperTunerResults.RESULTS_NON.items()):
         # SEAL line
         auc_SEAL_results = HyperTunerResults.SEAL[dataset]['Time_MEAN'] * 4
-        plt.plot(default_x_ticks, auc_SEAL_results, label=f"{dataset} SEAL", color=seal_colors[index], linestyle='-')
+        plt.plot(default_x_ticks, auc_SEAL_results, label=f"SEAL h=2", color=seal_colors[index],
+                 linestyle='-', linewidth=2, markersize=10)
 
         auc_m_results = results['time_m_results']
         for inner_index, m_values in enumerate(auc_m_results):
-            plt.plot(default_x_ticks, m_values, label=f"{dataset} h={HyperTunerResults.m[inner_index]}",
+            plt.plot(default_x_ticks, m_values, label=f"ScaLed h={HyperTunerResults.m[inner_index]}",
                      color=slicedCM[index][inner_index],
-                     linestyle=line_style[inner_index], marker=marker_style[inner_index])
+                     linestyle=line_style[inner_index], marker=marker_style[inner_index], linewidth=2, markersize=10)
 
-    plt.ylabel('Time taken per run in seconds')
-    plt.xlabel('k: Number of walks')
-    plt.legend(loc="upper right")
-    plt.title(f"Non Attributed Datasets Time per run vs. (h, k)")
+    plt.ylabel('Runtime (sec)')
+    plt.xlabel('k: Number of Walks')
+    plt.legend(loc="lower right", ncol=2, borderpad=0.2, labelspacing=0.25, borderaxespad=0.25)
     plt.show()
     f.savefig("hypertuner_non_attr_time.pdf", bbox_inches='tight')
