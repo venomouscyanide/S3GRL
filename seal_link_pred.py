@@ -47,6 +47,7 @@ from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import load_splitted_data, read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN
+from ogbl_baselines.mf import train_mf_ogbl
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
@@ -959,8 +960,11 @@ def run_sweal(args, device):
                     args.batch_size, args.num_workers, args)
             exit()
         if args.train_mf:
-            train_mf(data, split_edge, device, args.log_steps, args.num_layers, args.hidden_channels, args.dropout,
-                     args.batch_size, args.lr, args.epochs, args.eval_steps, args.runs, args.seed, args)
+            if not args.dataset.startswith('ogbl'):
+                train_mf(data, split_edge, device, args.log_steps, args.num_layers, args.hidden_channels, args.dropout,
+                         args.batch_size, args.lr, args.epochs, args.eval_steps, args.runs, args.seed, args)
+            else:
+                train_mf_ogbl(args, split_edge, data)
             exit()
         if args.model == 'DGCNN':
             model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k,
