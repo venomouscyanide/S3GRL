@@ -129,7 +129,7 @@ def test(predictor, x, split_edge, evaluator, batch_size):
 def train_mf_ogbl(args, split_edge, data):
     print(args)
 
-    device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
+    device = f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device)
 
     emb = torch.nn.Embedding(data.num_nodes, args.hidden_channels).to(device)
