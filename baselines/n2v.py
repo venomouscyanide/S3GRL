@@ -47,8 +47,8 @@ def run_n2v(device, data, split_edge, epochs, lr, hidden_channels, neg_ratio, ba
             if epoch % args.eval_steps == 0:
                 clf = train_link_classifier(device, hidden_channels, model, split_edge)
 
-                val_ap, val_auc = get_auc(val_edges, model, clf, val_labels, hidden_channels)
-                test_ap, test_auc = get_auc(test_edges, model, clf, test_labels, hidden_channels)
+                val_ap, val_auc = get_auc(val_edges, model, clf, val_labels.cpu().numpy(), hidden_channels)
+                test_ap, test_auc = get_auc(test_edges, model, clf, test_labels.cpu().numpy(), hidden_channels)
 
                 results = {}
 
