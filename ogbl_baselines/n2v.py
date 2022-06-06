@@ -23,7 +23,7 @@ def test(model, split_edge, device, hidden_channels, evaluator):
     neg_test_edge = split_edge['test']['edge_neg'].to(device)
 
     clf = LogisticRegression()
-    link_features = link_examples_to_features(torch.cat([pos_train_edge, neg_train_edge.t()], dim=0), model,
+    link_features = link_examples_to_features(torch.cat([pos_train_edge, neg_train_edge.t()], dim=0).to(device), model,
                                               hidden_channels)
     labels = torch.cat([
         torch.ones(split_edge['train']['edge'].size(0)),
@@ -32,17 +32,17 @@ def test(model, split_edge, device, hidden_channels, evaluator):
 
     clf.fit(link_features, labels)
 
-    val_link_features = link_examples_to_features(torch.cat([pos_valid_edge, neg_valid_edge], dim=0), model,
+    val_link_features = link_examples_to_features(torch.cat([pos_valid_edge, neg_valid_edge], dim=0).to(device), model,
                                                   hidden_channels)
     predictions = clf.predict(val_link_features)
-    val_all_preds = torch.tensor(predictions)
+    val_all_preds = torch.tensor(predictions).to(device)
     pos_valid_pred = val_all_preds[:split_edge['valid']['edge'].size(0)]
     neg_valid_pred = val_all_preds[split_edge['valid']['edge'].size(0):]
 
-    test_link_features = link_examples_to_features(torch.cat([pos_test_edge, neg_test_edge], dim=0), model,
+    test_link_features = link_examples_to_features(torch.cat([pos_test_edge, neg_test_edge], dim=0).to(device), model,
                                                    hidden_channels)
     predictions = clf.predict(test_link_features)
-    test_all_preds = torch.tensor(predictions)
+    test_all_preds = torch.tensor(predictions).to(device)
     pos_test_pred = test_all_preds[:split_edge['test']['edge'].size(0)]
     neg_test_pred = test_all_preds[split_edge['test']['edge'].size(0):]
 
