@@ -16,7 +16,7 @@ def test(model, split_edge, device, hidden_channels, evaluator):
     model.eval()
 
     pos_train_edge = split_edge['train']['edge'].to(device)
-    neg_train_edge = negative_sampling(torch.tensor(split_edge['train']['edge']).t())
+    neg_train_edge = negative_sampling(torch.tensor(split_edge['train']['edge']).t()).to(device)
     pos_valid_edge = split_edge['valid']['edge'].to(device)
     neg_valid_edge = split_edge['valid']['edge_neg'].to(device)
     pos_test_edge = split_edge['test']['edge'].to(device)
