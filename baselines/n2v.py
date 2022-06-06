@@ -85,7 +85,7 @@ def run_n2v(device, data, split_edge, epochs, lr, hidden_channels, neg_ratio, ba
 @torch.no_grad()
 def train_link_classifier(device, hidden_channels, model, split_edge):
     clf = link_prediction_classifier()
-    train_edges = torch.cat([split_edge['train']['edge'], split_edge['train']['edge_neg']]).cpu().numpy()
+    train_edges = torch.cat([split_edge['train']['edge'], split_edge['train']['edge_neg']]).to(device)
     train_labels = torch.cat([
         torch.ones(split_edge['train']['edge'].size(0)),
         torch.zeros(split_edge['train']['edge'].size(0))
