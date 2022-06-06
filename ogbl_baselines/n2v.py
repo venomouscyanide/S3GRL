@@ -1,3 +1,4 @@
+# Adapted from https://github.com/snap-stanford/ogb/blob/master/examples/linkproppred/collab/node2vec.py
 import os
 
 import torch
