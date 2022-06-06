@@ -91,7 +91,7 @@ def train_link_classifier(device, hidden_channels, model, split_edge):
         torch.zeros(split_edge['train']['edge'].size(0))
     ], dim=0).to(device)
     link_features = link_examples_to_features(train_edges, model, hidden_channels)
-    clf.fit(link_features, train_labels)
+    clf.fit(link_features, train_labels.cpu().numpy())
     return clf
 
 
