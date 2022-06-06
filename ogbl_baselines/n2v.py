@@ -30,7 +30,7 @@ def test(model, split_edge, device, hidden_channels, evaluator):
         torch.zeros(neg_train_edge.t().size(0))
     ], dim=0).to(device)
 
-    clf.fit(link_features, labels)
+    clf.fit(link_features, labels.cpu().numpy())
 
     val_link_features = link_examples_to_features(torch.cat([pos_valid_edge, neg_valid_edge], dim=0).to(device), model,
                                                   hidden_channels)
