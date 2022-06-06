@@ -45,8 +45,10 @@ def run_n2v(device, data, split_edge, epochs, lr, hidden_channels, neg_ratio, ba
             loss = train(model, optimizer, loader, device)
 
             if epoch % args.eval_steps == 0:
-                val_ap, val_auc = get_auc(val_edges, val_labels, model, hidden_channels)
-                test_ap, test_auc = get_auc(test_edges, test_labels, model, hidden_channels)
+                clf = train_link_classifier(device, hidden_channels, model, split_edge)
+
+                val_ap, val_auc = get_auc(val_edges, model, clf, val_labels, hidden_channels)
+                test_ap, test_auc = get_auc(test_edges, model, clf, test_labels, hidden_channels)
 
                 results = {}
 
@@ -79,14 +81,22 @@ def run_n2v(device, data, split_edge, epochs, lr, hidden_channels, neg_ratio, ba
 
     print(f"Total Parameters are: {total_params}")
 
+@torch.no_grad()
+def train_link_classifier(device, hidden_channels, model, split_edge):
+    clf = link_prediction_classifier()
+    train_edges = torch.cat([split_edge['train']['edge'], split_edge['train']['edge_neg']])
+    train_labels = torch.cat([
+        torch.ones(split_edge['train']['edge'].size(0)),
+        torch.zeros(split_edge['train']['edge'].size(0))
+    ], dim=0).to(device)
+    link_features = link_examples_to_features(train_edges, model, hidden_channels)
+    clf.fit(link_features, train_labels)
+    return clf
+
 
 @torch.no_grad()
-def get_auc(edges, labels, model, hidden_channels):
-    labels = labels.cpu().numpy()
-    clf = link_prediction_classifier()
+def get_auc(edges, model, clf, labels, hidden_channels):
     link_features = link_examples_to_features(edges, model, hidden_channels)
-    clf.fit(link_features, labels)
-
     auc = roc_auc_score(labels, clf.predict(link_features))
     ap = average_precision_score(labels, clf.predict(link_features))
     return ap, auc

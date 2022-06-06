@@ -73,17 +73,10 @@ def train(predictor, x, split_edge, optimizer, batch_size):
 def test(predictor, x, split_edge, evaluator, batch_size):
     predictor.eval()
 
-    pos_train_edge = split_edge['train']['edge'].to(x.device)
     pos_valid_edge = split_edge['valid']['edge'].to(x.device)
     neg_valid_edge = split_edge['valid']['edge_neg'].to(x.device)
     pos_test_edge = split_edge['test']['edge'].to(x.device)
     neg_test_edge = split_edge['test']['edge_neg'].to(x.device)
-
-    pos_train_preds = []
-    for perm in DataLoader(range(pos_train_edge.size(0)), batch_size):
-        edge = pos_train_edge[perm].t()
-        pos_train_preds += [predictor(x[edge[0]], x[edge[1]]).squeeze().cpu()]
-    pos_train_pred = torch.cat(pos_train_preds, dim=0)
 
     pos_valid_preds = []
     for perm in DataLoader(range(pos_valid_edge.size(0)), batch_size):
