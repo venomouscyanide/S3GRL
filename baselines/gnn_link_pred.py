@@ -15,15 +15,17 @@ from utils import Logger
 
 
 class Net(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, layer='GCN'):
+    def __init__(self, in_channels, hidden_channels, layer='GCN'):
         super().__init__()
 
         if layer == 'GCN':
             self.conv1 = GCNConv(in_channels, hidden_channels)
-            self.conv2 = GCNConv(hidden_channels, out_channels)
+            self.conv2 = GCNConv(hidden_channels, hidden_channels)
+            self.conv3 = GCNConv(hidden_channels, hidden_channels)
         elif layer == 'SAGE':
             self.conv1 = SAGEConv(in_channels, hidden_channels)
-            self.conv2 = SAGEConv(hidden_channels, out_channels)
+            self.conv2 = SAGEConv(hidden_channels, hidden_channels)
+            self.conv3 = SAGEConv(hidden_channels, hidden_channels)
         elif layer == "GIN":
             self.conv1 = GINConv(Sequential(
                 Linear(in_channels, hidden_channels),
@@ -37,13 +39,21 @@ class Net(torch.nn.Module):
                 Linear(hidden_channels, hidden_channels),
                 ReLU(),
             ), train_eps=False)
+            self.conv3 = GINConv(Sequential(
+                Linear(hidden_channels, hidden_channels),
+                ReLU(),
+                Linear(hidden_channels, hidden_channels),
+                ReLU(),
+            ), train_eps=False)
         else:
             raise NotImplementedError(f"Layer {layer} not supported")
 
     def encode(self, x, edge_index, dropout):
         x = self.conv1(x, edge_index).relu()
         x = F.dropout(x, p=dropout, training=self.training)
-        return self.conv2(x, edge_index)
+        x = self.conv2(x, edge_index).relu()
+        x = F.dropout(x, p=dropout, training=self.training)
+        return self.conv3(x, edge_index)
 
     def decode(self, z, edge_label_index):
         return (z[edge_label_index[0]] * z[edge_label_index[1]]).sum(dim=-1)
@@ -53,7 +63,7 @@ class Net(torch.nn.Module):
         return (prob_adj > 0).nonzero(as_tuple=False).t()
 
     def reset_parameters(self):
-        for conv in [self.conv1, self.conv2]:
+        for conv in [self.conv1, self.conv2, self.conv3]:
             conv.reset_parameters()
 
 
@@ -129,7 +139,7 @@ def train_gnn(device, data, split_edge, args, one_hot_encode=False):
         seed_everything(args.seed)
         data.to(device)
 
-        model = Net(data.x.size(-1), args.hidden_channels, args.hidden_channels, layer=args.model).to(device)
+        model = Net(data.x.size(-1), args.hidden_channels, layer=args.model).to(device)
         model.reset_parameters()
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
