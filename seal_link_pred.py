@@ -47,6 +47,7 @@ from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import load_splitted_data, read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN
+from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
 from ogbl_baselines.n2v import run_n2v_ogbl
 from profiler_utils import profile_helper
@@ -954,7 +955,10 @@ def run_sweal(args, device):
         if args.pairwise:
             train_dataset = train_positive_dataset
         if args.train_gae:
-            train_gnn(device, data, split_edge, args)
+            if not args.dataset.startswith('ogbl'):
+                train_gnn(device, data, split_edge, args)
+            else:
+                train_gae_ogbl(device, data, split_edge, args)
             exit()
         if args.train_n2v:
             if not args.dataset.startswith('ogbl'):
