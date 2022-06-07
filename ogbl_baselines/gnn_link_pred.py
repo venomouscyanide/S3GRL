@@ -72,7 +72,12 @@ def train(model, optimizer, data, split_edge, dropout, batch_size):
     pos_train_edge = split_edge['train']['edge'].to(data.x.device)
 
     total_loss = total_examples = 0
-    for perm in DataLoader(range(pos_train_edge.size(0)), batch_size, shuffle=True):
+
+    loader = DataLoader(range(pos_train_edge.size(0)), batch_size, shuffle=True)
+    len_loader = len(loader)
+
+    for index, perm in enumerate(loader):
+        print(f"Index: {index} of {len_loader}")
         optimizer.zero_grad()
 
         edge = pos_train_edge[perm].t()
