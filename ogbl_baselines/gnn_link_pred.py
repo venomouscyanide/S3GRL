@@ -154,7 +154,7 @@ def test(model, predictor, data, split_edge, evaluator, batch_size, dropout):
         neg_valid_preds += [predictor(h[edge[0]], h[edge[1]]).squeeze().cpu()]
     neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
-    h = model(data.x, data.full_adj_t)
+    h = model(data.x, data.full_adj_t, dropout)
 
     pos_test_preds = []
     for perm in DataLoader(range(pos_test_edge.size(0)), batch_size):
