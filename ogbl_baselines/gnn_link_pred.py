@@ -87,7 +87,7 @@ class LinkPredictor(torch.nn.Module):
         return torch.sigmoid(x)
 
 
-def train(model, predictor, data, split_edge, optimizer, batch_size, dropout):
+def train(model, predictor, data, split_edge, optimizer, batch_size, dropout, verbose=False):
     model.train()
     predictor.train()
 
@@ -95,11 +95,11 @@ def train(model, predictor, data, split_edge, optimizer, batch_size, dropout):
 
     total_loss = total_examples = 0
 
-    loader = DataLoader(range(pos_train_edge.size(0)), batch_size,
-                           shuffle=True)
+    loader = DataLoader(range(pos_train_edge.size(0)), batch_size, shuffle=True)
     num = len(loader)
     for index, perm in enumerate(loader):
-        print(f"Index: {index + 1} of {num}")
+        if verbose:
+            print(f"Index: {index + 1} of {num}")
         optimizer.zero_grad()
 
         h = model(data.x, data.adj_t, dropout)
