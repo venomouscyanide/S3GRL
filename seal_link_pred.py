@@ -959,7 +959,7 @@ def run_sweal(args, device):
             if not args.dataset.startswith('ogbl'):
                 train_gnn(device, data, split_edge, args)
             else:
-                train_gae_ogbl(device, data, split_edge, args)
+                train_gae_ogbl(args, device, data, split_edge)
             exit()
         if args.train_n2v:
             if not args.dataset.startswith('ogbl'):
