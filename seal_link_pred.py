@@ -49,7 +49,8 @@ from data_utils import load_splitted_data, read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN
 from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
-from ogbl_baselines.n2v import run_n2v_ogbl
+from ogbl_baselines.mlp_on_n2v import train_n2v_emb
+from ogbl_baselines.n2v import run_and_save_n2v
 from profiler_utils import profile_helper
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
@@ -965,8 +966,8 @@ def run_sweal(args, device):
                 run_n2v(device, data, split_edge, args.epochs, args.lr, args.hidden_channels, args.neg_ratio,
                         args.batch_size, args.num_workers, args)
             else:
-                run_n2v_ogbl(device, data, split_edge, args.epochs, args.lr, args.hidden_channels, args.neg_ratio,
-                             args.batch_size, args.num_workers, args)
+                run_and_save_n2v(args, device, data)  # saves n2v embeddings
+                train_n2v_emb(args, device, data, split_edge)  # trains MLP on above saved n2v embeddings
             exit()
         if args.train_mf:
             if not args.dataset.startswith('ogbl'):
