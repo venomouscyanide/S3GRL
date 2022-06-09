@@ -4,15 +4,15 @@
 
 # GCN on ogbl-collab
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset ogbl-collab --train_gae --model GCN --epochs 50 --seed $SEED --use_feature --lr 0.001 --batch_size 512 --hidden_channels 256 --use_valedges_as_input --dropout 0.0
+  python seal_link_pred.py --dataset ogbl-collab --train_gae --model GCN --epochs 200 --seed $SEED --use_feature --lr 0.001 --batch_size 512 --hidden_channels 256 --use_valedges_as_input --dropout 0.0
 done
 
 # SAGE on ogbl-collab
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset ogbl-collab --train_gae --model SAGE --epochs 50 --seed $SEED --use_feature --lr 0.001 --batch_size 512 --hidden_channels 256 --use_valedges_as_input --dropout 0.0
+  python seal_link_pred.py --dataset ogbl-collab --train_gae --model SAGE --epochs 200 --seed $SEED --use_feature --lr 0.001 --batch_size 512 --hidden_channels 256 --use_valedges_as_input --dropout 0.0
 done
 
 # GIN on ogbl-collab
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset ogbl-collab --train_gae --model GIN --epochs 50 --seed $SEED --use_feature --lr 0.001 --batch_size 512 --hidden_channels 256 --use_valedges_as_input --dropout 0.0
+  python seal_link_pred.py --dataset ogbl-collab --train_gae --model GIN --epochs 200 --seed $SEED --use_feature --lr 0.001 --batch_size 512 --hidden_channels 256 --use_valedges_as_input --dropout 0.0
 done
