@@ -44,8 +44,24 @@ node2vec_mf_dict = \
             {
                 'AUC': [],
                 'AP': []
+            },
+        'Cora':
+            {
+                'AUC': [],
+                'AP': []
+            },
+        'CiteSeer':
+            {
+                'AUC': [],
+                'AP': []
+            },
+        'ogbl-collab':
+            {
+                'AUC': [],
+                'AP': []
             }
     }
+
 
 def parse_n2vec_mf(file_name, method_type):
     with open(file_name, 'r') as hyper_file:
