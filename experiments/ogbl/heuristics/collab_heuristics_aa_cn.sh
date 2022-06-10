@@ -1,5 +1,5 @@
 #!/bin/bash
-# this will help reproduce scaled vs baselines results for heuristics; AA, CN and PPR on Cora and CiteSeer
+# this will help reproduce scaled vs baselines results for heuristics; AA, CN on ogbl-collab
 # all runs are on 5 different seeds(1 run each of every seed).
 
 # CN
