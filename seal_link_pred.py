@@ -22,12 +22,13 @@ from networkx import Graph
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit, timeit
+from torch_geometric.transforms import SIGN
 from tqdm import tqdm
 import pdb
 
 from sklearn.metrics import roc_auc_score, average_precision_score
 import scipy.sparse as ssp
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import BCEWithLogitsLoss, Embedding
 
 from torch_sparse import coalesce, SparseTensor
 
@@ -46,7 +47,7 @@ from baselines.mf import train_mf
 from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import load_splitted_data, read_label, read_edges
-from models import SAGE, DGCNN, GCN, GIN
+from models import SAGE, DGCNN, GCN, GIN, SIGNNet
 from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
 from ogbl_baselines.mlp_on_n2v import train_n2v_emb
@@ -64,7 +65,7 @@ class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1):
+                 pos_pairwise=False, neg_ratio=1, z_embedding=None, use_feature=False):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -86,6 +87,8 @@ class SEALDataset(InMemoryDataset):
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
+        self.z_embedding = z_embedding
+        self.use_feature = use_feature
         super(SEALDataset, self).__init__(root)
         if not self.rw_kwargs.get('calc_ratio', False):
             self.data, self.slices = torch.load(self.processed_paths[0])
@@ -142,28 +145,37 @@ class SEALDataset(InMemoryDataset):
                               args.dataset, args.seed)
             exit()
 
+        sign_kwargs = {}
+        if args.model == 'SIGN':
+            num_layers = args.num_layers
+            sign_kwargs.update({
+                "num_layers": num_layers,
+                "z_embedding": self.z_embedding,
+                "use_feature": self.use_feature
+            })
+
         if not self.pairwise:
             print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
             torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
             if self.pos_pairwise:
                 pos_list = extract_enclosing_subgraphs(
                     pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
-                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
+                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
                 torch.save(self.collate(pos_list), self.processed_paths[0])
                 del pos_list
             else:
                 neg_list = extract_enclosing_subgraphs(
                     neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
-                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs)
+                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
                 torch.save(self.collate(neg_list), self.processed_paths[0])
                 del neg_list
 
@@ -172,7 +184,7 @@ class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, **kwargs):
+                 pos_pairwise=False, neg_ratio=1, z_embedding=None, use_feature=False, **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -193,6 +205,8 @@ class SEALDynamicDataset(Dataset):
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
+        self.z_embedding = z_embedding
+        self.use_feature = use_feature
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -312,7 +326,13 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
-        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        if args.model == 'SIGN':
+            xs = [data.x.to(device)]
+            xs += [data[f'x{i}'].to(device) for i in range(1, args.num_layers + 1)]
+            logits = model(xs, data.batch)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+
         loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
         loss.backward()
         optimizer.step()
@@ -377,7 +397,13 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
-        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        if args.model == 'SIGN':
+            xs = [data.x.to(device)]
+            xs += [data[f'x{i}'].to(device) for i in range(1, args.num_layers + 1)]
+            logits = model(xs, data.batch)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        # logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     val_pred, val_true = torch.cat(y_pred), torch.cat(y_true)
@@ -391,7 +417,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
-        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        if args.model == 'SIGN':
+            xs = [data.x.to(device)]
+            xs += [data[f'x{i}'].to(device) for i in range(1, args.num_layers + 1)]
+            logits = model(xs, data.batch)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
@@ -681,6 +712,11 @@ def run_sweal(args, device):
     else:
         raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
 
+    max_z = 1000  # set a large max_z so that every z has embeddings to look up
+    z_embedding = None
+    if args.model == "SIGN":
+        z_embedding = Embedding(max_z, args.hidden_channels)
+
     if args.dataset_stats:
         if args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
             print(f'Dataset: {dataset}:')
@@ -822,6 +858,8 @@ def run_sweal(args, device):
                 rw_kwargs=rw_kwargs,
                 device=device,
                 neg_ratio=args.neg_ratio,
+                z_embedding=z_embedding,
+                use_feature=args.use_feature
             )
         else:
             pos_path = f'{path}_pos_edges'
@@ -842,6 +880,8 @@ def run_sweal(args, device):
                 pairwise=args.pairwise,
                 pos_pairwise=True,
                 neg_ratio=args.neg_ratio,
+                z_embedding=z_embedding,
+                use_feature=args.use_feature
             )
             neg_path = f'{path}_neg_edges'
             train_negative_dataset = eval(dataset_class)(
@@ -861,6 +901,8 @@ def run_sweal(args, device):
                 pairwise=args.pairwise,
                 pos_pairwise=False,
                 neg_ratio=args.neg_ratio,
+                z_embedding=z_embedding,
+                use_feature=args.use_feature
             )
     viz = False
     if viz:  # visualize some graphs
@@ -901,7 +943,9 @@ def run_sweal(args, device):
             max_nodes_per_hop=args.max_nodes_per_hop,
             directed=directed,
             rw_kwargs=rw_kwargs,
-            device=device
+            device=device,
+            z_embedding=z_embedding,
+            use_feature=args.use_feature
         )
         print("Setting up Test data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
@@ -918,14 +962,14 @@ def run_sweal(args, device):
             max_nodes_per_hop=args.max_nodes_per_hop,
             directed=directed,
             rw_kwargs=rw_kwargs,
-            device=device
+            device=device,
+            z_embedding=z_embedding,
+            use_feature=args.use_feature
         )
 
     if args.calc_ratio:
         print("Finished calculating ratio of datasets.")
         exit()
-
-    max_z = 1000  # set a large max_z so that every z has embeddings to look up
 
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
@@ -989,6 +1033,10 @@ def run_sweal(args, device):
         elif args.model == 'GIN':
             model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset,
                         args.use_feature, node_embedding=emb).to(device)
+        elif args.model == "SIGN":
+            model = SIGNNet(args.hidden_channels, args.num_layers, max_z, train_dataset,
+                            args.use_feature, node_embedding=emb).to(device)
+
         parameters = list(model.parameters())
         if args.train_node_embedding:
             torch.nn.init.xavier_uniform_(emb.weight)
