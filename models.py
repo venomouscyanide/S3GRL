@@ -318,7 +318,7 @@ class SIGNNet(torch.nn.Module):
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
 
-        if num_layers == 1:
+        if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
             self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
         else:
