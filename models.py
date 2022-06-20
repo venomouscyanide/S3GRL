@@ -318,10 +318,13 @@ class SIGNNet(torch.nn.Module):
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
 
-        for _ in range(num_layers + 1):
+        if num_layers == 1:
             self.lins.append(Linear(initial_channels, hidden_channels))
-
-        self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout, batch_norm=False)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
+        else:
+            for _ in range(num_layers + 1):
+                self.lins.append(Linear(initial_channels, hidden_channels))
+            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout, batch_norm=False)
 
         self.dropout = dropout
         self.dropedge = dropedge  # not used in SIGN

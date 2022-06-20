@@ -327,8 +327,11 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            xs = [data.x.to(device)]
-            xs += [data[f'x{i}'].to(device) for i in range(1, args.num_layers + 1)]
+            if args.sign_k != 1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+            else:
+                xs = [data[f'x{args.num_layers}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
@@ -398,11 +401,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            xs = [data.x.to(device)]
-            xs += [data[f'x{i}'].to(device) for i in range(1, args.num_layers + 1)]
+            if args.sign_k != 1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+            else:
+                xs = [data[f'x{args.num_layers}'].to(device)]
             logits = model(xs, data.batch)
-        else:
-            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         # logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
@@ -418,11 +422,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            xs = [data.x.to(device)]
-            xs += [data[f'x{i}'].to(device) for i in range(1, args.num_layers + 1)]
+            if args.sign_k != 1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+            else:
+                xs = [data[f'x{args.num_layers}'].to(device)]
             logits = model(xs, data.batch)
-        else:
-            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
@@ -1034,7 +1039,7 @@ def run_sweal(args, device):
             model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset,
                         args.use_feature, node_embedding=emb).to(device)
         elif args.model == "SIGN":
-            model = SIGNNet(args.hidden_channels, args.num_layers, max_z, train_dataset,
+            model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
                             args.use_feature, node_embedding=emb).to(device)
 
         parameters = list(model.parameters())
@@ -1271,6 +1276,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--train_n2v', action='store_true', help="Train node2vec on the dataset")
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
+    parser.add_argument('--sign_k', type=int, default=3)
 
     args = parser.parse_args()
 
