@@ -304,7 +304,15 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
-        logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        if args.model == 'SIGN':
+            if args.sign_k != -1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+            else:
+                xs = [data[f'x{args.num_layers}'].to(device)]
+            logits = model(xs, data.batch)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
         loss.backward()
         optimizer.step()
