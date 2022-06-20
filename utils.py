@@ -263,9 +263,8 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         z = torch.zeros(len(dists), dtype=torch.long)
     if sign_pyg_kwargs:
         # SIGN PyG graph construction flow
-        z = sign_pyg_kwargs['z_embedding'](z)
         if sign_pyg_kwargs['use_feature'] and node_features is not None:
-            node_features = torch.cat([z, node_features.to(torch.float)], 1)
+            node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
         else:
             node_features = z
         data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, node_id=node_ids, num_nodes=num_nodes)
