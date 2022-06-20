@@ -407,7 +407,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
             else:
                 xs = [data[f'x{args.num_layers}'].to(device)]
             logits = model(xs, data.batch)
-        # logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     val_pred, val_true = torch.cat(y_pred), torch.cat(y_true)
@@ -428,6 +429,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
             else:
                 xs = [data[f'x{args.num_layers}'].to(device)]
             logits = model(xs, data.batch)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
