@@ -66,6 +66,7 @@ class SEALDataset(InMemoryDataset):
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
                  pos_pairwise=False, neg_ratio=1, use_feature=False, args=None):
+        # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -186,6 +187,7 @@ class SEALDynamicDataset(Dataset):
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
                  pos_pairwise=False, neg_ratio=1, use_feature=False, args=None, **kwargs):
+        # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
