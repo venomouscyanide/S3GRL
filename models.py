@@ -300,3 +300,52 @@ class GIN(torch.nn.Module):
         x = self.mlp(x)
 
         return x
+
+
+class SIGNNet(torch.nn.Module):
+    def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
+                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0):
+        super().__init__()
+
+        self.use_feature = use_feature
+        self.node_embedding = node_embedding
+
+        self.lins = torch.nn.ModuleList()
+        initial_channels = hidden_channels
+
+        if self.use_feature:
+            initial_channels += train_dataset.num_features - hidden_channels
+        if self.node_embedding is not None:
+            initial_channels += node_embedding.embedding_dim
+
+        if num_layers == -1:
+            self.lins.append(Linear(initial_channels, hidden_channels))
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
+        else:
+            for _ in range(num_layers + 1):
+                self.lins.append(Linear(initial_channels, hidden_channels))
+            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout, batch_norm=False)
+
+        self.dropout = dropout
+        self.dropedge = dropedge  # not used in SIGN
+
+    def forward(self, xs, batch):
+        hs = []
+        for x, lin in zip(xs, self.lins):
+            h = lin(x).relu()
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            hs.append(h)
+        h = torch.cat(hs, dim=-1)
+
+        # center pooling
+        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
+        h_src = h[center_indices]
+        h_dst = h[center_indices + 1]
+        h = (h_src * h_dst)
+
+        h = self.mlp(h)
+        return h
+
+    def reset_parameters(self):
+        for lin in self.lins:
+            lin.reset_parameters()

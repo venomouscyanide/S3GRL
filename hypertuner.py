@@ -42,7 +42,7 @@ class ManualTuner:
                                            profile=profile, split_val_ratio=split_val_ratio,
                                            split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50,
                                            train_gae=False, base_gae="", dataset_stats=False, seed=seed,
-                                           dataset_split_num=1, train_n2v=False, train_mf=False)
+                                           dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3)
 
         run_sweal(sweal_parser, device)
 

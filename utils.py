@@ -8,6 +8,7 @@ import os
 from pprint import pprint
 
 import torch_geometric.utils
+from torch_geometric.transforms import SIGN
 from tqdm import tqdm
 import random
 import numpy as np
@@ -234,7 +235,7 @@ def de_plus_node_labeling(adj, src, dst, max_dist=100):
     return dist.to(torch.long)
 
 
-def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl'):
+def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl', sign_pyg_kwargs=None):
     # Construct a pytorch_geometric graph from a scipy csr adjacency matrix.
     u, v, r = ssp.find(adj)
     num_nodes = adj.shape[0]
@@ -260,8 +261,16 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         z[z > 100] = 100  # limit the maximum label to 100
     else:
         z = torch.zeros(len(dists), dtype=torch.long)
-    data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z,
-                node_id=node_ids, num_nodes=num_nodes)
+    if sign_pyg_kwargs:
+        # SIGN PyG graph construction flow
+        if sign_pyg_kwargs['use_feature'] and node_features is not None:
+            node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
+        else:
+            node_features = z
+        data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, node_id=node_ids, num_nodes=num_nodes)
+    else:
+        data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z,
+                    node_id=node_ids, num_nodes=num_nodes)
     return data
 
 
@@ -299,7 +308,8 @@ def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
 def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_label='drnl',
                       ratio_per_hop=1.0, max_nodes_per_hop=None,
                       directed=False, A_csc=None, rw_kwargs=None, split='train', dataset_name='', seed=1):
-    # calculate sparsity of subgraphs of seal vs sweal for the split
+    # TODO: this needs to be updated to account for addition of SIGN
+    # calculate sparsity of subgraphs of seal vs ScaLed for the split
     stats_dict = {}
 
     overall_seal_node_storage = []
@@ -376,9 +386,28 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
 
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
                                 ratio_per_hop=1.0, max_nodes_per_hop=None,
-                                directed=False, A_csc=None, rw_kwargs=None):
+                                directed=False, A_csc=None, rw_kwargs=None, sign_kwargs=None):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
+
+    if sign_kwargs:
+        for src, dst in tqdm(link_index.t().tolist()):
+            num_hops = 1  # restrict to 1, then taken powers of A
+            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                 max_nodes_per_hop, node_features=x, y=y,
+                                 directed=directed, A_csc=A_csc)
+
+            sign_pyg_kwargs = {
+                'use_feature': sign_kwargs['use_feature'],
+            }
+            data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+
+            sign_t = SIGN(sign_kwargs['num_layers'])
+            data = sign_t(data)
+
+            data_list.append(data)
+
+        return data_list
 
     for src, dst in tqdm(link_index.t().tolist()):
         if not rw_kwargs['rw_m']:
