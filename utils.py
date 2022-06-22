@@ -308,7 +308,8 @@ def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
 def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_label='drnl',
                       ratio_per_hop=1.0, max_nodes_per_hop=None,
                       directed=False, A_csc=None, rw_kwargs=None, split='train', dataset_name='', seed=1):
-    # calculate sparsity of subgraphs of seal vs sweal for the split
+    # TODO: this needs to be updated to account for addition of SIGN
+    # calculate sparsity of subgraphs of seal vs ScaLed for the split
     stats_dict = {}
 
     overall_seal_node_storage = []
@@ -389,11 +390,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
 
-    # A_list = []
     if sign_kwargs:
-        # TODO: handle powers here for SIGN
-        # for power in range(1, sign_kwargs['num_layers']):
-        #     A_list.append(A.pow(power))
         for src, dst in tqdm(link_index.t().tolist()):
             num_hops = 1  # restrict to 1, then taken powers of A
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
@@ -402,7 +399,6 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
             sign_pyg_kwargs = {
                 'use_feature': sign_kwargs['use_feature'],
-                'z_embedding': sign_kwargs['z_embedding']
             }
             data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
 

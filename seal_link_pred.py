@@ -65,7 +65,7 @@ class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, z_embedding=None, use_feature=False):
+                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -87,8 +87,8 @@ class SEALDataset(InMemoryDataset):
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
-        self.z_embedding = z_embedding
         self.use_feature = use_feature
+        self.args = args
         super(SEALDataset, self).__init__(root)
         if not self.rw_kwargs.get('calc_ratio', False):
             self.data, self.slices = torch.load(self.processed_paths[0])
@@ -138,21 +138,22 @@ class SEALDataset(InMemoryDataset):
             "data": self.data,
         }
 
-        if self.rw_kwargs.get('calc_ratio', False):
-            print(f"Calculating preprocessing stats for {self.split}")
-            calc_ratio_helper(pos_edge, neg_edge, A, self.data.x, -1, self.num_hops, self.node_label,
-                              self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
-                              args.dataset, args.seed)
-            exit()
-
         sign_kwargs = {}
-        if args.model == 'SIGN':
-            num_layers = args.num_layers
+        if self.args.model == 'SIGN':
+            num_layers = self.args.num_layers
             sign_kwargs.update({
                 "num_layers": num_layers,
-                "z_embedding": self.z_embedding,
                 "use_feature": self.use_feature
             })
+
+        if self.rw_kwargs.get('calc_ratio', False):
+            print(f"Calculating preprocessing stats for {self.split}")
+            if self.args.model == "SIGN":
+                raise NotImplementedError("calc_ratio not implemented for SIGN")
+            calc_ratio_helper(pos_edge, neg_edge, A, self.data.x, -1, self.num_hops, self.node_label,
+                              self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
+                              self.args.dataset, self.args.seed)
+            exit()
 
         if not self.pairwise:
             print("Setting up Positive Subgraphs")
@@ -184,7 +185,7 @@ class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, z_embedding=None, use_feature=False, **kwargs):
+                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None, **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -205,8 +206,8 @@ class SEALDynamicDataset(Dataset):
         self.pairwise = pairwise
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
-        self.z_embedding = z_embedding
         self.use_feature = use_feature
+        self.args = args
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -277,15 +278,31 @@ class SEALDynamicDataset(Dataset):
             "unique_nodes": self.unique_nodes
         }
 
-        if not rw_kwargs['rw_m']:
-            tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+        sign_kwargs = {}
+        if self.args.model == 'SIGN':
+            num_layers = self.args.num_layers
+            sign_pyg_kwargs = {
+                'use_feature': self.use_feature,
+            }
+            num_hops = 1  # restrict to 1, then taken powers of A
+            tmp = k_hop_subgraph(src, dst, num_hops, self.A, self.ratio_per_hop,
                                  self.max_nodes_per_hop, node_features=self.data.x,
                                  y=y, directed=self.directed, A_csc=self.A_csc)
-            data = construct_pyg_graph(*tmp, self.node_label)
+            data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
+
+            sign_t = SIGN(num_layers)
+            data = sign_t(data)
+
         else:
-            data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
-                                  self.max_nodes_per_hop, node_features=self.data.x,
-                                  y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
+            if not rw_kwargs['rw_m']:
+                tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                                     self.max_nodes_per_hop, node_features=self.data.x,
+                                     y=y, directed=self.directed, A_csc=self.A_csc)
+                data = construct_pyg_graph(*tmp, self.node_label, sign_kwargs)
+            else:
+                data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                                      self.max_nodes_per_hop, node_features=self.data.x,
+                                      y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
 
         return data
 
@@ -368,16 +385,32 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
         pos_edge_weight = pos_data.edge_weight if args.use_edge_weight else None
         pos_node_id = pos_data.node_id if emb else None
         pos_num_nodes = pos_data.num_nodes
-        pos_logits = model(pos_num_nodes, pos_data.z, pos_data.edge_index, data.batch, pos_x, pos_edge_weight,
-                           pos_node_id)
+        if args.model == 'SIGN':
+            if args.sign_k != -1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+            else:
+                xs = [data[f'x{args.num_layers}'].to(device)]
+            pos_logits = model(xs, data.batch)
+        else:
+            pos_logits = model(pos_num_nodes, pos_data.z, pos_data.edge_index, data.batch, pos_x, pos_edge_weight,
+                               pos_node_id)
 
         neg_data = next(train_negative_loader).to(device)
         neg_x = neg_data.x if args.use_feature else None
         neg_edge_weight = neg_data.edge_weight if args.use_edge_weight else None
         neg_node_id = neg_data.node_id if emb else None
         neg_num_nodes = neg_data.num_nodes
-        neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
-                           neg_node_id)
+        if args.model == 'SIGN':
+            if args.sign_k != -1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+            else:
+                xs = [data[f'x{args.num_layers}'].to(device)]
+            neg_logits = model(xs, data.batch)
+        else:
+            neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
+                               neg_node_id)
         loss_fn = get_loss(args.loss_fn)
         loss = loss_fn(pos_logits, neg_logits, args.neg_ratio)
 
@@ -566,7 +599,7 @@ class SWEALArgumentParser:
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
-                 seed, dataset_split_num, train_n2v, train_mf):
+                 seed, dataset_split_num, train_n2v, train_mf, sign_k):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -634,6 +667,7 @@ class SWEALArgumentParser:
         self.dataset_split_num = dataset_split_num
         self.train_n2v = train_n2v
         self.train_mf = train_mf
+        self.sign_k = sign_k
 
 
 def run_sweal(args, device):
@@ -670,7 +704,7 @@ def run_sweal(args, device):
     with open(log_file, 'a') as f:
         f.write('\n' + cmd_input)
 
-    # S[W]EAL Dataset prep + Training Flow
+    # ScaLed Dataset prep + Training Flow
     if args.dataset.startswith('ogbl'):
         dataset = PygLinkPropPredDataset(name=args.dataset)
         split_edge = dataset.get_edge_split()
@@ -729,9 +763,6 @@ def run_sweal(args, device):
         raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
 
     max_z = 1000  # set a large max_z so that every z has embeddings to look up
-    z_embedding = None
-    if args.model == "SIGN":
-        z_embedding = Embedding(max_z, args.hidden_channels)
 
     if args.dataset_stats:
         if args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
@@ -874,8 +905,8 @@ def run_sweal(args, device):
                 rw_kwargs=rw_kwargs,
                 device=device,
                 neg_ratio=args.neg_ratio,
-                z_embedding=z_embedding,
-                use_feature=args.use_feature
+                use_feature=args.use_feature,
+                args=args,
             )
         else:
             pos_path = f'{path}_pos_edges'
@@ -896,8 +927,8 @@ def run_sweal(args, device):
                 pairwise=args.pairwise,
                 pos_pairwise=True,
                 neg_ratio=args.neg_ratio,
-                z_embedding=z_embedding,
-                use_feature=args.use_feature
+                use_feature=args.use_feature,
+                args=args,
             )
             neg_path = f'{path}_neg_edges'
             train_negative_dataset = eval(dataset_class)(
@@ -917,8 +948,8 @@ def run_sweal(args, device):
                 pairwise=args.pairwise,
                 pos_pairwise=False,
                 neg_ratio=args.neg_ratio,
-                z_embedding=z_embedding,
-                use_feature=args.use_feature
+                use_feature=args.use_feature,
+                args=args,
             )
     viz = False
     if viz:  # visualize some graphs
@@ -960,8 +991,8 @@ def run_sweal(args, device):
             directed=directed,
             rw_kwargs=rw_kwargs,
             device=device,
-            z_embedding=z_embedding,
-            use_feature=args.use_feature
+            use_feature=args.use_feature,
+            args=args,
         )
         print("Setting up Test data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
@@ -979,8 +1010,8 @@ def run_sweal(args, device):
             directed=directed,
             rw_kwargs=rw_kwargs,
             device=device,
-            z_embedding=z_embedding,
-            use_feature=args.use_feature
+            use_feature=args.use_feature,
+            args=args,
         )
 
     if args.calc_ratio:
@@ -1294,6 +1325,9 @@ if __name__ == '__main__':
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
 
     seed_everything(args.seed)
+
+    if args.model == "SIGN" and not args.use_feature:
+        raise Exception("Need to have use_feature enabled for SIGN to work")
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
