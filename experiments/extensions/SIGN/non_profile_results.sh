@@ -2,10 +2,10 @@
 
 # PUBMED
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset PubMed --epochs 50 --seed $SEED --node_label zo --use_feature --num_layers 3 --sign_k 3 --data_appendix pubmed_k3_$SEED --model SIGN --dynamic_train
+  python seal_link_pred.py --dataset Pubmed --epochs 50 --seed $SEED --node_label zo --use_feature --num_layers 3 --sign_k 3 --data_appendix pubmed_k3_$SEED --model SIGN --dynamic_train
 done
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset PubMed --epochs 50 --seed $SEED --node_label zo --use_feature --num_layers 3 --sign_k -1 --data_appendix pubmed_k-1_$SEED --model SIGN --dynamic_train
+  python seal_link_pred.py --dataset Pubmed --epochs 50 --seed $SEED --node_label zo --use_feature --num_layers 3 --sign_k -1 --data_appendix pubmed_k-1_$SEED --model SIGN --dynamic_train
 done
 
 # attributed-Facebook
@@ -21,7 +21,7 @@ done
 
 # PUBMED
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset PubMed --epochs 50 --seed $SEED --num_hops 3 --use_feature --data_appendix pubmed_seal_$SEED --dynamic_train --model DGCNN
+  python seal_link_pred.py --dataset Pubmed --epochs 50 --seed $SEED --num_hops 3 --use_feature --data_appendix pubmed_seal_$SEED --dynamic_train --model DGCNN
 done
 
 # CORA
