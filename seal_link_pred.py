@@ -22,7 +22,6 @@ from networkx import Graph
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit, timeit
-from torch_geometric.transforms import SIGN
 from tqdm import tqdm
 import pdb
 
@@ -53,6 +52,7 @@ from ogbl_baselines.mf import train_mf_ogbl
 from ogbl_baselines.mlp_on_n2v import train_n2v_emb
 from ogbl_baselines.n2v import run_and_save_n2v
 from profiler_utils import profile_helper
+from tuned_SIGN import TunedSIGN
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
 
@@ -141,10 +141,12 @@ class SEALDataset(InMemoryDataset):
 
         sign_kwargs = {}
         if self.args.model == 'SIGN':
+            sign_k = self.args.sign_k
             num_layers = self.args.num_layers
             sign_kwargs.update({
+                "sign_k": sign_k,
+                "use_feature": self.use_feature,
                 "num_layers": num_layers,
-                "use_feature": self.use_feature
             })
 
         if self.rw_kwargs.get('calc_ratio', False):
@@ -282,7 +284,6 @@ class SEALDynamicDataset(Dataset):
 
         sign_kwargs = {}
         if self.args.model == 'SIGN':
-            num_layers = self.args.num_layers
             sign_pyg_kwargs = {
                 'use_feature': self.use_feature,
             }
@@ -292,8 +293,8 @@ class SEALDynamicDataset(Dataset):
                                  y=y, directed=self.directed, A_csc=self.A_csc)
             data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
 
-            sign_t = SIGN(num_layers)
-            data = sign_t(data)
+            sign_t = TunedSIGN(self.args.num_layers)
+            data = sign_t(data, self.args.sign_k)
 
         else:
             if not rw_kwargs['rw_m']:

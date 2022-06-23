@@ -24,6 +24,8 @@ import networkx as nx
 from torch_geometric.utils import to_scipy_sparse_matrix
 from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 
+from tuned_SIGN import TunedSIGN
+
 
 def neighbors(fringe, A, outgoing=True):
     # Find all 1-hop neighbors of nodes in fringe from graph A, 
@@ -402,8 +404,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             }
             data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
 
-            sign_t = SIGN(sign_kwargs['num_layers'])
-            data = sign_t(data)
+            sign_t = TunedSIGN(sign_kwargs['num_layers'])
+            data = sign_t(data, sign_kwargs['sign_k'])
 
             data_list.append(data)
 
