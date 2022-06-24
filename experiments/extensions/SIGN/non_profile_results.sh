@@ -10,7 +10,7 @@ done
 
 # attributed-Facebook
 for SEED in 1 2 3 4 5; do
-  python seal_link_pred.py --dataset attributed-Facebook --epochs 50 --seed $SEED --use_feature --hidden_channels 256 --split_test_ratio 0.50 --node_label zo --data_appendix facebook_k3_$SEED --num_layers 3 --sign_k 3 --model SIGN
+  python seal_link_pred.py --dataset attributed-Facebook --epochs 50 --seed $SEED --use_feature --hidden_channels 256 --split_test_ratio 0.50 --node_label zo --data_appendix facebook_k3_$SEED --num_layers 1 --sign_k 1 --model SIGN
 done
 for SEED in 1 2 3 4 5; do
   python seal_link_pred.py --dataset attributed-Facebook --epochs 50 --seed $SEED --use_feature --hidden_channels 256 --split_test_ratio 0.50 --node_label zo --data_appendix facebook_k-1_$SEED --num_layers 3 --sign_k -1 --model SIGN
