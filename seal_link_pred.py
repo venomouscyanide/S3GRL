@@ -137,6 +137,7 @@ class SEALDataset(InMemoryDataset):
             "edge_index": self.data.edge_index,
             "device": self.device,
             "data": self.data,
+            "node_label": self.node_label,
         }
 
         sign_kwargs = {}
@@ -279,30 +280,43 @@ class SEALDynamicDataset(Dataset):
             "edge_index": self.data.edge_index,
             "device": self.device,
             "data": self.data,
-            "unique_nodes": self.unique_nodes
+            "unique_nodes": self.unique_nodes,
+            "node_label": self.node_label,
         }
 
         sign_kwargs = {}
         if self.args.model == 'SIGN':
-            sign_pyg_kwargs = {
-                'use_feature': self.use_feature,
-            }
-            num_hops = 1  # restrict to 1, then taken powers of A
-            tmp = k_hop_subgraph(src, dst, num_hops, self.A, self.ratio_per_hop,
-                                 self.max_nodes_per_hop, node_features=self.data.x,
-                                 y=y, directed=self.directed, A_csc=self.A_csc)
-            data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
+            if not self.rw_kwargs.get('m'):
+                # SIGN + SEAL flow
+                sign_pyg_kwargs = {
+                    'use_feature': self.use_feature,
+                }
+                num_hops = 1  # restrict to 1, then taken powers of A
+                tmp = k_hop_subgraph(src, dst, num_hops, self.A, self.ratio_per_hop,
+                                     self.max_nodes_per_hop, node_features=self.data.x,
+                                     y=y, directed=self.directed, A_csc=self.A_csc)
+                data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
 
-            sign_t = TunedSIGN(self.args.num_layers)
-            data = sign_t(data, self.args.sign_k)
+                sign_t = TunedSIGN(self.args.num_layers)
+                data = sign_t(data, self.args.sign_k)
+            else:
+                # SIGN + ScaLed flow
+                rw_kwargs.update({'sign': True})
+                data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                                      self.max_nodes_per_hop, node_features=self.data.x,
+                                      y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
+                sign_t = TunedSIGN(self.args.num_layers)
+                data = sign_t(data, self.args.sign_k)
 
         else:
             if not rw_kwargs['rw_m']:
+                # SEAL flow
                 tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                      self.max_nodes_per_hop, node_features=self.data.x,
                                      y=y, directed=self.directed, A_csc=self.A_csc)
                 data = construct_pyg_graph(*tmp, self.node_label, sign_kwargs)
             else:
+                # ScaLed flow
                 data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                       self.max_nodes_per_hop, node_features=self.data.x,
                                       y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
