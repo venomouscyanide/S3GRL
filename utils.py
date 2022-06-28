@@ -121,14 +121,25 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         sub_edge_index_revised = sub_edge_index[:, mask1 & mask2]
 
         # Calculate node labeling.
-        z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
-                                            num_nodes=sub_nodes.size(0))
+        if rw_kwargs['node_label'] == 'zo':
+            z_revised = torch.zeros(size=[len(rw_set)])
+            z_revised.index_fill_(0, torch.tensor([src, dst]), 1)
+        elif rw_kwargs['node_label'] == 'drnl':
+            z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
+                                                num_nodes=sub_nodes.size(0))
+        else:
+            raise NotImplementedError(f"ScaLed does not support {rw_kwargs['node_label']} labeling trick yet.")
 
         y = torch.tensor([y], dtype=torch.int)
         x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
-        data_revised = Data(x=x, z=z_revised,
-                            edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
-                            num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
+        if not rw_kwargs.get('sign'):
+            data_revised = Data(x=x, z=z_revised,
+                                edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
+                                num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
+        else:
+            node_features = torch.cat([z_revised.reshape(z_revised.size()[0], 1), x.to(torch.float)], -1)
+            data_revised = Data(node_features, edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
+                                num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
         # end of core-logic for S.C.A.L.E.D.
         return data_revised
 
@@ -268,6 +279,7 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         if sign_pyg_kwargs['use_feature'] and node_features is not None:
             node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
         else:
+            # flow never really enters here due to check in main()
             node_features = z
         data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, node_id=node_ids, num_nodes=num_nodes)
     else:
@@ -393,32 +405,46 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     data_list = []
 
     if sign_kwargs:
-        for src, dst in tqdm(link_index.t().tolist()):
-            num_hops = 1  # restrict to 1, then taken powers of A
-            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                 max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc)
+        if not rw_kwargs['rw_m']:
+            # SIGN + SEAL flow
+            for src, dst in tqdm(link_index.t().tolist()):
+                num_hops = 1  # restrict to 1, then taken powers of A
+                tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                     max_nodes_per_hop, node_features=x, y=y,
+                                     directed=directed, A_csc=A_csc)
 
-            sign_pyg_kwargs = {
-                'use_feature': sign_kwargs['use_feature'],
-            }
-            data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+                sign_pyg_kwargs = {
+                    'use_feature': sign_kwargs['use_feature'],
+                }
+                data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
 
-            sign_t = TunedSIGN(sign_kwargs['num_layers'])
-            data = sign_t(data, sign_kwargs['sign_k'])
+                sign_t = TunedSIGN(sign_kwargs['num_layers'])
+                data = sign_t(data, sign_kwargs['sign_k'])
 
-            data_list.append(data)
+                data_list.append(data)
+        else:
+            # SIGN + ScaLed flow
+            for src, dst in tqdm(link_index.t().tolist()):
+                rw_kwargs.update({'sign': True})
+                data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                      max_nodes_per_hop, node_features=x, y=y,
+                                      directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+                sign_t = TunedSIGN(sign_kwargs['num_layers'])
+                data = sign_t(data, sign_kwargs['sign_k'])
 
+                data_list.append(data)
         return data_list
 
     for src, dst in tqdm(link_index.t().tolist()):
         if not rw_kwargs['rw_m']:
+            # SEAL flow
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc)
 
             data = construct_pyg_graph(*tmp, node_label)
         else:
+            # ScaLed flow
             data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                   max_nodes_per_hop, node_features=x, y=y,
                                   directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
