@@ -3,6 +3,7 @@ import random
 
 import torch
 from networkx import Graph
+from scipy.sparse import SparseEfficiencyWarning
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.datasets import Planetoid
 from torch_geometric.loader import DataLoader
@@ -20,6 +21,8 @@ from torch_geometric.transforms import SIGN
 import warnings
 
 # supress all warnings
+
+warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
 warnings.simplefilter('ignore', UserWarning)
 
@@ -191,7 +194,7 @@ class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, sign_k, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None):
+                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None, include_negative_samples=False):
         # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
@@ -217,6 +220,7 @@ class SEALDataset(InMemoryDataset):
         self.use_feature = use_feature
         self.args = args
         self.sign_k = sign_k
+        self.include_negative_samples = include_negative_samples
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -270,17 +274,23 @@ class SEALDataset(InMemoryDataset):
         pos_list = extract_enclosing_subgraphs(
             pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
-        print("Setting up Negative Subgraphs")
-        neg_list = extract_enclosing_subgraphs(
-            neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
-        torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
-        del pos_list, neg_list
+        if not self.include_negative_samples:
+            print("Skipping Setting up Negative Subgraphs")
+            torch.save(self.collate(pos_list), self.processed_paths[0])
+            del pos_list
+        else:
+            print("Setting up Negative Subgraphs")
+            neg_list = extract_enclosing_subgraphs(
+                neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+            torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
+            del pos_list, neg_list
 
 
-def viz_sign_operators(num_hops, sign_k, dataset_name, num_samples, type='golden', seed=42):
+def viz_sign_operators(num_hops, sign_k, dataset_name, num_samples, type='golden', seed=42, edge_weight_labels=False,
+                       include_negative_samples=False):
     # fix seed
-    seed = 42
+    seed = seed
     random.seed(seed)
     np.random.seed(seed)
 
@@ -296,7 +306,7 @@ def viz_sign_operators(num_hops, sign_k, dataset_name, num_samples, type='golden
     data.edge_index = split_edge['train']['edge'].t()
 
     train_dataset = SEALDataset(root=path, data=data, split_edge=split_edge, num_hops=num_hops, sign_k=sign_k,
-                                use_feature=True, node_label='zo')
+                                use_feature=True, node_label='zo', include_negative_samples=include_negative_samples)
 
     # matplotlib.use("Agg")
 
@@ -324,13 +334,15 @@ def viz_sign_operators(num_hops, sign_k, dataset_name, num_samples, type='golden
             pos = nx.spring_layout(G)
             nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
 
-            edge_labels = nx.get_edge_attributes(G, 'weight')
-            edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
-            nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+            if edge_weight_labels:
+                edge_labels = nx.get_edge_attributes(G, 'weight')
+                edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
+                nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
 
             f.show()
             plt.show()
 
 
 if __name__ == '__main__':
-    viz_sign_operators(num_hops=1, sign_k=3, dataset_name='Cora', num_samples=3, type='golden', seed=42)
+    viz_sign_operators(num_hops=1, sign_k=3, dataset_name='CiteSeer', num_samples=3, type='golden', seed=55,
+                       edge_weight_labels=False, include_negative_samples=False)
