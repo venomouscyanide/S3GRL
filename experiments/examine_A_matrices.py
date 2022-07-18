@@ -1,5 +1,4 @@
 # Standalone code that helps examine Golden Operator Matrices as graphs
-import copy
 import random
 
 import torch
@@ -12,11 +11,17 @@ from torch_sparse import SparseTensor
 import scipy.sparse as ssp
 from tqdm import tqdm
 import networkx as nx
-from torch_geometric.utils import to_networkx
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from torch_geometric.transforms import SIGN
+
+import warnings
+
+# supress all warnings
+warnings.simplefilter('ignore', FutureWarning)
+warnings.simplefilter('ignore', UserWarning)
 
 
 def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1, data_passed=False):
@@ -273,18 +278,17 @@ class SEALDataset(InMemoryDataset):
         del pos_list, neg_list
 
 
-if __name__ == '__main__':
+def viz_sign_operators(num_hops, sign_k, dataset_name, num_samples, type='golden', seed=42):
     # fix seed
     seed = 42
     random.seed(seed)
     np.random.seed(seed)
 
+    # TODO: support 'beagle'
+
     # examine some A matrices with and without self-loops
     # the code is extracted from the extended ScaLed code base keeping only the skeletal elements
-    num_hops = 3
-    sign_k = 3
     path = 'datasets'
-    dataset_name = 'Cora'
 
     dataset = Planetoid(path, dataset_name)
     split_edge = do_edge_split(dataset, False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1)
@@ -296,8 +300,9 @@ if __name__ == '__main__':
 
     # matplotlib.use("Agg")
 
-    loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
-    for g in loader:
+    loader = list(DataLoader(train_dataset, batch_size=1, shuffle=False))
+    selected_samples = random.sample(loader, num_samples)
+    for g in selected_samples:
         if g.edge_index.nelement() != 0:
             dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
         else:
@@ -313,9 +318,19 @@ if __name__ == '__main__':
 
             with_labels = True
             G = Graph(ajc_power.detach().numpy(), )
-            labels = {i: str(i + 1) for i in range(len(G))}
+            node_labels = {i: str(i + 1) for i in range(len(G))}
 
             print(f"Drawing graph {index} of {sign_k}")
-            nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=labels)
+            pos = nx.spring_layout(G)
+            nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
+
+            edge_labels = nx.get_edge_attributes(G, 'weight')
+            edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
+            nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+
             f.show()
             plt.show()
+
+
+if __name__ == '__main__':
+    viz_sign_operators(num_hops=1, sign_k=3, dataset_name='Cora', num_samples=3, type='golden', seed=42)
