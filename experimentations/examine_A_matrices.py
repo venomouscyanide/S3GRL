@@ -1,4 +1,5 @@
 # Standalone code that helps examine Golden Operator Matrices as graphs
+import os
 import random
 
 import torch
@@ -19,9 +20,12 @@ import numpy as np
 from torch_geometric.transforms import SIGN
 
 import warnings
+import graphistry
+
+graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
+                    password=os.environ['graphistry_pass'])
 
 # supress all warnings
-
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
 warnings.simplefilter('ignore', UserWarning)
@@ -168,24 +172,58 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
 
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='zo',
                                 ratio_per_hop=1.0, max_nodes_per_hop=None,
-                                directed=False, A_csc=None, rw_kwargs=None, sign_kwargs=None):
+                                directed=False, A_csc=None, rw_kwargs=None, sign_kwargs=None, powers_of_A=None,
+                                data=None):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
     for src, dst in tqdm(link_index.t().tolist()):
         num_hops = 1  # restrict to 1, then taken powers of A
-        tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                             max_nodes_per_hop, node_features=x, y=y,
-                             directed=directed, A_csc=A_csc)
 
-        sign_pyg_kwargs = {
-            'use_feature': sign_kwargs['use_feature'],
-        }
-        data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+        if not powers_of_A:
+            # golden flow
 
-        sign_t = TunedSIGN(sign_kwargs['num_layers'])
-        data = sign_t(data, sign_kwargs['sign_k'])
+            # debug code with graphistry
+            # networkx_G = to_networkx(data)  # the full graph
+            # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+            # check against the nodes that is received in tmp before the relabeling occurs
 
-        data_list.append(data)
+            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                 max_nodes_per_hop, node_features=x, y=y,
+                                 directed=directed, A_csc=A_csc)
+
+            sign_pyg_kwargs = {
+                'use_feature': sign_kwargs['use_feature'],
+            }
+
+            data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+
+            sign_t = TunedSIGN(sign_kwargs['sign_k'])
+            data = sign_t(data, sign_kwargs['sign_k'])
+
+            data_list.append(data)
+        else:
+            # beagle flow
+
+            # debug code with graphistry
+            # networkx_G = to_networkx(data)  # the full graph
+            # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+            # check against the nodes that is received in tmp before the relabeling occurs
+
+            for index, power_of_a in enumerate(powers_of_A, start=1):
+                tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
+                                     max_nodes_per_hop, node_features=x, y=y,
+                                     directed=directed, A_csc=A_csc)
+                sign_pyg_kwargs = {
+                    'use_feature': sign_kwargs['use_feature'],
+                }
+
+                data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+
+                sign_t = TunedSIGN(1)
+                data = sign_t(data, 1)
+                data.operator_index = index
+
+                data_list.append(data)
 
     return data_list
 
@@ -194,7 +232,8 @@ class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, sign_k, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None, include_negative_samples=False):
+                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None, include_negative_samples=False,
+                 sign_type='golden'):
         # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
@@ -221,6 +260,7 @@ class SEALDataset(InMemoryDataset):
         self.args = args
         self.sign_k = sign_k
         self.include_negative_samples = include_negative_samples
+        self.sign_type = sign_type
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -263,17 +303,27 @@ class SEALDataset(InMemoryDataset):
         rw_kwargs = {}
         sign_kwargs = {}
 
-        num_layers = self.num_hops
         sign_kwargs.update({
             "sign_k": self.sign_k,
-            "use_feature": self.use_feature,
-            "num_layers": num_layers,
+            "use_feature": self.use_feature
         })
+
+        powers_of_A = []
+        if self.sign_type == 'beagle':
+            edge_index = self.data.edge_index
+            num_nodes = self.data.num_nodes
+
+            dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
+            powers_of_A = [A]
+            for sign_k in range(2, self.sign_k + 1):
+                dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
+                powers_of_A.append(ssp.csr_matrix(dense_adj_power))
 
         print("Setting up Positive Subgraphs")
         pos_list = extract_enclosing_subgraphs(
             pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+            powers_of_A=powers_of_A, data=self.data)
         if not self.include_negative_samples:
             print("Skipping Setting up Negative Subgraphs")
             torch.save(self.collate(pos_list), self.processed_paths[0])
@@ -282,67 +332,99 @@ class SEALDataset(InMemoryDataset):
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+                powers_of_A=powers_of_A, data=self.data)
             torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
             del pos_list, neg_list
 
 
-def viz_sign_operators(num_hops, sign_k, dataset_name, num_samples, type='golden', seed=42, edge_weight_labels=False,
-                       include_negative_samples=False):
+def viz_sign_operators(p, dataset_name, num_samples, seed=42, edge_weight_labels=False,
+                       include_negative_samples=False, sign_type='golden'):
+    num_hops = 1  # this really does not matter. It is hardcoded in the extraction method regardless
     # fix seed
     seed = seed
     random.seed(seed)
     np.random.seed(seed)
 
-    # TODO: support 'beagle'
-
     # examine some A matrices with and without self-loops
     # the code is extracted from the extended ScaLed code base keeping only the skeletal elements
-    path = 'datasets'
+    path = 'datasets' + str(p) + str(seed) + sign_type + str(
+        include_negative_samples)  # make the path unique to help cache
 
     dataset = Planetoid(path, dataset_name)
     split_edge = do_edge_split(dataset, False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1)
     data = dataset[0]
     data.edge_index = split_edge['train']['edge'].t()
 
-    train_dataset = SEALDataset(root=path, data=data, split_edge=split_edge, num_hops=num_hops, sign_k=sign_k,
-                                use_feature=True, node_label='zo', include_negative_samples=include_negative_samples)
-
-    # matplotlib.use("Agg")
+    train_dataset = SEALDataset(root=path, data=data, split_edge=split_edge, num_hops=num_hops, sign_k=p,
+                                use_feature=True, node_label='zo', include_negative_samples=include_negative_samples,
+                                sign_type=sign_type)
 
     loader = list(DataLoader(train_dataset, batch_size=1, shuffle=False))
-    selected_samples = random.sample(loader, num_samples)
-    for g in selected_samples:
-        if g.edge_index.nelement() != 0:
-            dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
-        else:
-            dense_adj = torch.zeros(size=(g.num_nodes, g.num_nodes))
-        all_powers = [dense_adj]
-        for power in range(2, sign_k + 1):
-            all_powers.append(torch.linalg.matrix_power(dense_adj, power))
+    selected_samples_golden = random.sample(loader, num_samples)
+    selected_samples_beagle = random.sample(loader[::p], num_samples)
 
-        for index, ajc_power in enumerate(all_powers, start=1):
-            f = plt.figure(figsize=(5, 5))
-            limits = plt.axis('off')
-            node_size = 100  # cut-off to viz better
+    if sign_type == 'golden':
+        # golden showcase
+        for g in selected_samples_golden:
+            if g.edge_index.nelement() != 0:
+                dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
+            else:
+                dense_adj = torch.zeros(size=(g.num_nodes, g.num_nodes))
+            all_powers = [dense_adj]
+            for power in range(2, p + 1):
+                all_powers.append(torch.linalg.matrix_power(dense_adj, power))
 
-            with_labels = True
-            G = Graph(ajc_power.detach().numpy(), )
-            node_labels = {i: str(i + 1) for i in range(len(G))}
+            for index, ajc_power in enumerate(all_powers, start=1):
+                f = plt.figure(figsize=(5, 5))
+                node_size = 100  # cut-off to viz better
 
-            print(f"Drawing graph {index} of {sign_k}")
-            pos = nx.spring_layout(G)
-            nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
+                with_labels = True
+                G = Graph(ajc_power.detach().numpy(), )
+                node_labels = {i: str(i + 1) for i in range(len(G))}
 
-            if edge_weight_labels:
-                edge_labels = nx.get_edge_attributes(G, 'weight')
-                edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
-                nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+                print(f"Drawing graph {index} of {p}")
+                pos = nx.spring_layout(G)
+                nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
 
-            f.show()
-            plt.show()
+                if edge_weight_labels:
+                    edge_labels = nx.get_edge_attributes(G, 'weight')
+                    edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
+                    nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+
+                f.show()
+                plt.show()
+    else:
+        # beagle showcase
+        for g in selected_samples_beagle:
+            index_of_g = loader.index(g)
+            for operators in range(index_of_g, index_of_g + 3):
+                g = loader[operators]
+                if g.edge_index.nelement() != 0:
+                    dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
+                else:
+                    dense_adj = torch.zeros(size=(g.num_nodes, g.num_nodes))
+
+                f = plt.figure(figsize=(5, 5))
+                node_size = 100  # cut-off to viz better
+
+                with_labels = True
+                G = Graph(dense_adj.detach().numpy(), )
+                node_labels = {i: str(i + 1) for i in range(len(G))}
+
+                print(f"Drawing graph {int(g.operator_index)} of {p}")
+                pos = nx.spring_layout(G)
+                nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
+
+                if edge_weight_labels:
+                    edge_labels = nx.get_edge_attributes(G, 'weight')
+                    edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
+                    nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+
+                f.show()
+                plt.show()
 
 
 if __name__ == '__main__':
-    viz_sign_operators(num_hops=1, sign_k=3, dataset_name='CiteSeer', num_samples=3, type='golden', seed=55,
-                       edge_weight_labels=False, include_negative_samples=False)
+    viz_sign_operators(p=3, dataset_name='CiteSeer', num_samples=3, seed=55,
+                       edge_weight_labels=False, include_negative_samples=False, sign_type='beagle')
