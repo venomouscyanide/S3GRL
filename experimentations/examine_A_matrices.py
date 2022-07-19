@@ -1,4 +1,4 @@
-# Standalone code that helps examine Golden Operator Matrices as graphs
+# Standalone code that helps examine Golden/Beagle Operator Matrices as graphs
 import os
 import random
 
@@ -20,7 +20,7 @@ import numpy as np
 from torch_geometric.transforms import SIGN
 
 import warnings
-import graphistry
+import graphistry  # only really required for debug. code using graphity is commented by default.
 
 graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
                     password=os.environ['graphistry_pass'])
@@ -338,8 +338,20 @@ class SEALDataset(InMemoryDataset):
             del pos_list, neg_list
 
 
-def viz_sign_operators(p, dataset_name, num_samples, seed=42, edge_weight_labels=False,
-                       include_negative_samples=False, sign_type='golden'):
+def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edge_weight_labels: bool = False,
+                       include_negative_samples: bool = False, sign_type: str = 'golden') -> None:
+    """
+    API that helps visualize the operators formed in 'golden' and 'beagle' (ie; SEAL + SIGN)
+    for odd values of p, a plot space is always empty due to even number of subplots being allocated
+    :param p: The number of operators to create
+    :param dataset_name: The name of the Dataset, eg; Cora
+    :param num_samples: The number of sample operators to showcase
+    :param seed: Fixes the Python and other library seeds
+    :param edge_weight_labels: Show edge weights in the plots?
+    :param include_negative_samples: Include negative link operators/subgraphs?
+    :param sign_type: Choose between "golden" and "beagle"
+    :return: None, but does showcase the graphs in grids
+    """
     num_hops = 1  # this really does not matter. It is hardcoded in the extraction method regardless
     # fix seed
     seed = seed
@@ -348,7 +360,7 @@ def viz_sign_operators(p, dataset_name, num_samples, seed=42, edge_weight_labels
 
     # examine some A matrices with and without self-loops
     # the code is extracted from the extended ScaLed code base keeping only the skeletal elements
-    path = 'datasets' + str(p) + str(seed) + sign_type + str(
+    path = 'datasets/' + str(p) + str(seed) + sign_type + str(
         include_negative_samples)  # make the path unique to help cache
 
     dataset = Planetoid(path, dataset_name)
@@ -362,11 +374,25 @@ def viz_sign_operators(p, dataset_name, num_samples, seed=42, edge_weight_labels
 
     loader = list(DataLoader(train_dataset, batch_size=1, shuffle=False))
     selected_samples_golden = random.sample(loader, num_samples)
-    selected_samples_beagle = random.sample(loader[::p], num_samples)
+    selected_samples_beagle = random.sample(loader[::p], num_samples)  # gets every p-th operator
+
+    node_size = 100  # cut-off to viz better
+    with_labels = True  # always show node labels
+
+    print(
+        f"Plotting for {sign_type} graphs. Num samples = {num_samples}, p = {p}, seed = {seed},"
+        f" edge_weight_labels = {edge_weight_labels},"
+        f" include_negative_samples = {include_negative_samples}"
+    )
 
     if sign_type == 'golden':
         # golden showcase
-        for g in selected_samples_golden:
+        for sample_idx, g in enumerate(selected_samples_golden, start=1):
+            print(f"Plotting sample number: {sample_idx}")
+            plt.figure(figsize=(10, 10))
+            fig, axes = plt.subplots(nrows=int(p / 2) if int(p) % 2 == 0 else int(p / 2) + 1, ncols=2)
+            ax = axes.flatten()
+
             if g.edge_index.nelement() != 0:
                 dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
             else:
@@ -376,55 +402,55 @@ def viz_sign_operators(p, dataset_name, num_samples, seed=42, edge_weight_labels
                 all_powers.append(torch.linalg.matrix_power(dense_adj, power))
 
             for index, ajc_power in enumerate(all_powers, start=1):
-                f = plt.figure(figsize=(5, 5))
-                node_size = 100  # cut-off to viz better
-
-                with_labels = True
                 G = Graph(ajc_power.detach().numpy(), )
                 node_labels = {i: str(i + 1) for i in range(len(G))}
 
-                print(f"Drawing graph {index} of {p}")
-                pos = nx.spring_layout(G)
-                nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
+                print(f"Drawing Operator graph {index} of {p}")
+                pos = nx.spring_layout(G, iterations=100)
+                ax[index - 1].set_title(f"{sign_type}, pow(A)={index}")
+                nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos,
+                        ax=ax[index - 1], )
 
                 if edge_weight_labels:
                     edge_labels = nx.get_edge_attributes(G, 'weight')
                     edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
-                    nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+                    nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos, ax=ax[index - 1])
+            plt.show()
 
-                f.show()
-                plt.show()
     else:
         # beagle showcase
-        for g in selected_samples_beagle:
+        for sample_idx, g in enumerate(selected_samples_beagle, start=1):
+            print(f"Plotting sample number: {sample_idx}")
+            plt.figure(figsize=(10, 10))
+            fig, axes = plt.subplots(nrows=int(p / 2) if int(p) % 2 == 0 else int(p / 2) + 1, ncols=2)
+            ax = axes.flatten()
+
             index_of_g = loader.index(g)
-            for operators in range(index_of_g, index_of_g + 3):
+            for index, operators in enumerate(range(index_of_g, index_of_g + 3), start=1):
                 g = loader[operators]
                 if g.edge_index.nelement() != 0:
                     dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
                 else:
                     dense_adj = torch.zeros(size=(g.num_nodes, g.num_nodes))
 
-                f = plt.figure(figsize=(5, 5))
-                node_size = 100  # cut-off to viz better
-
-                with_labels = True
                 G = Graph(dense_adj.detach().numpy(), )
                 node_labels = {i: str(i + 1) for i in range(len(G))}
 
-                print(f"Drawing graph {int(g.operator_index)} of {p}")
-                pos = nx.spring_layout(G)
-                nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos)
+                print(f"Drawing Operator graph {int(g.operator_index)} of {p}")
+                pos = nx.spring_layout(G, iterations=100)
+                ax[index - 1].set_title(f"{sign_type}, pow(A)={index}")
+                nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos,
+                        ax=ax[index - 1])
 
                 if edge_weight_labels:
                     edge_labels = nx.get_edge_attributes(G, 'weight')
                     edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
-                    nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
+                    nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos, ax=ax[index - 1])
 
-                f.show()
-                plt.show()
+            plt.show()
 
 
 if __name__ == '__main__':
-    viz_sign_operators(p=3, dataset_name='CiteSeer', num_samples=3, seed=55,
-                       edge_weight_labels=False, include_negative_samples=False, sign_type='beagle')
+    # TODO: broken include_negative_samples for beagle, check why
+    viz_sign_operators(p=4, dataset_name='CiteSeer', num_samples=3, seed=55,
+                       edge_weight_labels=True, include_negative_samples=False, sign_type='golden')
