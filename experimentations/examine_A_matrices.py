@@ -426,7 +426,7 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
             ax = axes.flatten()
 
             index_of_g = loader.index(g)
-            for index, operators in enumerate(range(index_of_g, index_of_g + 3), start=1):
+            for index, operators in enumerate(range(index_of_g, index_of_g + p), start=1):
                 g = loader[operators]
                 if g.edge_index.nelement() != 0:
                     dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
@@ -451,6 +451,5 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
 
 
 if __name__ == '__main__':
-    # TODO: broken include_negative_samples for beagle, check why
-    viz_sign_operators(p=4, dataset_name='CiteSeer', num_samples=3, seed=55,
-                       edge_weight_labels=True, include_negative_samples=False, sign_type='golden')
+    viz_sign_operators(p=2, dataset_name='CiteSeer', num_samples=3, seed=55,
+                       edge_weight_labels=True, include_negative_samples=True, sign_type='beagle')
