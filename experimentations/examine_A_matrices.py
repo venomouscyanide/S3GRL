@@ -8,7 +8,8 @@ from scipy.sparse import SparseEfficiencyWarning
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.datasets import Planetoid
 from torch_geometric.loader import DataLoader
-from torch_geometric.utils import coalesce, add_self_loops, negative_sampling, train_test_split_edges, to_dense_adj
+from torch_geometric.utils import coalesce, add_self_loops, negative_sampling, train_test_split_edges, to_dense_adj, \
+    to_networkx
 from torch_sparse import SparseTensor
 import scipy.sparse as ssp
 from tqdm import tqdm
@@ -339,7 +340,7 @@ class SEALDataset(InMemoryDataset):
 
 
 def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edge_weight_labels: bool = False,
-                       include_negative_samples: bool = False, sign_type: str = 'golden') -> None:
+                       include_negative_samples: bool = False, sign_type: str = 'golden', add_identity=False) -> None:
     """
     API that helps visualize the operators formed in 'golden' and 'beagle' (ie; SEAL + SIGN)
     for odd values of p, a plot space is always empty due to even number of subplots being allocated
@@ -350,6 +351,7 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
     :param edge_weight_labels: Show edge weights in the plots?
     :param include_negative_samples: Include negative link operators/subgraphs?
     :param sign_type: Choose between "golden" and "beagle"
+    :param add_identity: Choose to include the Identity matrix in A, ie; add self-loops
     :return: None, but does showcase the graphs in grids
     """
     num_hops = 1  # this really does not matter. It is hardcoded in the extraction method regardless
@@ -360,13 +362,16 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
 
     # examine some A matrices with and without self-loops
     # the code is extracted from the extended ScaLed code base keeping only the skeletal elements
-    path = 'datasets/' + str(p) + str(seed) + sign_type + str(
-        include_negative_samples)  # make the path unique to help cache
+    path = 'datasets/' + str(p) + str(seed) + sign_type + str(include_negative_samples) \
+           + str(add_identity)  # make the path unique to help cache
 
     dataset = Planetoid(path, dataset_name)
     split_edge = do_edge_split(dataset, False, val_ratio=0.05, test_ratio=0.1, neg_ratio=1)
     data = dataset[0]
     data.edge_index = split_edge['train']['edge'].t()
+
+    if add_identity:
+        data.edge_index, _ = add_self_loops(data.edge_index)
 
     train_dataset = SEALDataset(root=path, data=data, split_edge=split_edge, num_hops=num_hops, sign_k=p,
                                 use_feature=True, node_label='zo', include_negative_samples=include_negative_samples,
@@ -382,7 +387,7 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
     print(
         f"Plotting for {sign_type} graphs. Num samples = {num_samples}, p = {p}, seed = {seed},"
         f" edge_weight_labels = {edge_weight_labels},"
-        f" include_negative_samples = {include_negative_samples}"
+        f" include_negative_samples = {include_negative_samples}, add_identity = {add_identity}"
     )
 
     if sign_type == 'golden':
@@ -407,7 +412,7 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
 
                 print(f"Drawing Operator graph {index} of {p}")
                 pos = nx.spring_layout(G, iterations=100)
-                ax[index - 1].set_title(f"{sign_type}, pow(A)={index}")
+                ax[index - 1].set_title(f"{sign_type}, pow(A)={index}, ID={int(add_identity)}")
                 nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos,
                         ax=ax[index - 1], )
 
@@ -438,7 +443,7 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
 
                 print(f"Drawing Operator graph {int(g.operator_index)} of {p}")
                 pos = nx.spring_layout(G, iterations=100)
-                ax[index - 1].set_title(f"{sign_type}, pow(A)={index}")
+                ax[index - 1].set_title(f"{sign_type}, pow(A)={index}, ID={int(add_identity)}")
                 nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, labels=node_labels, pos=pos,
                         ax=ax[index - 1])
 
@@ -451,5 +456,5 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
 
 
 if __name__ == '__main__':
-    viz_sign_operators(p=2, dataset_name='CiteSeer', num_samples=3, seed=55,
-                       edge_weight_labels=True, include_negative_samples=True, sign_type='beagle')
+    viz_sign_operators(p=2, dataset_name='CiteSeer', num_samples=3, seed=55, edge_weight_labels=True,
+                       include_negative_samples=False, sign_type='golden', add_identity=True)
