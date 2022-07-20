@@ -381,8 +381,9 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
     selected_samples_golden = random.sample(loader, num_samples)
     selected_samples_beagle = random.sample(loader[::p], num_samples)  # gets every p-th operator
 
-    node_size = 100  # cut-off to viz better
+    node_size = 100  # node size to viz
     with_labels = True  # always show node labels
+    plt.figure(figsize=(25, 25))
 
     print(
         f"Plotting for {sign_type} graphs. Num samples = {num_samples}, p = {p}, seed = {seed},"
@@ -394,7 +395,6 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
         # golden showcase
         for sample_idx, g in enumerate(selected_samples_golden, start=1):
             print(f"Plotting sample number: {sample_idx}")
-            plt.figure(figsize=(10, 10))
             fig, axes = plt.subplots(nrows=int(p / 2) if int(p) % 2 == 0 else int(p / 2) + 1, ncols=2)
             ax = axes.flatten()
 
@@ -426,7 +426,6 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
         # beagle showcase
         for sample_idx, g in enumerate(selected_samples_beagle, start=1):
             print(f"Plotting sample number: {sample_idx}")
-            plt.figure(figsize=(10, 10))
             fig, axes = plt.subplots(nrows=int(p / 2) if int(p) % 2 == 0 else int(p / 2) + 1, ncols=2)
             ax = axes.flatten()
 
@@ -456,5 +455,5 @@ def viz_sign_operators(p: int, dataset_name: str, num_samples: int, seed=42, edg
 
 
 if __name__ == '__main__':
-    viz_sign_operators(p=2, dataset_name='CiteSeer', num_samples=3, seed=55, edge_weight_labels=True,
+    viz_sign_operators(p=2, dataset_name='CiteSeer', num_samples=3, seed=55, edge_weight_labels=False,
                        include_negative_samples=False, sign_type='golden', add_identity=True)
