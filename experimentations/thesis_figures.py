@@ -6,6 +6,7 @@ import torch
 import torch_geometric
 from networkx import Graph, relabel_nodes
 from scipy.sparse import SparseEfficiencyWarning
+from torch_geometric import seed_everything
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.datasets import Planetoid
 from torch_geometric.loader import DataLoader
@@ -24,6 +25,7 @@ from torch_geometric.transforms import SIGN
 import warnings
 import graphistry  # only really required for debug. code using graphity is commented by default.
 
+seed_everything(42)
 graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
                     password=os.environ['graphistry_pass'])
 
@@ -353,7 +355,7 @@ class SEALDataset(InMemoryDataset):
 
 
 def viz_sign_operators(h: int, p: int, dataset_name: str, num_samples: int, seed=42, edge_weight_labels: bool = False,
-                       include_negative_samples: bool = False, sign_type: str = 'golden', add_identity=False) -> None:
+                       include_negative_samples: bool = False, sign_type: str = 'golden', add_identity=True) -> None:
     """
     API that helps visualize the operators formed in 'golden' and 'beagle' (ie; SEAL + SIGN)
     for odd values of p, a plot space is always empty due to even number of subplots being allocated
@@ -386,78 +388,78 @@ def viz_sign_operators(h: int, p: int, dataset_name: str, num_samples: int, seed
     if add_identity:
         data.edge_index, _ = add_self_loops(data.edge_index)
 
-    train_dataset_golden = SEALDataset(root=path + 'golden', data=data, split_edge=split_edge, num_hops=4, sign_k=4,
-                                       use_feature=True, node_label='zo',
-                                       include_negative_samples=include_negative_samples,
-                                       sign_type='golden')
+    # train_dataset_golden = SEALDataset(root=path + 'golden', data=data, split_edge=split_edge, num_hops=2, sign_k=4,
+    #                                    use_feature=True, node_label='zo',
+    #                                    include_negative_samples=include_negative_samples,
+    #                                    sign_type='golden')
+    #
+    # train_dataset_beagle = SEALDataset(root=path + 'beagle', data=data, split_edge=split_edge, num_hops=4, sign_k=20,
+    #                                    use_feature=True, node_label='zo',
+    #                                    include_negative_samples=include_negative_samples,
+    #                                    sign_type='beagle')
+    # # train_dataset_beagle_h4 = SEALDataset(root=path + 'beagle_h4', data=data, split_edge=split_edge, num_hops=10, sign_k=4,
+    # #                                       use_feature=True, node_label='zo',
+    # #                                       include_negative_samples=include_negative_samples,
+    # #                                       sign_type='beagle')
+    #
+    # golden_loader = list(DataLoader(train_dataset_golden, batch_size=1, shuffle=False))
+    # beagle_loader = list(DataLoader(train_dataset_beagle, batch_size=1, shuffle=False))
+    # # beagle_loader_h4 = list(DataLoader(train_dataset_beagle_h4, batch_size=1, shuffle=False))
+    #
+    # dense_adj = to_dense_adj(golden_loader[0].edge_index).reshape(
+    #     [golden_loader[0].num_nodes, golden_loader[0].num_nodes])
+    # all_powers = [dense_adj]
+    # for power in range(2, 20):
+    #     all_powers.append(torch.linalg.matrix_power(dense_adj, power))
+    #
+    # # selected_samples_golden = random.sample(loader, num_samples)
+    # # selected_samples_beagle = random.sample(loader[::p], num_samples)  # gets every p-th operator
+    #
+    # node_size = 500  # node size to viz
+    # with_labels = True  # always show node labels
+    # plt.figure()
+    #
+    # all_golden_edge_indices = []
+    # all_golden_graphs = []
+    # for index, ajc_power in enumerate(all_powers, start=1):
+    #     G = Graph(ajc_power.detach().numpy(), )
+    #     node_labels = {i: golden_loader[0].node_ids[0][i] for i in range(len(G))}
+    #     relabel_nodes(G, node_labels, False)
+    #     print(f"Drawing Operator graph {index} of {p}")
+    #     pos = nx.circular_layout(G)
+    #     nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, pos=pos, )
+    #     all_golden_graphs.append(G)
+    #     all_golden_edge_indices.append(G.edges)
+    #     plt.show()
+    #
+    # all_beagle_edge_indices = []
+    # all_beagle_graphs = []
+    # for index, operators in enumerate(beagle_loader, start=1):
+    #     g = operators
+    #     if g.edge_index.nelement() != 0:
+    #         dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
+    #     else:
+    #         dense_adj = torch.zeros(size=(g.num_nodes, g.num_nodes))
+    #
+    #     G = Graph(dense_adj.detach().numpy(), )
+    #
+    #     node_labels = {i: beagle_loader[index - 1].node_ids[0][i] for i in range(len(G))}
+    #     relabel_nodes(G, node_labels, False)
+    #
+    #     all_beagle_graphs.append(G)
+    #     all_beagle_edge_indices.append(G.edges)
+    #
+    #     print(f"Drawing Operator graph {int(g.operator_index)} of {p}")
+    #     pos = nx.circular_layout(G)
+    #
+    #     nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, pos=pos)
+    #
+    #     if edge_weight_labels:
+    #         edge_labels = nx.get_edge_attributes(G, 'weight')
+    #         edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
+    #         nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
 
-    train_dataset_beagle = SEALDataset(root=path + 'beagle', data=data, split_edge=split_edge, num_hops=4, sign_k=4,
-                                       use_feature=True, node_label='zo',
-                                       include_negative_samples=include_negative_samples,
-                                       sign_type='beagle')
-    # train_dataset_beagle_h4 = SEALDataset(root=path + 'beagle_h4', data=data, split_edge=split_edge, num_hops=10, sign_k=4,
-    #                                       use_feature=True, node_label='zo',
-    #                                       include_negative_samples=include_negative_samples,
-    #                                       sign_type='beagle')
-
-    golden_loader = list(DataLoader(train_dataset_golden, batch_size=1, shuffle=False))
-    beagle_loader = list(DataLoader(train_dataset_beagle, batch_size=1, shuffle=False))
-    # beagle_loader_h4 = list(DataLoader(train_dataset_beagle_h4, batch_size=1, shuffle=False))
-
-    dense_adj = to_dense_adj(golden_loader[0].edge_index).reshape(
-        [golden_loader[0].num_nodes, golden_loader[0].num_nodes])
-    all_powers = [dense_adj]
-    for power in range(2, 5):
-        all_powers.append(torch.linalg.matrix_power(dense_adj, power))
-
-    # selected_samples_golden = random.sample(loader, num_samples)
-    # selected_samples_beagle = random.sample(loader[::p], num_samples)  # gets every p-th operator
-
-    node_size = 500  # node size to viz
-    with_labels = True  # always show node labels
-    plt.figure()
-
-    all_golden_edge_indices = []
-    all_golden_graphs = []
-    for index, ajc_power in enumerate(all_powers, start=1):
-        G = Graph(ajc_power.detach().numpy(), )
-        node_labels = {i: golden_loader[0].node_ids[0][i] for i in range(len(G))}
-        relabel_nodes(G, node_labels, False)
-        print(f"Drawing Operator graph {index} of {p}")
-        pos = nx.circular_layout(G)
-        nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, pos=pos, )
-        all_golden_graphs.append(G)
-        all_golden_edge_indices.append(G.edges)
-        plt.show()
-
-    all_beagle_edge_indices = []
-    all_beagle_graphs = []
-    for index, operators in enumerate(beagle_loader, start=1):
-        g = operators
-        if g.edge_index.nelement() != 0:
-            dense_adj = to_dense_adj(g.edge_index).reshape([g.num_nodes, g.num_nodes])
-        else:
-            dense_adj = torch.zeros(size=(g.num_nodes, g.num_nodes))
-
-        G = Graph(dense_adj.detach().numpy(), )
-
-        node_labels = {i: beagle_loader[index - 1].node_ids[0][i] for i in range(len(G))}
-        relabel_nodes(G, node_labels, False)
-
-        all_beagle_graphs.append(G)
-        all_beagle_edge_indices.append(G.edges)
-
-        print(f"Drawing Operator graph {int(g.operator_index)} of {p}")
-        pos = nx.circular_layout(G)
-
-        nx.draw(G, node_size=node_size, arrows=False, with_labels=with_labels, pos=pos)
-
-        if edge_weight_labels:
-            edge_labels = nx.get_edge_attributes(G, 'weight')
-            edge_labels = {edge: int(weight) for edge, weight in edge_labels.items()}
-            nx.draw_networkx_edge_labels(G, edge_labels=edge_labels, pos=pos)
-
-        plt.show()
+        # plt.show()
 
     # all_beagle_edge_indices_h4 = []
     # all_beagle_graphs_h4 = []
@@ -492,57 +494,60 @@ def viz_sign_operators(h: int, p: int, dataset_name: str, num_samples: int, seed
         f" edge_weight_labels = {edge_weight_labels},"
         f" include_negative_samples = {include_negative_samples}, add_identity = {add_identity}"
     )
-    exit()
+    # exit()
     # start of beagle h1
-    # G = nx.random_regular_graph(d=3, n=10, seed=42)
-    #
-    # pos = nx.circular_layout(G)
-    # nx.draw(G, with_labels=True, pos=pos)
-    # plt.savefig(f'example1.png')
-    # G.remove_edge(3, 4)
-    # plt.show()
-    #
-    # G = nx.subgraph(G, [3, 4, 0, 1, 8, 9])  # 1 hop
-    # G = G.copy()
-    # pos = nx.planar_layout(G)
-    # nx.draw(G, with_labels=True, pos=pos)
-    #
-    # plt.show()
-    #
-    # edge_index = torch.tensor(list(G.edges))
-    # all_edge_indices = set()
-    # for e in edge_index:
-    #     all_edge_indices.add((int(e[0]), int(e[1])))
-    #     all_edge_indices.add((int(e[1]), int(e[0])))
-    # dense_adj = to_dense_adj(torch.tensor(list(all_edge_indices)).t()).reshape([10, 10])
-    # # graphistry.bind(source='src', destination='dst', node='nodeid').plot(G)
-    # all_powers = [dense_adj]
-    # for power in range(2, 10):
-    #     all_powers.append(torch.linalg.matrix_power(dense_adj, power))
-    #
-    # all_edge_indices = []
-    # all_graphs = []
-    #
-    # # fig, axes = plt.subplots(nrows=int(p / 2) if int(p) % 2 == 0 else int(p / 2) + 1, ncols=2, figsize=(10, 10))
-    # # ax = axes.flatten()
-    #
-    # for index, ajc_power in enumerate(all_powers, start=1):
-    #     G = Graph(ajc_power.detach().numpy(), )
-    #     node_labels = {i: str(i) for i in range(len(G))}
-    #
-    #     print(f"Drawing Operator graph {index} of {p}")
-    #     pos = nx.circular_layout(G)
-    #     # ax[index - 1].set_title(f"{sign_type}, pow(A)={index}, ID={int(add_identity)}")
-    #
-    #     title = f'p = {index}'
-    #     ax = plt.gca()
-    #     ax.set_title(title)
-    #
-    #     nx.draw(G, node_size=500, arrows=False, with_labels=True, labels=node_labels, pos=pos)
-    #     all_graphs.append(G)
-    #     all_edge_indices.append(G.edges)
-    #     plt.savefig(f'p = {index}.png')
-    #     plt.show()
+    G = nx.random_regular_graph(d=3, n=10, seed=42)
+
+    for node in G.nodes:
+        G.add_edge(node, node)
+
+    pos = nx.circular_layout(G)
+    nx.draw(G, with_labels=True, pos=pos)
+    plt.savefig(f'example1 selfloop.png')
+    G.remove_edge(3, 4)
+    plt.show()
+
+    G = nx.subgraph(G, [3, 4, 0, 1, 8, 9])  # 1 hop
+    G = G.copy()
+    pos = nx.planar_layout(G)
+    nx.draw(G, with_labels=True, pos=pos)
+
+    plt.show()
+
+    edge_index = torch.tensor(list(G.edges))
+    all_edge_indices = set()
+    for e in edge_index:
+        all_edge_indices.add((int(e[0]), int(e[1])))
+        all_edge_indices.add((int(e[1]), int(e[0])))
+    dense_adj = to_dense_adj(torch.tensor(list(all_edge_indices)).t()).reshape([10, 10])
+    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(G)
+    all_powers = [dense_adj]
+    for power in range(2, 10):
+        all_powers.append(torch.linalg.matrix_power(dense_adj, power))
+
+    all_edge_indices = []
+    all_graphs = []
+
+    # fig, axes = plt.subplots(nrows=int(p / 2) if int(p) % 2 == 0 else int(p / 2) + 1, ncols=2, figsize=(10, 10))
+    # ax = axes.flatten()
+
+    for index, ajc_power in enumerate(all_powers, start=1):
+        G = Graph(ajc_power.detach().numpy(), )
+        node_labels = {i: str(i) for i in range(len(G))}
+
+        print(f"Drawing Operator graph {index} of {p}")
+        pos = nx.circular_layout(G)
+        # ax[index - 1].set_title(f"{sign_type}, pow(A)={index}, ID={int(add_identity)}")
+
+        title = f'p = {index}'
+        ax = plt.gca()
+        ax.set_title(title)
+
+        nx.draw(G, node_size=500, arrows=False, with_labels=True, labels=node_labels, pos=pos)
+        all_graphs.append(G)
+        all_edge_indices.append(G.edges)
+        plt.savefig(f'p = {index} selfloop.png')
+        plt.show()
     #
     # # end of beagle h1
     #
@@ -607,7 +612,7 @@ def viz_sign_operators(h: int, p: int, dataset_name: str, num_samples: int, seed
     #     plt.savefig(f'p = {index} h2.png')
     #     plt.show()
     #
-    # exit()
+    exit()
     # end of beagle h2
 
     if sign_type == 'golden':
