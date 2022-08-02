@@ -1112,9 +1112,8 @@ def run_sweal(args, device):
             train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size * args.neg_ratio,
                                           shuffle=True, num_workers=args.num_workers)
         else:
-            # TODO change back shuffle
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                      shuffle=False, num_workers=args.num_workers)
+                                      shuffle=True, num_workers=args.num_workers)
 
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
                                 num_workers=args.num_workers)
