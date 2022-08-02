@@ -309,6 +309,8 @@ def parse_attributed_results(file_name, method_type):
     for dataset in result_dict.keys():
         result_key = result_dict[dataset]
         auc = np.array(result_key['AUC'])
+        if not result_key['AUC']:
+            continue
         ap = np.array(result_key['AP'])
         time_per_run = np.array(result_key['Time taken (per run)'])
         allocated_cuda = np.array(result_key['Max allocated CUDA'])
