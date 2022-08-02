@@ -335,6 +335,7 @@ class SIGNNet(torch.nn.Module):
             h = lin(x).relu()
             h = F.dropout(h, p=self.dropout, training=self.training)
             hs.append(h)
+        # TODO: fix dimensionality here for beagle architecture
         h = torch.cat(hs, dim=-1)
 
         # center pooling
