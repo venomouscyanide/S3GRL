@@ -329,6 +329,8 @@ class SEALDynamicDataset(Dataset):
 
                     sign_pyg_kwargs = {
                         'use_feature': self.use_feature,
+                        'src_dst': [src, dst],
+                        'sign_type': 'golden'
                     }
 
                     data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
@@ -348,9 +350,11 @@ class SEALDynamicDataset(Dataset):
                     for index, power_of_a in enumerate(self.powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, self.num_hops, power_of_a, self.ratio_per_hop,
                                              self.max_nodes_per_hop, node_features=self.data.x,
-                                             y=y, directed=self.directed, A_csc=self.A_csc)
+                                             y=y, directed=self.directed, A_csc=self.A_csc, model_type='beagle')
                         sign_pyg_kwargs = {
                             'use_feature': self.use_feature,
+                            'src_dst': [src, dst],
+                            'sign_type': 'beagle'
                         }
 
                         data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)

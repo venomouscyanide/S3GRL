@@ -28,6 +28,7 @@ from tuned_SIGN import TunedSIGN
 
 import graphistry  # only really required for debug. code using graphity is commented by default.
 
+
 # uncomment to use graphistry to debug data
 # graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
 #                     password=os.environ['graphistry_pass'])
@@ -49,7 +50,7 @@ def neighbors(fringe, A, outgoing=True):
 
 def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
                    max_nodes_per_hop=None, node_features=None,
-                   y=1, directed=False, A_csc=None, rw_kwargs=None):
+                   y=1, directed=False, A_csc=None, rw_kwargs=None, model_type=None):
     debug = False  # set True manually to debug using matplotlib and gephi
     # Extract the k-hop enclosing subgraph around link (src, dst) from A.
     if not rw_kwargs:
@@ -76,14 +77,27 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
             nodes = nodes + list(fringe)
             dists = dists + [dist] * len(fringe)
 
-        subgraph = A[nodes, :][:, nodes]
+        if model_type == 'beagle':
+            # https://stackoverflow.com/a/70613260
+            idx = np.isin(np.arange(A.shape[0]), nodes).astype(int)
+            subgraph = ssp.diags(idx, format='csr') @ A
 
-        # Remove target link between the subgraph.
-        subgraph[0, 1] = 0
-        subgraph[1, 0] = 0
+            # Remove target link between the subgraph.
+            subgraph[src, dst] = 0
+            subgraph[dst, src] = 0
 
-        if node_features is not None:
-            node_features = node_features[nodes]
+            indices_to_nullify = list(set(list(range(node_features.shape[0]))).difference(nodes))
+            node_features.index_fill_(0, torch.tensor(indices_to_nullify), 0)
+
+        else:
+            subgraph = A[nodes, :][:, nodes]
+
+            # Remove target link between the subgraph.
+            subgraph[0, 1] = 0
+            subgraph[1, 0] = 0
+
+            if node_features is not None:
+                node_features = node_features[nodes]
 
         return nodes, subgraph, dists, node_features, y
     else:
@@ -283,7 +297,12 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
     if sign_pyg_kwargs:
         # SIGN PyG graph construction flow
         if sign_pyg_kwargs['use_feature'] and node_features is not None:
-            node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
+            if sign_pyg_kwargs['sign_type'] == 'beagle':
+                z = torch.zeros(size=[node_features.size()[0]])
+                node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
+                node_features[sign_pyg_kwargs['src_dst'], 0] = 1
+            else:
+                node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
         else:
             # flow never really enters here due to check in main()
             node_features = z
@@ -429,6 +448,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                     sign_pyg_kwargs = {
                         'use_feature': sign_kwargs['use_feature'],
+                        'sign_type': sign_kwargs['sign_type'],
+                        'src_dst': [src, dst],
                     }
 
                     data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
@@ -448,9 +469,11 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     for index, power_of_a in enumerate(powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
                                              max_nodes_per_hop, node_features=x, y=y,
-                                             directed=directed, A_csc=A_csc)
+                                             directed=directed, A_csc=A_csc, model_type=sign_kwargs['sign_type'])
                         sign_pyg_kwargs = {
                             'use_feature': sign_kwargs['use_feature'],
+                            'sign_type': sign_kwargs['sign_type'],
+                            'src_dst': [src, dst],
                         }
 
                         data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
