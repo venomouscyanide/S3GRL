@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor
+import torch_geometric.transforms as T
 
 
 class TunedSIGN(SIGN):
@@ -18,6 +19,7 @@ class TunedSIGN(SIGN):
     def beagle_data_creation(self, powers_of_A):
         original_data = powers_of_A[0]
 
+        x = SparseTensor.from_dense(powers_of_A[0].x)
         for index, data in enumerate(powers_of_A, start=1):
             assert data.edge_index is not None
             row, col = data.edge_index
@@ -29,10 +31,11 @@ class TunedSIGN(SIGN):
             deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
             adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
 
-            assert data.x is not None
-            xs = [data.x]
+            assert x is not None
+            xs = [x]
 
             xs += [adj_t @ xs[-1]]
+            xs[-1] = SparseTensor.to_torch_sparse_coo_tensor(xs[-1])
             original_data[f'x{index}'] = xs[-1]
 
         return original_data
