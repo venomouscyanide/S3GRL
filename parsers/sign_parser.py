@@ -108,7 +108,7 @@ seal_dict = \
 
 scaled_dict = \
     {
-        'Corak3_1_10':
+        'Corak3':
             {'AUC': [],
              'AP': [],
              'Time taken (per run)': [],
@@ -116,7 +116,8 @@ scaled_dict = \
              'Model size': [],
              'Parameters': []
              },
-        'Corak3_1_20':
+
+        'Corak-1':
             {'AUC': [],
              'AP': [],
              'Time taken (per run)': [],
@@ -124,7 +125,7 @@ scaled_dict = \
              'Model size': [],
              'Parameters': []
              },
-        'Corak-1_1_10':
+        'CiteSeerk3':
             {'AUC': [],
              'AP': [],
              'Time taken (per run)': [],
@@ -132,7 +133,8 @@ scaled_dict = \
              'Model size': [],
              'Parameters': []
              },
-        'Corak-1_1_20':
+
+        'CiteSeerk-1':
             {'AUC': [],
              'AP': [],
              'Time taken (per run)': [],
@@ -140,38 +142,7 @@ scaled_dict = \
              'Model size': [],
              'Parameters': []
              },
-        'CiteSeerk3_1_10':
-            {'AUC': [],
-             'AP': [],
-             'Time taken (per run)': [],
-             'Max allocated CUDA': [],
-             'Model size': [],
-             'Parameters': []
-             },
-        'CiteSeerk3_1_20':
-            {'AUC': [],
-             'AP': [],
-             'Time taken (per run)': [],
-             'Max allocated CUDA': [],
-             'Model size': [],
-             'Parameters': []
-             },
-        'CiteSeerk-1_1_10':
-            {'AUC': [],
-             'AP': [],
-             'Time taken (per run)': [],
-             'Max allocated CUDA': [],
-             'Model size': [],
-             'Parameters': []
-             },
-        'CiteSeerk-1_1_20':
-            {'AUC': [],
-             'AP': [],
-             'Time taken (per run)': [],
-             'Max allocated CUDA': [],
-             'Model size': [],
-             'Parameters': []
-             },
+
         'Pubmedk3_1_10':
             {'AUC': [],
              'AP': [],
@@ -260,9 +231,13 @@ def parse_attributed_results(file_name, method_type):
             else:
                 dataset = line.split("--dataset")[-1].split(f'--epochs')[0].strip()
                 if dataset == 'attributed-Facebook':
-                    identifier = line.split("--data_appendix ")[-1].split(f'--num_layers ')[0][len(dataset.split('-')[-1]) + 1: -3]
+                    identifier = line.split("--data_appendix ")[-1].split(f'--num_layers ')[0][
+                                 len(dataset.split('-')[-1]) + 1: -3]
                 else:
                     identifier = line.split("--data_appendix ")[-1].split(f'--model ')[0][len(dataset) + 1: -3]
+                if identifier == 'seal':
+                    index += 1
+                    continue
                 dataset += identifier
                 result_dict = scaled_dict
             while 1:
