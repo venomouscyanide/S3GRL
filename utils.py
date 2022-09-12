@@ -26,6 +26,12 @@ from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 
 from tuned_SIGN import TunedSIGN
 
+import graphistry  # only really required for debug. code using graphity is commented by default.
+
+# uncomment to use graphistry to debug data
+# graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
+#                     password=os.environ['graphistry_pass'])
+
 
 def neighbors(fringe, A, outgoing=True):
     # Find all 1-hop neighbors of nodes in fringe from graph A, 
@@ -400,30 +406,62 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
 
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
                                 ratio_per_hop=1.0, max_nodes_per_hop=None,
-                                directed=False, A_csc=None, rw_kwargs=None, sign_kwargs=None):
+                                directed=False, A_csc=None, rw_kwargs=None, sign_kwargs=None, powers_of_A=None,
+                                data=None):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
 
     if sign_kwargs:
         if not rw_kwargs['rw_m']:
-            # SIGN + SEAL flow
+            # SIGN + SEAL flow; includes both golden and beagle flows
             for src, dst in tqdm(link_index.t().tolist()):
-                num_hops = 1  # restrict to 1, then taken powers of A
-                tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                     max_nodes_per_hop, node_features=x, y=y,
-                                     directed=directed, A_csc=A_csc)
+                if not powers_of_A:
+                    # golden flow
 
-                sign_pyg_kwargs = {
-                    'use_feature': sign_kwargs['use_feature'],
-                }
-                data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+                    # debug code with graphistry
+                    # networkx_G = to_networkx(data)  # the full graph
+                    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+                    # check against the nodes that is received in tmp before the relabeling occurs
 
-                sign_t = TunedSIGN(sign_kwargs['num_layers'])
-                data = sign_t(data, sign_kwargs['sign_k'])
+                    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                         max_nodes_per_hop, node_features=x, y=y,
+                                         directed=directed, A_csc=A_csc)
 
-                data_list.append(data)
+                    sign_pyg_kwargs = {
+                        'use_feature': sign_kwargs['use_feature'],
+                    }
+
+                    data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+
+                    sign_t = TunedSIGN(sign_kwargs['sign_k'])
+                    data = sign_t(data, sign_kwargs['sign_k'])
+
+                    data_list.append(data)
+                else:
+                    # beagle flow
+
+                    # debug code with graphistry
+                    # networkx_G = to_networkx(data)  # the full graph
+                    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+                    # check against the nodes that is received in tmp before the relabeling occurs
+                    beagle_data_list = []
+                    for index, power_of_a in enumerate(powers_of_A, start=1):
+                        tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
+                                             max_nodes_per_hop, node_features=x, y=y,
+                                             directed=directed, A_csc=A_csc)
+                        sign_pyg_kwargs = {
+                            'use_feature': sign_kwargs['use_feature'],
+                        }
+
+                        data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
+                        beagle_data_list.append(data)
+
+                    sign_t = TunedSIGN(sign_kwargs['sign_k'])
+                    data = sign_t.beagle_data_creation(beagle_data_list)
+                    data_list.append(data)
         else:
-            # SIGN + ScaLed flow
+            # SIGN + ScaLed flow (research is pending for this)
+            # TODO: this is not yet fully implemented and tested
             for src, dst in tqdm(link_index.t().tolist()):
                 rw_kwargs.update({'sign': True})
                 data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,

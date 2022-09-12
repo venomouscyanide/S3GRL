@@ -33,7 +33,7 @@ from torch_sparse import coalesce, SparseTensor
 
 from torch_geometric.datasets import Planetoid, AttributedGraphDataset
 from torch_geometric.data import Dataset, InMemoryDataset, Data
-from torch_geometric.utils import to_undirected
+from torch_geometric.utils import to_undirected, to_dense_adj
 from torch_geometric import transforms as T
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
@@ -65,7 +65,7 @@ class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None):
+                 pos_pairwise=False, neg_ratio=1, use_feature=False, sign_type="", args=None):
         # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
@@ -89,6 +89,7 @@ class SEALDataset(InMemoryDataset):
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
         self.use_feature = use_feature
+        self.sign_type = sign_type
         self.args = args
         super(SEALDataset, self).__init__(root)
         if not self.rw_kwargs.get('calc_ratio', False):
@@ -141,14 +142,24 @@ class SEALDataset(InMemoryDataset):
         }
 
         sign_kwargs = {}
+        powers_of_A = []
         if self.args.model == 'SIGN':
             sign_k = self.args.sign_k
-            num_layers = self.args.num_layers
+            sign_type = self.sign_type
             sign_kwargs.update({
                 "sign_k": sign_k,
                 "use_feature": self.use_feature,
-                "num_layers": num_layers,
+                "sign_type": sign_type,
             })
+            if sign_type == 'beagle':
+                edge_index = self.data.edge_index
+                num_nodes = self.data.num_nodes
+
+                dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
+                powers_of_A = [A]
+                for sign_k in range(2, self.args.sign_k + 1):
+                    dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
+                    powers_of_A.append(ssp.csr_matrix(dense_adj_power))
 
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")
@@ -163,24 +174,28 @@ class SEALDataset(InMemoryDataset):
             print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+                powers_of_A=powers_of_A, data=self.data)
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+                powers_of_A=powers_of_A, data=self.data)
             torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
             if self.pos_pairwise:
                 pos_list = extract_enclosing_subgraphs(
                     pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
-                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+                    powers_of_A=powers_of_A, data=self.data)
                 torch.save(self.collate(pos_list), self.processed_paths[0])
                 del pos_list
             else:
                 neg_list = extract_enclosing_subgraphs(
                     neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
-                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs)
+                    self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+                    powers_of_A=powers_of_A, data=self.data)
                 torch.save(self.collate(neg_list), self.processed_paths[0])
                 del neg_list
 
@@ -189,7 +204,7 @@ class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train',
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
-                 pos_pairwise=False, neg_ratio=1, use_feature=False, args=None, **kwargs):
+                 pos_pairwise=False, neg_ratio=1, use_feature=False, sign_type="", args=None, **kwargs):
         # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
@@ -212,6 +227,7 @@ class SEALDynamicDataset(Dataset):
         self.pos_pairwise = pos_pairwise
         self.neg_ratio = neg_ratio
         self.use_feature = use_feature
+        self.sign_type = sign_type
         self.args = args
         super(SEALDynamicDataset, self).__init__(root)
 
@@ -263,6 +279,18 @@ class SEALDynamicDataset(Dataset):
                 self.unique_nodes[tuple(link)] = torch.unique(rw.flatten()).tolist()
             print("Finish caching random walk unique nodes")
 
+        self.powers_of_A = []
+        if self.args.model == 'SIGN':
+            if self.sign_type == 'beagle':
+                edge_index = self.data.edge_index
+                num_nodes = self.data.num_nodes
+
+                dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
+                self.powers_of_A = [self.A]
+                for sign_k in range(2, self.args.sign_k + 1):
+                    dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
+                    self.powers_of_A.append(ssp.csr_matrix(dense_adj_power))
+
     def __len__(self):
         return len(self.links)
 
@@ -287,20 +315,54 @@ class SEALDynamicDataset(Dataset):
         sign_kwargs = {}
         if self.args.model == 'SIGN':
             if not self.rw_kwargs.get('m'):
-                # SIGN + SEAL flow
-                sign_pyg_kwargs = {
-                    'use_feature': self.use_feature,
-                }
-                num_hops = 1  # restrict to 1, then taken powers of A
-                tmp = k_hop_subgraph(src, dst, num_hops, self.A, self.ratio_per_hop,
-                                     self.max_nodes_per_hop, node_features=self.data.x,
-                                     y=y, directed=self.directed, A_csc=self.A_csc)
-                data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
+                if not self.powers_of_A:
+                    # golden flow
 
-                sign_t = TunedSIGN(self.args.num_layers)
-                data = sign_t(data, self.args.sign_k)
+                    # debug code with graphistry
+                    # networkx_G = to_networkx(data)  # the full graph
+                    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+                    # check against the nodes that is received in tmp before the relabeling occurs
+
+                    tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
+                                         self.max_nodes_per_hop, node_features=self.data.x,
+                                         y=y, directed=self.directed, A_csc=self.A_csc)
+
+                    sign_pyg_kwargs = {
+                        'use_feature': self.use_feature,
+                    }
+
+                    data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
+
+                    sign_t = TunedSIGN(self.args.sign_k)
+                    data = sign_t(data, self.args.sign_k)
+
+                else:
+                    # beagle flow
+
+                    # debug code with graphistry
+                    # networkx_G = to_networkx(data)  # the full graph
+                    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+                    # check against the nodes that is received in tmp before the relabeling occurs
+
+                    beagle_data_list = []
+                    for index, power_of_a in enumerate(self.powers_of_A, start=1):
+                        tmp = k_hop_subgraph(src, dst, self.num_hops, power_of_a, self.ratio_per_hop,
+                                             self.max_nodes_per_hop, node_features=self.data.x,
+                                             y=y, directed=self.directed, A_csc=self.A_csc)
+                        sign_pyg_kwargs = {
+                            'use_feature': self.use_feature,
+                        }
+
+                        data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
+                        beagle_data_list.append(data)
+
+                    sign_t = TunedSIGN(self.args.sign_k)
+                    data = sign_t.beagle_data_creation(beagle_data_list)
+
+
             else:
-                # SIGN + ScaLed flow
+                # SIGN + ScaLed flow (research is pending for this)
+                # TODO: this is not yet fully implemented and tested
                 rw_kwargs.update({'sign': True})
                 data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                       self.max_nodes_per_hop, node_features=self.data.x,
@@ -616,7 +678,7 @@ class SWEALArgumentParser:
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
-                 seed, dataset_split_num, train_n2v, train_mf, sign_k):
+                 seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -684,7 +746,10 @@ class SWEALArgumentParser:
         self.dataset_split_num = dataset_split_num
         self.train_n2v = train_n2v
         self.train_mf = train_mf
+
+        # SIGN related
         self.sign_k = sign_k
+        self.sign_type = sign_type
 
 
 def run_sweal(args, device):
@@ -923,6 +988,7 @@ def run_sweal(args, device):
                 device=device,
                 neg_ratio=args.neg_ratio,
                 use_feature=args.use_feature,
+                sign_type=args.sign_type,
                 args=args,
             )
         else:
@@ -945,6 +1011,7 @@ def run_sweal(args, device):
                 pos_pairwise=True,
                 neg_ratio=args.neg_ratio,
                 use_feature=args.use_feature,
+                sign_type=args.sign_type,
                 args=args,
             )
             neg_path = f'{path}_neg_edges'
@@ -966,6 +1033,7 @@ def run_sweal(args, device):
                 pos_pairwise=False,
                 neg_ratio=args.neg_ratio,
                 use_feature=args.use_feature,
+                sign_type=args.sign_type,
                 args=args,
             )
     viz = False
@@ -1009,6 +1077,7 @@ def run_sweal(args, device):
             rw_kwargs=rw_kwargs,
             device=device,
             use_feature=args.use_feature,
+            sign_type=args.sign_type,
             args=args,
         )
         print("Setting up Test data")
@@ -1028,6 +1097,7 @@ def run_sweal(args, device):
             rw_kwargs=rw_kwargs,
             device=device,
             use_feature=args.use_feature,
+            sign_type=args.sign_type,
             args=args,
         )
 
@@ -1098,6 +1168,7 @@ def run_sweal(args, device):
             model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset,
                         args.use_feature, node_embedding=emb).to(device)
         elif args.model == "SIGN":
+            # num_layers in SIGN is simply sign_k
             model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
                             args.use_feature, node_embedding=emb).to(device)
 
@@ -1336,10 +1407,12 @@ if __name__ == '__main__':
     parser.add_argument('--train_n2v', action='store_true', help="Train node2vec on the dataset")
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
     parser.add_argument('--sign_k', type=int, default=3)
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['golden', 'beagle'])
 
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
 
     seed_everything(args.seed)
 
