@@ -678,7 +678,7 @@ class SWEALArgumentParser:
                  data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
                  m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
-                 seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type):
+                 seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type, pool_operatorwise):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -750,6 +750,7 @@ class SWEALArgumentParser:
         # SIGN related
         self.sign_k = sign_k
         self.sign_type = sign_type
+        self.pool_operatorwise = pool_operatorwise
 
 
 def run_sweal(args, device):
@@ -1170,7 +1171,7 @@ def run_sweal(args, device):
         elif args.model == "SIGN":
             # num_layers in SIGN is simply sign_k
             model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
-                            args.use_feature, node_embedding=emb).to(device)
+                            args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:
@@ -1408,6 +1409,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
     parser.add_argument('--sign_k', type=int, default=3)
     parser.add_argument('--sign_type', type=str, default='', required=False, choices=['golden', 'beagle'])
+    parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
 
     args = parser.parse_args()
 
@@ -1421,6 +1423,9 @@ if __name__ == '__main__':
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
+
+    if args.sign_type == 'bealge' and not args.pool_operatorwise:
+        raise Exception(f"Cannot run beagle with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.profile:
         run_sweal_with_run_profiling(args, device)

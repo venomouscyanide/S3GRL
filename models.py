@@ -304,7 +304,7 @@ class GIN(torch.nn.Module):
 
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
-                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0):
+                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False):
         super().__init__()
 
         self.use_feature = use_feature
@@ -328,21 +328,29 @@ class SIGNNet(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge  # not used in SIGN
+        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for beagle
+
+    def _centre_pool_helper(self, batch, h):
+        # center pooling
+        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
+        h_src = h[center_indices]
+        h_dst = h[center_indices + 1]
+        h = (h_src * h_dst)
+        return h
 
     def forward(self, xs, batch):
         hs = []
         for x, lin in zip(xs, self.lins):
             h = lin(x).relu()
             h = F.dropout(h, p=self.dropout, training=self.training)
+            if self.pool_operatorwise:
+                h = self._centre_pool_helper(batch, h)
             hs.append(h)
-        # TODO: fix dimensionality here for beagle architecture
+
         h = torch.cat(hs, dim=-1)
 
-        # center pooling
-        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-        h_src = h[center_indices]
-        h_dst = h[center_indices + 1]
-        h = (h_src * h_dst)
+        if not self.pool_operatorwise:
+            h = self._centre_pool_helper(batch, h)
 
         h = self.mlp(h)
         return h
