@@ -1424,7 +1424,7 @@ if __name__ == '__main__':
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
-    if args.sign_type == 'bealge' and not args.pool_operatorwise:
+    if args.sign_type == 'beagle' and not args.pool_operatorwise:
         raise Exception(f"Cannot run beagle with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.profile:
