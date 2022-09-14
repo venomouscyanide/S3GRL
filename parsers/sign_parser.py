@@ -117,7 +117,7 @@ scaled_dict = \
              'Parameters': []
              },
 
-        'Corak-1':
+        'Corak1':
             {'AUC': [],
              'AP': [],
              'Time taken (per run)': [],
@@ -134,7 +134,7 @@ scaled_dict = \
              'Parameters': []
              },
 
-        'CiteSeerk-1':
+        'CiteSeerk1':
             {'AUC': [],
              'AP': [],
              'Time taken (per run)': [],
