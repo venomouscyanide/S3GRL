@@ -28,6 +28,7 @@ from tuned_SIGN import TunedSIGN
 
 import graphistry  # only really required for debug. code using graphity is commented by default.
 
+
 # uncomment to use graphistry to debug data
 # graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
 #                     password=os.environ['graphistry_pass'])
@@ -412,7 +413,66 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     data_list = []
 
     if sign_kwargs:
-        if not rw_kwargs['rw_m']:
+        if not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign']:
+            # optimized beagle [PoS] flow
+
+            beagle_data_list = []
+
+            a_global_list = []
+            g_global_list = []
+            normalized_powers_of_A = []
+            g_h_global_list = []
+
+            for pow_of_A in powers_of_A:
+                deg = pow_of_A.sum(dim=1).to(torch.float)
+                deg_inv_sqrt = deg.pow(-0.5)
+                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+                normalized_A = deg_inv_sqrt.view(-1, 1) * pow_of_A * deg_inv_sqrt.view(1, -1)
+                normalized_powers_of_A.append(normalized_A)
+
+            list_of_training_edges = link_index.t().tolist()
+            num_training_egs = len(list_of_training_edges)
+
+            for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
+                a_global_list.append(torch.ones(size=[num_training_egs * 2, A.shape[0]]))
+
+                for link_number in range(0, num_training_egs * 2, 2):
+                    src, dst = list_of_training_edges[int(link_number / 2)]
+                    a_global_list[index][link_number, :] = power_of_a[src, :]
+                    a_global_list[index][link_number + 1, :] = power_of_a[dst, :]
+
+            for operator_id in range(len(normalized_powers_of_A)):
+                g_global_list.append(a_global_list[operator_id] @ x)
+
+            for index, src_dst_x in enumerate(g_global_list, start=0):
+                g_h_global_list.append(torch.ones(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
+
+                for link_number in range(0, num_training_egs * 2, 2):
+                    src, dst = list_of_training_edges[int(link_number / 2)]
+                    h_src = normalized_powers_of_A[index][src][src] + normalized_powers_of_A[index][src][dst]
+                    h_dst = normalized_powers_of_A[index][dst][dst] + normalized_powers_of_A[index][dst][src]
+                    g_h_global_list[index][link_number] = torch.hstack([g_global_list[index][link_number], h_src])
+                    g_h_global_list[index][link_number + 1] = torch.hstack([g_global_list[index][link_number], h_dst])
+
+            for link_number in range(0, num_training_egs * 2, 2):
+                src, dst = list_of_training_edges[int(link_number / 2)]
+                data = Data(
+                    x=torch.hstack([torch.vstack(
+                        [x[src], x[dst]]
+                    ), torch.tensor([[1], [1]])]),
+                    y=y,
+                )
+
+                for global_index, all_i_operators in enumerate(g_h_global_list):
+                    src_features = g_h_global_list[global_index][link_number]
+                    dst_features = g_h_global_list[global_index][link_number + 1]
+                    subgraph_features = torch.vstack([src_features, dst_features])
+
+                    data[f'x{global_index + 1}'] = subgraph_features
+                beagle_data_list.append(data)
+            return beagle_data_list
+
+        elif not rw_kwargs['rw_m']:
             # SIGN + SEAL flow; includes both golden and beagle flows
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:

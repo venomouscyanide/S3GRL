@@ -30,9 +30,9 @@ class TunedSIGN(SIGN):
             adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
 
             assert data.x is not None
-            xs = [data.x]
-
-            xs += [adj_t @ xs[-1]]
-            original_data[f'x{index}'] = xs[-1]
+            # xs = [data.x]
+            #
+            # xs += [adj_t @ data.x]
+            original_data[f'x{index}'] = adj_t @ data.x
 
         return original_data
