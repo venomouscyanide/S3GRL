@@ -156,19 +156,36 @@ class SEALDataset(InMemoryDataset):
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
-                dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
+                row, col = edge_index
+                adj_t = SparseTensor(row=col, col=row,
+                                     sparse_sizes=(num_nodes, num_nodes)
+                                     )
 
-                if not self.args.optimize_sign:
-                    powers_of_A = [A]
-                else:
-                    powers_of_A = [dense_adj]
+                deg = adj_t.sum(dim=1).to(torch.float)
+                deg_inv_sqrt = deg.pow(-0.5)
+                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
 
+                powers_of_A = [adj_t]
                 for sign_k in range(2, self.args.sign_k + 1):
-                    dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
-                    if not self.args.optimize_sign:
-                        powers_of_A.append(ssp.csr_matrix(dense_adj_power))
-                    else:
-                        powers_of_A.append(dense_adj_power)
+                    powers_of_A += [adj_t @ powers_of_A[-1]]
+
+                for index in range(len(powers_of_A)):
+                    powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
+
+                # dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
+
+                # if not self.args.optimize_sign:
+                #     powers_of_A = [A]
+                # else:
+                #     powers_of_A = [dense_adj]
+                #
+                # for sign_k in range(2, self.args.sign_k + 1):
+                #     dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
+                #     if not self.args.optimize_sign:
+                #         powers_of_A.append(ssp.csr_matrix(dense_adj_power))
+                #     else:
+                #         powers_of_A.append(dense_adj_power)
 
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")

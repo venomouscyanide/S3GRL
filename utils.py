@@ -262,9 +262,10 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
 
     node_ids = torch.LongTensor(node_ids)
     u, v = torch.LongTensor(u), torch.LongTensor(v)
-    r = torch.LongTensor(r)
+    # r = torch.LongTensor(r)
     edge_index = torch.stack([u, v], 0)
-    edge_weight = r.to(torch.float)
+    # edge_weight = r.to(torch.float)
+    edge_weight = r
     y = torch.tensor([y])
     if node_label == 'drnl':  # DRNL
         z = drnl_node_labeling(adj, 0, 1)
