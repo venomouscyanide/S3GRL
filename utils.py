@@ -438,8 +438,12 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 for link_number in range(0, num_training_egs * 2, 2):
                     src, dst = list_of_training_edges[int(link_number / 2)]
-                    a_global_list[index][link_number, :] = power_of_a[src, :]
-                    a_global_list[index][link_number + 1, :] = power_of_a[dst, :]
+                    interim_src = power_of_a[src, :].clone().detach()
+                    interim_src[dst] = 0
+                    interim_dst = power_of_a[dst, :].clone().detach()
+                    interim_dst[src] = 0
+                    a_global_list[index][link_number, :] = interim_src
+                    a_global_list[index][link_number + 1, :] = interim_dst
 
             for operator_id in range(len(normalized_powers_of_A)):
                 g_global_list.append(a_global_list[operator_id] @ x)
@@ -451,15 +455,16 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     src, dst = list_of_training_edges[int(link_number / 2)]
                     h_src = normalized_powers_of_A[index][src][src] + normalized_powers_of_A[index][src][dst]
                     h_dst = normalized_powers_of_A[index][dst][dst] + normalized_powers_of_A[index][dst][src]
-                    g_h_global_list[index][link_number] = torch.hstack([g_global_list[index][link_number], h_src])
-                    g_h_global_list[index][link_number + 1] = torch.hstack([g_global_list[index][link_number], h_dst])
+                    g_h_global_list[index][link_number] = torch.hstack([h_src, g_global_list[index][link_number]])
+                    g_h_global_list[index][link_number + 1] = torch.hstack([h_dst, g_global_list[index][link_number]])
 
             for link_number in range(0, num_training_egs * 2, 2):
                 src, dst = list_of_training_edges[int(link_number / 2)]
                 data = Data(
-                    x=torch.hstack([torch.vstack(
-                        [x[src], x[dst]]
-                    ), torch.tensor([[1], [1]])]),
+                    x=torch.hstack(
+                        [torch.tensor([[1], [1]]),
+                         torch.vstack([x[src], x[dst]]),
+                         ]),
                     y=y,
                 )
 
@@ -471,6 +476,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     data[f'x{global_index + 1}'] = subgraph_features
                 beagle_data_list.append(data)
             return beagle_data_list
+        elif not rw_kwargs['rw_m'] and not powers_of_A and sign_kwargs['optimize_sign']:
+            # optimized golden [SuP] flow
+            pass
 
         elif not rw_kwargs['rw_m']:
             # SIGN + SEAL flow; includes both golden and beagle flows
