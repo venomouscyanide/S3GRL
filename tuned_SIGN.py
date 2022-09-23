@@ -21,7 +21,7 @@ class TunedSIGN(SIGN):
         for index, data in enumerate(beagle_data_list, start=1):
             assert data.edge_index is not None
             row, col = data.edge_index
-            adj_t = SparseTensor(row=col, col=row, value = torch.tensor(data.edge_weight),
+            adj_t = SparseTensor(row=col, col=row, value=torch.tensor(data.edge_weight),
                                  sparse_sizes=(data.num_nodes, data.num_nodes))
 
             # deg = adj_t.sum(dim=1).to(torch.float)
