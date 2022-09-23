@@ -34,5 +34,9 @@ class TunedSIGN(SIGN):
             #
             # xs += [adj_t @ data.x]
             original_data[f'x{index}'] = (adj_t @ data.x)[:2, :]
-
+        original_data.x = original_data.x[:2, :]
+        del original_data['node_id']
+        del original_data['num_nodes']
+        del original_data['edge_index']
+        del original_data['edge_weight']
         return original_data
