@@ -457,8 +457,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 for link_number in range(0, num_training_egs * 2, 2):
                     src, dst = list_of_training_edges[int(link_number / 2)]
-                    h_src = normalized_powers_of_A[index][src][src] + normalized_powers_of_A[index][src][dst]
-                    h_dst = normalized_powers_of_A[index][dst][dst] + normalized_powers_of_A[index][dst][src]
+                    h_src = normalized_powers_of_A[index][src][src]
+                    h_dst = normalized_powers_of_A[index][dst][dst]
                     g_h_global_list[index][link_number] = torch.hstack([h_src, g_global_list[index][link_number]])
                     g_h_global_list[index][link_number + 1] = torch.hstack([h_dst, g_global_list[index][link_number + 1]])
 
