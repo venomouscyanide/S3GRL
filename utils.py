@@ -9,6 +9,7 @@ from pprint import pprint
 
 import torch_geometric.utils
 from torch_geometric.transforms import SIGN
+from torch_sparse import SparseTensor
 from tqdm import tqdm
 import random
 import numpy as np
@@ -476,8 +477,77 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             return beagle_data_list
         elif not rw_kwargs['rw_m'] and not powers_of_A and sign_kwargs['optimize_sign']:
             # optimized golden [SuP] flow
-            pass
+            golden_data_list = []
 
+            for src, dst in tqdm(link_index.t().tolist()):
+                tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                     max_nodes_per_hop, node_features=x, y=y,
+                                     directed=directed, A_csc=A_csc)
+
+                u, v, r = ssp.find(tmp[1])
+                u, v = torch.LongTensor(u), torch.LongTensor(v)
+                # r = torch.LongTensor(r)
+                edge_index = torch.stack([u, v], 0)
+
+                temp_data = Data(edge_index=edge_index)
+                row, col = temp_data.edge_index
+                adj_t = SparseTensor(row=row, col=col,
+                                     sparse_sizes=(temp_data.num_nodes, temp_data.num_nodes))
+
+                deg = adj_t.sum(dim=1).to(torch.float)
+                deg_inv_sqrt = deg.pow(-0.5)
+                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+                subgraph_features = tmp[3]
+                subgraph = adj_t
+
+                if subgraph.size(1) == 0 and subgraph.size(0) == 0:
+                    # empty enclosing subgraph
+                    continue
+
+                assert subgraph_features is not None
+
+                powers_of_a = [subgraph]
+                K = sign_kwargs['sign_k']
+
+                for _ in range(K - 1):
+                    powers_of_a.append(subgraph @ powers_of_a[-1])
+
+                all_a_values = torch.ones(size=[K * 2, subgraph.size(0)])
+
+                for operator_index in range(0, K * 2, 2):
+                    all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
+                        powers_of_a[operator_index // 2][[0, 1], :].to_dense()
+                    )
+
+                all_ax_values = all_a_values @ subgraph_features
+
+                updated_features = torch.ones(size=[K * 2, all_ax_values[0].size()[-1] + 1])
+                for operator_index in range(0, K * 2, 2):
+                    label_src = all_a_values[operator_index][0]
+                    label_dst = all_a_values[operator_index + 1][1]
+
+                    updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
+                    updated_features[operator_index + 1, :] = torch.hstack(
+                        [label_dst, all_ax_values[operator_index + 1]])
+
+                data = Data(
+                    x=torch.hstack(
+                        [torch.tensor([[1], [1]]),
+                         torch.vstack([subgraph_features[0], subgraph_features[1]]),
+                         ]),
+                    y=y,
+                )
+
+                for operator_index in range(0, K * 2, 2):
+                    data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+                        [updated_features[operator_index], updated_features[operator_index + 1]]
+                    )
+
+                golden_data_list.append(data)
+
+            return golden_data_list
         elif not rw_kwargs['rw_m']:
             # SIGN + SEAL flow; includes both golden and beagle flows
             for src, dst in tqdm(link_index.t().tolist()):

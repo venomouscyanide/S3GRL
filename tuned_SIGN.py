@@ -5,7 +5,7 @@ from torch_sparse import SparseTensor
 
 class TunedSIGN(SIGN):
     """
-    Helps pop the keys that are not consumed during training
+    Custom SIGN class for SuP and PoS
     """
 
     def __call__(self, data, sign_k):
