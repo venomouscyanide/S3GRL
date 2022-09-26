@@ -150,16 +150,28 @@ class SEALDataset(InMemoryDataset):
                 "sign_k": sign_k,
                 "use_feature": self.use_feature,
                 "sign_type": sign_type,
+                "optimize_sign": self.args.optimize_sign,
             })
             if sign_type == 'beagle':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
-                dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
-                powers_of_A = [A]
+                row, col = edge_index
+                adj_t = SparseTensor(row=col, col=row,
+                                     sparse_sizes=(num_nodes, num_nodes)
+                                     )
+
+                deg = adj_t.sum(dim=1).to(torch.float)
+                deg_inv_sqrt = deg.pow(-0.5)
+                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+                powers_of_A = [adj_t]
                 for sign_k in range(2, self.args.sign_k + 1):
-                    dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
-                    powers_of_A.append(ssp.csr_matrix(dense_adj_power))
+                    powers_of_A += [adj_t @ powers_of_A[-1]]
+
+                for index in range(len(powers_of_A)):
+                    powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
 
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")
@@ -426,10 +438,6 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
     for data in pbar:
         data = data.to(device)
         optimizer.zero_grad()
-        x = data.x if args.use_feature else None
-        edge_weight = data.edge_weight if args.use_edge_weight else None
-        node_id = data.node_id if emb else None
-        num_nodes = data.num_nodes
         if args.model == 'SIGN':
             if args.sign_k != -1:
                 xs = [data.x.to(device)]
@@ -438,6 +446,10 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
                 xs = [data[f'x{args.num_layers}'].to(device)]
             logits = model(xs, data.batch)
         else:
+            x = data.x if args.use_feature else None
+            edge_weight = data.edge_weight if args.use_edge_weight else None
+            node_id = data.node_id if emb else None
+            num_nodes = data.num_nodes
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
 
         loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
@@ -1407,9 +1419,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--train_n2v', action='store_true', help="Train node2vec on the dataset")
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
+
     parser.add_argument('--sign_k', type=int, default=3)
     parser.add_argument('--sign_type', type=str, default='', required=False, choices=['golden', 'beagle'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
+    parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
 
     args = parser.parse_args()
 

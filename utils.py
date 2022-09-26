@@ -9,6 +9,7 @@ from pprint import pprint
 
 import torch_geometric.utils
 from torch_geometric.transforms import SIGN
+from torch_sparse import SparseTensor
 from tqdm import tqdm
 import random
 import numpy as np
@@ -27,6 +28,7 @@ from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 from tuned_SIGN import TunedSIGN
 
 import graphistry  # only really required for debug. code using graphity is commented by default.
+
 
 # uncomment to use graphistry to debug data
 # graphistry.register(api=3, protocol="https", server="hub.graphistry.com", username="i_see_nodes_everywhere",
@@ -261,9 +263,10 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
 
     node_ids = torch.LongTensor(node_ids)
     u, v = torch.LongTensor(u), torch.LongTensor(v)
-    r = torch.LongTensor(r)
+    # r = torch.LongTensor(r)
     edge_index = torch.stack([u, v], 0)
-    edge_weight = r.to(torch.float)
+    # edge_weight = r.to(torch.float)
+    edge_weight = r
     y = torch.tensor([y])
     if node_label == 'drnl':  # DRNL
         z = drnl_node_labeling(adj, 0, 1)
@@ -412,7 +415,140 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     data_list = []
 
     if sign_kwargs:
-        if not rw_kwargs['rw_m']:
+        if not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign']:
+            # optimized beagle [PoS] flow
+
+            beagle_data_list = []
+
+            a_global_list = []
+            g_global_list = []
+            normalized_powers_of_A = []
+            g_h_global_list = []
+
+            for index in range(len(powers_of_A)):
+                normalized_powers_of_A.append(torch.tensor(powers_of_A[index].todense()))
+
+            list_of_training_edges = link_index.t().tolist()
+            num_training_egs = len(list_of_training_edges)
+
+            for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
+                a_global_list.append(torch.ones(size=[num_training_egs * 2, A.shape[0]]))
+
+                for link_number in range(0, num_training_egs * 2, 2):
+                    src, dst = list_of_training_edges[int(link_number / 2)]
+                    interim_src = power_of_a[src, :].clone().detach()
+                    interim_src[dst] = 0
+                    interim_dst = power_of_a[dst, :].clone().detach()
+                    interim_dst[src] = 0
+                    a_global_list[index][link_number, :] = interim_src
+                    a_global_list[index][link_number + 1, :] = interim_dst
+
+            for operator_id in range(len(normalized_powers_of_A)):
+                g_global_list.append(a_global_list[operator_id] @ x)
+
+            for index, src_dst_x in enumerate(g_global_list, start=0):
+                g_h_global_list.append(torch.ones(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
+
+                for link_number in range(0, num_training_egs * 2, 2):
+                    src, dst = list_of_training_edges[int(link_number / 2)]
+                    h_src = normalized_powers_of_A[index][src][src]
+                    h_dst = normalized_powers_of_A[index][dst][dst]
+                    g_h_global_list[index][link_number] = torch.hstack([h_src, g_global_list[index][link_number]])
+                    g_h_global_list[index][link_number + 1] = torch.hstack(
+                        [h_dst, g_global_list[index][link_number + 1]])
+
+            for link_number in range(0, num_training_egs * 2, 2):
+                src, dst = list_of_training_edges[int(link_number / 2)]
+                data = Data(
+                    x=torch.hstack(
+                        [torch.tensor([[1], [1]]),
+                         torch.vstack([x[src], x[dst]]),
+                         ]),
+                    y=y,
+                )
+
+                for global_index, all_i_operators in enumerate(g_h_global_list):
+                    src_features = g_h_global_list[global_index][link_number]
+                    dst_features = g_h_global_list[global_index][link_number + 1]
+                    subgraph_features = torch.vstack([src_features, dst_features])
+
+                    data[f'x{global_index + 1}'] = subgraph_features
+                beagle_data_list.append(data)
+            return beagle_data_list
+        elif not rw_kwargs['rw_m'] and not powers_of_A and sign_kwargs['optimize_sign']:
+            # optimized golden [SuP] flow
+            golden_data_list = []
+
+            for src, dst in tqdm(link_index.t().tolist()):
+                tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                     max_nodes_per_hop, node_features=x, y=y,
+                                     directed=directed, A_csc=A_csc)
+
+                u, v, r = ssp.find(tmp[1])
+                u, v = torch.LongTensor(u), torch.LongTensor(v)
+                # r = torch.LongTensor(r)
+                edge_index = torch.stack([u, v], 0)
+
+                temp_data = Data(edge_index=edge_index)
+                row, col = temp_data.edge_index
+                adj_t = SparseTensor(row=row, col=col,
+                                     sparse_sizes=(temp_data.num_nodes, temp_data.num_nodes))
+
+                deg = adj_t.sum(dim=1).to(torch.float)
+                deg_inv_sqrt = deg.pow(-0.5)
+                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+                subgraph_features = tmp[3]
+                subgraph = adj_t
+
+                if subgraph.size(1) == 0 and subgraph.size(0) == 0:
+                    # empty enclosing subgraph
+                    continue
+
+                assert subgraph_features is not None
+
+                powers_of_a = [subgraph]
+                K = sign_kwargs['sign_k']
+
+                for _ in range(K - 1):
+                    powers_of_a.append(subgraph @ powers_of_a[-1])
+
+                all_a_values = torch.ones(size=[K * 2, subgraph.size(0)])
+
+                for operator_index in range(0, K * 2, 2):
+                    all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
+                        powers_of_a[operator_index // 2][[0, 1], :].to_dense()
+                    )
+
+                all_ax_values = all_a_values @ subgraph_features
+
+                updated_features = torch.ones(size=[K * 2, all_ax_values[0].size()[-1] + 1])
+                for operator_index in range(0, K * 2, 2):
+                    label_src = all_a_values[operator_index][0]
+                    label_dst = all_a_values[operator_index + 1][1]
+
+                    updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
+                    updated_features[operator_index + 1, :] = torch.hstack(
+                        [label_dst, all_ax_values[operator_index + 1]])
+
+                data = Data(
+                    x=torch.hstack(
+                        [torch.tensor([[1], [1]]),
+                         torch.vstack([subgraph_features[0], subgraph_features[1]]),
+                         ]),
+                    y=y,
+                )
+
+                for operator_index in range(0, K * 2, 2):
+                    data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+                        [updated_features[operator_index], updated_features[operator_index + 1]]
+                    )
+
+                golden_data_list.append(data)
+
+            return golden_data_list
+        elif not rw_kwargs['rw_m']:
             # SIGN + SEAL flow; includes both golden and beagle flows
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
