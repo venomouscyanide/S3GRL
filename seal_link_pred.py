@@ -173,20 +173,6 @@ class SEALDataset(InMemoryDataset):
                 for index in range(len(powers_of_A)):
                     powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
 
-                # dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
-
-                # if not self.args.optimize_sign:
-                #     powers_of_A = [A]
-                # else:
-                #     powers_of_A = [dense_adj]
-                #
-                # for sign_k in range(2, self.args.sign_k + 1):
-                #     dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
-                #     if not self.args.optimize_sign:
-                #         powers_of_A.append(ssp.csr_matrix(dense_adj_power))
-                #     else:
-                #         powers_of_A.append(dense_adj_power)
-
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")
             if self.args.model == "SIGN":

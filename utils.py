@@ -427,13 +427,6 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             for index in range(len(powers_of_A)):
                 normalized_powers_of_A.append(torch.tensor(powers_of_A[index].todense()))
 
-            # for pow_of_A in powers_of_A:
-            #     deg = pow_of_A.sum(dim=1).to(torch.float)
-            #     deg_inv_sqrt = deg.pow(-0.5)
-            #     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            #     normalized_A = deg_inv_sqrt.view(-1, 1) * pow_of_A * deg_inv_sqrt.view(1, -1)
-            #     normalized_powers_of_A.append(normalized_A)
-
             list_of_training_edges = link_index.t().tolist()
             num_training_egs = len(list_of_training_edges)
 
@@ -460,7 +453,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     h_src = normalized_powers_of_A[index][src][src]
                     h_dst = normalized_powers_of_A[index][dst][dst]
                     g_h_global_list[index][link_number] = torch.hstack([h_src, g_global_list[index][link_number]])
-                    g_h_global_list[index][link_number + 1] = torch.hstack([h_dst, g_global_list[index][link_number + 1]])
+                    g_h_global_list[index][link_number + 1] = torch.hstack(
+                        [h_dst, g_global_list[index][link_number + 1]])
 
             for link_number in range(0, num_training_egs * 2, 2):
                 src, dst = list_of_training_edges[int(link_number / 2)]
