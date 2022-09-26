@@ -981,6 +981,7 @@ def run_sweal(args, device):
     if args.calc_ratio:
         rw_kwargs.update({'calc_ratio': True})
 
+    time_for_prep_start = default_timer()
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Train data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
@@ -1117,6 +1118,9 @@ def run_sweal(args, device):
     if args.calc_ratio:
         print("Finished calculating ratio of datasets.")
         exit()
+
+    time_for_prep_end = default_timer()
+    total_prep_time = time_for_prep_end - time_for_prep_start
 
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
@@ -1321,6 +1325,7 @@ def run_sweal(args, device):
             shutil.rmtree(path)
 
     print("fin.")
+    return total_prep_time
 
 
 @timeit()
@@ -1445,6 +1450,7 @@ if __name__ == '__main__':
         run_sweal_with_run_profiling(args, device)
     else:
         start = default_timer()
-        run_sweal(args, device)
+        total_prep_time = run_sweal(args, device)
         end = default_timer()
+        print(f"Time taken for dataset prep: {total_prep_time:.2f} seconds")
         print(f"Time taken for run: {end - start:.2f} seconds")
