@@ -15,24 +15,23 @@ class TunedSIGN(SIGN):
                 data.pop(f'x{idx}')
         return data
 
-    def beagle_data_creation(self, powers_of_A):
-        original_data = powers_of_A[0]
+    def beagle_data_creation(self, beagle_data_list):
+        original_data = beagle_data_list[0]
 
-        for index, data in enumerate(powers_of_A, start=1):
+        for index, data in enumerate(beagle_data_list, start=1):
             assert data.edge_index is not None
             row, col = data.edge_index
-            adj_t = SparseTensor(row=col, col=row, value=data.edge_weight,
+            adj_t = SparseTensor(row=col, col=row, value=torch.tensor(data.edge_weight),
                                  sparse_sizes=(data.num_nodes, data.num_nodes))
 
-            deg = adj_t.sum(dim=1).to(torch.float)
-            deg_inv_sqrt = deg.pow(-0.5)
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
             assert data.x is not None
-            # xs = [data.x]
-            #
-            # xs += [adj_t @ data.x]
-            original_data[f'x{index}'] = adj_t @ data.x
+
+            original_data[f'x{index}'] = (adj_t @ data.x)
+
+        # the following keys are useless in SIGN-esque training
+        del original_data['node_id']
+        del original_data['num_nodes']
+        del original_data['edge_index']
+        del original_data['edge_weight']
 
         return original_data
