@@ -22,6 +22,7 @@ from networkx import Graph
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit, timeit
+from torch_geometric.transforms import OneHotDegree
 from tqdm import tqdm
 import pdb
 
@@ -765,7 +766,7 @@ class SWEALArgumentParser:
         self.pool_operatorwise = pool_operatorwise
 
 
-def run_sweal(args, device):
+def run_sgrl_learning(args, device):
     if args.save_appendix == '':
         args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S") + f'_seed{args.seed}'
         if args.m and args.M:
@@ -883,6 +884,14 @@ def run_sweal(args, device):
             print(f'Average clustering coeffiecient: {nx.average_clustering(G)}')
             print(f'Is undirected: {data.is_undirected()}')
             exit()
+
+    init_features = args.init_features
+    if init_features == "degree":
+        one_hot = OneHotDegree(max_degree=1024)
+        data = one_hot(data)
+    elif init_features == "eye":
+        # if no features, we simply set x to be identity matrix as seen in GAE paper
+        data.x = torch.eye(data.num_nodes)
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1138,6 +1147,7 @@ def run_sweal(args, device):
                                  num_workers=args.num_workers)
 
     if args.train_node_embedding:
+        # TODO; heads-up: this arg is not supported in SIGN
         emb = torch.nn.Embedding(data.num_nodes, args.hidden_channels).to(device)
     elif args.pretrained_node_embedding:
         weight = torch.load(args.pretrained_node_embedding)
@@ -1329,9 +1339,9 @@ def run_sweal(args, device):
 
 
 @timeit()
-def run_sweal_with_run_profiling(args, device):
+def run_sgrl_with_run_profiling(args, device):
     start = default_timer()
-    run_sweal(args, device)
+    run_sgrl_learning(args, device)
     end = default_timer()
     print(f"Time taken for run: {end - start:.2f} seconds")
 
@@ -1429,6 +1439,9 @@ if __name__ == '__main__':
     parser.add_argument('--sign_type', type=str, default='', required=False, choices=['golden', 'beagle'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
+    parser.add_argument('--init_features', type=str, default='',
+                        help='Choose to augment node features with either one-hot encoding or their degree values',
+                        choices=['degree', 'eye'])
 
     args = parser.parse_args()
 
@@ -1437,8 +1450,11 @@ if __name__ == '__main__':
 
     seed_everything(args.seed)
 
-    if args.model == "SIGN" and not args.use_feature:
-        raise Exception("Need to have use_feature enabled for SIGN to work")
+    if args.model == "SIGN" and not args.init_features:
+        raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
+
+    if args.model == "SIGN" and any([args.dynamic_train, args.dynamic_test, args.dynamic_val]):
+        raise Exception("SIGN does not support Dynamic Datasets (yet).")
 
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
@@ -1447,10 +1463,10 @@ if __name__ == '__main__':
         raise Exception(f"Cannot run beagle with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.profile:
-        run_sweal_with_run_profiling(args, device)
+        run_sgrl_with_run_profiling(args, device)
     else:
         start = default_timer()
-        total_prep_time = run_sweal(args, device)
+        total_prep_time = run_sgrl_learning(args, device)
         end = default_timer()
         print(f"Time taken for dataset prep: {total_prep_time:.2f} seconds")
         print(f"Time taken for run: {end - start:.2f} seconds")

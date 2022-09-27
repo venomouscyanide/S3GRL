@@ -7,7 +7,7 @@ import argparse
 
 from tqdm import tqdm
 
-from seal_link_pred import SWEALArgumentParser, run_sweal
+from seal_link_pred import SWEALArgumentParser, run_sgrl_learning
 
 warnings.filterwarnings(action="ignore")
 
@@ -45,7 +45,7 @@ class ManualTuner:
                                            dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3, sign_type='',
                                            pool_operatorwise=False)
 
-        run_sweal(sweal_parser, device)
+        run_sgrl_learning(sweal_parser, device)
 
 
 if __name__ == '__main__':
