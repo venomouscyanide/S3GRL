@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "USAir": {
+    "Cora": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -10,16 +10,16 @@
           400,
           500
         ],
-        "id": "USAir_SuP_NoOpt"
+        "id": "Cora_SuP_NoOpt"
       },
       "hyperparams_per_run": {
         "fast_split": false,
         "delete_dataset": true,
 
-        "model": "DGCNN",
-        "sortpool_k": 0.6,
-        "num_layers": 3,
-        "hidden_channels": 32,
+        "model": "SIGN",
+        "sortpool_k": -1,
+        "num_layers": -1,
+        "hidden_channels": 256,
         "batch_size": 32,
 
         "num_hops": 1,
@@ -30,7 +30,7 @@
         "use_edge_weight": false,
 
         "lr": 0.0001,
-        "epochs": 1,
+        "epochs": 50,
         "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
@@ -75,8 +75,8 @@
         "train_mf": false,
 
         "sign_k": 3,
-        "sign_type": "",
-        "pool_operatorwise": false,
+        "sign_type": "beagle",
+        "pool_operatorwise": true,
         "optimize_sign": false,
         "init_features": ""
       }

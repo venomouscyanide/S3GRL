@@ -1,6 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
 from timeit import default_timer
 
 import torch
@@ -274,7 +271,7 @@ class SEALDynamicDataset(Dataset):
         self.unique_nodes = {}
         if self.rw_kwargs.get('M'):
             print("Start caching random walk unique nodes")
-            # if in dynamic SWEAL mode, need to cache the unique nodes of random walks before get() due to below error
+            # if in dynamic ScaLed mode, need to cache the unique nodes of random walks before get() due to below error
             # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
             # To use CUDA with multiprocessing, you must use the 'spawn' start method
             for link in self.links:
@@ -374,7 +371,7 @@ class SEALDynamicDataset(Dataset):
                 data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                       self.max_nodes_per_hop, node_features=self.data.x,
                                       y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
-                sign_t = TunedSIGN(self.args.num_layers)
+                sign_t = TunedSIGN(self.args.sign_k)
                 data = sign_t(data, self.args.sign_k)
 
         else:
@@ -412,7 +409,7 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
@@ -438,7 +435,7 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             x = data.x if args.use_feature else None
@@ -476,7 +473,7 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             pos_logits = model(xs, data.batch)
         else:
             pos_logits = model(pos_num_nodes, pos_data.z, pos_data.edge_index, data.batch, pos_x, pos_edge_weight,
@@ -492,7 +489,7 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             neg_logits = model(xs, data.batch)
         else:
             neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
@@ -532,7 +529,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
@@ -554,7 +551,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)

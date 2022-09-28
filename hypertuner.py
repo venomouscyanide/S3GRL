@@ -27,7 +27,7 @@ class ManualTuner:
              runs, use_heuristic, m, M, cuda_device, dropedge, save_appendix, data_appendix, device, train_percent,
              delete_dataset,
              epochs, split_val_ratio, split_test_ratio, profile, seed, use_valedges_as_input):
-        sweal_parser = SGRLArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
+        scaled_parser = SGRLArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
                                           hidden_channels=hidden_channels, batch_size=32, num_hops=1,
                                           ratio_per_hop=1.0, max_nodes_per_hop=None, node_label='drnl',
                                           use_feature=use_feature, use_edge_weight=False, lr=lr, epochs=epochs,
@@ -48,7 +48,7 @@ class ManualTuner:
                                           dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3, sign_type='',
                                           pool_operatorwise=False, optimize_sign=False, init_features='')
 
-        run_sgrl_learning(sweal_parser, device)
+        run_sgrl_learning(scaled_parser, device)
 
 
 if __name__ == '__main__':

@@ -96,10 +96,15 @@ class SGRLArgumentParser:
         self.init_features = init_features
 
 
-def sgrl_master_controller(config):
+def sgrl_master_controller(config, results_json):
+    """
+    Wrapper to run sgrl methods to capture the results in a cleaner fashion
+    """
     # TODO; make this available in args
     device = torch.device(f'cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
+
+    exp_results = {}
 
     with open(config) as config_file:
         config = json.load(config_file)
@@ -117,7 +122,7 @@ def sgrl_master_controller(config):
         prep_times = []
         total_run_times = []
 
-        for run, seed in zip(range(runs), seeds):
+        for run, seed in zip(range(1, runs + 1), seeds):
             kwargs.update(
                 {
                     "dataset": dataset,
@@ -140,12 +145,25 @@ def sgrl_master_controller(config):
         total_run_times = np.array(total_run_times)
         best_test_scores = np.array(best_test_scores)
 
+        exp_results[identifier] = {
+            "results": {
+                "Average Dataset Prep Time": f"{prep_times.mean():.5f} ± {prep_times.std():.5f}",
+                "Average Runtime": f"{total_run_times.mean():.5f} ± {total_run_times.std():.5f}",
+                "Average Test AUC": f"{best_test_scores.mean():.5f} ± {best_test_scores.std():.5f}",
+            },
+            "config_dump": ds_config
+        }
+        with open(results_json, 'w') as output_file:
+            json.dump(exp_results, output_file)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='configs/config.json')
+    parser.add_argument('--config', type=str, default='configs/cora_cite_comparison_5_runs.json')
+    parser.add_argument('--results_json', type=str, default='result.json')
 
     args = parser.parse_args()
 
     config = args.config
-    sgrl_master_controller(config)
+    results_json = args.results_json
+    sgrl_master_controller(config, results_json)
