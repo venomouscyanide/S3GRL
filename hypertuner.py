@@ -7,7 +7,8 @@ import argparse
 
 from tqdm import tqdm
 
-from seal_link_pred import SWEALArgumentParser, run_sgrl_learning
+from seal_link_pred import run_sgrl_learning
+from sgrl_run_manager import SGRLArgumentParser
 
 warnings.filterwarnings(action="ignore")
 
@@ -23,27 +24,29 @@ class HyperTuningSearchSpace:
 class ManualTuner:
     @staticmethod
     def tune(dataset, model, hidden_channels, use_feature, lr,
-             runs, use_heuristic, m, M, dropedge, save_appendix, data_appendix, device, train_percent, delete_dataset,
+             runs, use_heuristic, m, M, cuda_device, dropedge, save_appendix, data_appendix, device, train_percent,
+             delete_dataset,
              epochs, split_val_ratio, split_test_ratio, profile, seed, use_valedges_as_input):
-        sweal_parser = SWEALArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
-                                           hidden_channels=hidden_channels, batch_size=32, num_hops=1,
-                                           ratio_per_hop=1.0, max_nodes_per_hop=None, node_label='drnl',
-                                           use_feature=use_feature, use_edge_weight=False, lr=lr, epochs=epochs,
-                                           runs=runs, train_percent=train_percent, val_percent=100, test_percent=100,
-                                           dynamic_train=False,
-                                           dynamic_val=False, dynamic_test=False, num_workers=16,
-                                           train_node_embedding=False, pretrained_node_embedding=False,
-                                           use_valedges_as_input=use_valedges_as_input, eval_steps=1, log_steps=1,
-                                           data_appendix=data_appendix, save_appendix=save_appendix, keep_old=False,
-                                           continue_from=None,
-                                           only_test=False, test_multiple_models=False, use_heuristic=use_heuristic,
-                                           m=m, M=M, dropedge=dropedge, calc_ratio=False, checkpoint_training=False,
-                                           delete_dataset=delete_dataset, pairwise=False, loss_fn='', neg_ratio=1,
-                                           profile=profile, split_val_ratio=split_val_ratio,
-                                           split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50,
-                                           train_gae=False, base_gae="", dataset_stats=False, seed=seed,
-                                           dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3, sign_type='',
-                                           pool_operatorwise=False)
+        sweal_parser = SGRLArgumentParser(dataset=dataset, fast_split=False, model=model, sortpool_k=0.6, num_layers=3,
+                                          hidden_channels=hidden_channels, batch_size=32, num_hops=1,
+                                          ratio_per_hop=1.0, max_nodes_per_hop=None, node_label='drnl',
+                                          use_feature=use_feature, use_edge_weight=False, lr=lr, epochs=epochs,
+                                          runs=runs, train_percent=train_percent, val_percent=100, test_percent=100,
+                                          dynamic_train=False,
+                                          dynamic_val=False, dynamic_test=False, num_workers=16,
+                                          train_node_embedding=False, pretrained_node_embedding=False,
+                                          use_valedges_as_input=use_valedges_as_input, eval_steps=1, log_steps=1,
+                                          data_appendix=data_appendix, save_appendix=save_appendix, keep_old=False,
+                                          continue_from=None,
+                                          only_test=False, test_multiple_models=False, use_heuristic=use_heuristic,
+                                          m=m, M=M, cuda_device=cuda_device, dropedge=dropedge, calc_ratio=False,
+                                          checkpoint_training=False,
+                                          delete_dataset=delete_dataset, pairwise=False, loss_fn='', neg_ratio=1,
+                                          profile=profile, split_val_ratio=split_val_ratio,
+                                          split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50,
+                                          train_gae=False, base_gae="", dataset_stats=False, seed=seed,
+                                          dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3, sign_type='',
+                                          pool_operatorwise=False, optimize_sign=False, init_features='')
 
         run_sgrl_learning(sweal_parser, device)
 
@@ -91,7 +94,7 @@ if __name__ == '__main__':
             start = default_timer()
             ManualTuner.tune(dataset=args.dataset, model=args.model, hidden_channels=args.hidden_channels,
                              lr=args.lr, runs=args.runs, use_feature=args.use_feature,
-                             use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], dropedge=perm[2],
+                             use_heuristic=args.use_heuristic, m=perm[0], M=perm[1], cuda_device=0, dropedge=perm[2],
                              save_appendix=args.save_appendix, data_appendix=args.data_appendix, device=device,
                              train_percent=args.train_percent, delete_dataset=args.delete_dataset, epochs=args.epochs,
                              split_val_ratio=args.split_val_ratio, split_test_ratio=args.split_test_ratio,

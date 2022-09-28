@@ -3,8 +3,6 @@
 # LICENSE file in the root directory of this source tree.
 from timeit import default_timer
 
-import numpy as np
-import networkx as nx
 import torch
 import shutil
 
@@ -16,11 +14,8 @@ import os.path as osp
 from shutil import copy
 import copy as cp
 
-import torch_geometric.utils
 from torch_geometric import seed_everything
-from networkx import Graph
 from torch_geometric.loader import DataLoader
-from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit, timeit
 from torch_geometric.transforms import OneHotDegree
 from tqdm import tqdm
@@ -28,14 +23,13 @@ import pdb
 
 from sklearn.metrics import roc_auc_score, average_precision_score
 import scipy.sparse as ssp
-from torch.nn import BCEWithLogitsLoss, Embedding
+from torch.nn import BCEWithLogitsLoss
 
 from torch_sparse import coalesce, SparseTensor
 
 from torch_geometric.datasets import Planetoid, AttributedGraphDataset
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 from torch_geometric.utils import to_undirected, to_dense_adj
-from torch_geometric import transforms as T
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
@@ -46,7 +40,7 @@ from baselines.gnn_link_pred import train_gnn
 from baselines.mf import train_mf
 from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
-from data_utils import load_splitted_data, read_label, read_edges
+from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
 from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
@@ -55,7 +49,7 @@ from ogbl_baselines.n2v import run_and_save_n2v
 from profiler_utils import profile_helper
 from tuned_SIGN import TunedSIGN
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
+    Logger, AA, CN, PPR, calc_ratio_helperg
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -683,89 +677,6 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     return results
 
 
-class SWEALArgumentParser:
-    def __init__(self, dataset, fast_split, model, sortpool_k, num_layers, hidden_channels, batch_size, num_hops,
-                 ratio_per_hop, max_nodes_per_hop, node_label, use_feature, use_edge_weight, lr, epochs, runs,
-                 train_percent, val_percent, test_percent, dynamic_train, dynamic_val, dynamic_test, num_workers,
-                 train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
-                 data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
-                 m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
-                 profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
-                 seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type, pool_operatorwise):
-        # Data Settings
-        self.dataset = dataset
-        self.fast_split = fast_split
-        self.delete_dataset = delete_dataset
-
-        # GNN Settings
-        self.model = model
-        self.sortpool_k = sortpool_k
-        self.num_layers = num_layers
-        self.hidden_channels = hidden_channels
-        self.batch_size = batch_size
-
-        # Subgraph extraction settings
-        self.num_hops = num_hops
-        self.ratio_per_hop = ratio_per_hop
-        self.max_nodes_per_hop = max_nodes_per_hop
-        self.node_label = node_label
-        self.use_feature = use_feature
-        self.use_edge_weight = use_edge_weight
-
-        # Training settings
-        self.lr = lr
-        self.epochs = epochs
-        self.runs = runs
-        self.train_percent = train_percent
-        self.val_percent = val_percent
-        self.test_percent = test_percent
-        self.dynamic_train = dynamic_train
-        self.dynamic_val = dynamic_val
-        self.dynamic_test = dynamic_test
-        self.num_workers = num_workers
-        self.train_node_embedding = train_node_embedding
-        self.pretrained_node_embedding = pretrained_node_embedding
-
-        # Testing settings
-        self.use_valedges_as_input = use_valedges_as_input
-        self.eval_steps = eval_steps
-        self.log_steps = log_steps
-        self.checkpoint_training = checkpoint_training
-        self.data_appendix = data_appendix
-        self.save_appendix = save_appendix
-        self.keep_old = keep_old
-        self.continue_from = continue_from
-        self.only_test = only_test
-        self.test_multiple_models = test_multiple_models
-        self.use_heuristic = use_heuristic
-
-        # SWEAL
-        self.m = m
-        self.M = M
-        self.dropedge = dropedge
-        self.calc_ratio = calc_ratio
-        self.pairwise = pairwise
-        self.loss_fn = loss_fn
-        self.neg_ratio = neg_ratio
-        self.profile = profile
-        self.split_val_ratio = split_val_ratio
-        self.split_test_ratio = split_test_ratio
-        self.train_mlp = train_mlp
-        self.dropout = dropout
-        self.train_gae = train_gae
-        self.base_gae = base_gae
-        self.dataset_stats = dataset_stats
-        self.seed = seed
-        self.dataset_split_num = dataset_split_num
-        self.train_n2v = train_n2v
-        self.train_mf = train_mf
-
-        # SIGN related
-        self.sign_k = sign_k
-        self.sign_type = sign_type
-        self.pool_operatorwise = pool_operatorwise
-
-
 def run_sgrl_learning(args, device):
     if args.save_appendix == '':
         args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S") + f'_seed{args.seed}'
@@ -1320,10 +1231,11 @@ def run_sgrl_learning(args, device):
                 print(key, file=f)
                 loggers[key].print_statistics(run, f=f)
 
+    best_test_scores = []
     for key in loggers.keys():
         print(key)
         loggers[key].add_info(args.epochs, args.runs)
-        loggers[key].print_statistics()
+        best_test_scores += [loggers[key].print_statistics()]
         with open(log_file, 'a') as f:
             print(key, file=f)
             loggers[key].print_statistics(f=f)
@@ -1335,7 +1247,7 @@ def run_sgrl_learning(args, device):
             shutil.rmtree(path)
 
     print("fin.")
-    return total_prep_time
+    return total_prep_time, best_test_scores[0]
 
 
 @timeit()
@@ -1466,7 +1378,7 @@ if __name__ == '__main__':
         run_sgrl_with_run_profiling(args, device)
     else:
         start = default_timer()
-        total_prep_time = run_sgrl_learning(args, device)
+        total_prep_time, _ = run_sgrl_learning(args, device)
         end = default_timer()
         print(f"Time taken for dataset prep: {total_prep_time:.2f} seconds")
         print(f"Time taken for run: {end - start:.2f} seconds")
