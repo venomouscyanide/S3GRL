@@ -144,7 +144,7 @@ class SEALDataset(InMemoryDataset):
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
             })
-            if sign_type == 'beagle':
+            if sign_type == 'PoS':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -285,7 +285,7 @@ class SEALDynamicDataset(Dataset):
 
         self.powers_of_A = []
         if self.args.model == 'SIGN':
-            if self.sign_type == 'beagle':
+            if self.sign_type == 'PoS':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -320,7 +320,7 @@ class SEALDynamicDataset(Dataset):
         if self.args.model == 'SIGN':
             if not self.rw_kwargs.get('m'):
                 if not self.powers_of_A:
-                    # golden flow
+                    # SuP flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -341,14 +341,14 @@ class SEALDynamicDataset(Dataset):
                     data = sign_t(data, self.args.sign_k)
 
                 else:
-                    # beagle flow
+                    # PoS flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
                     # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
                     # check against the nodes that is received in tmp before the relabeling occurs
 
-                    beagle_data_list = []
+                    pos_data_list = []
                     for index, power_of_a in enumerate(self.powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, self.num_hops, power_of_a, self.ratio_per_hop,
                                              self.max_nodes_per_hop, node_features=self.data.x,
@@ -358,10 +358,10 @@ class SEALDynamicDataset(Dataset):
                         }
 
                         data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
-                        beagle_data_list.append(data)
+                        pos_data_list.append(data)
 
                     sign_t = TunedSIGN(self.args.sign_k)
-                    data = sign_t.beagle_data_creation(beagle_data_list)
+                    data = sign_t.PoS_data_creation(pos_data_list)
 
 
             else:
@@ -1345,7 +1345,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['golden', 'beagle'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
@@ -1369,7 +1369,7 @@ if __name__ == '__main__':
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
     if args.sign_type == 'beagle' and not args.pool_operatorwise:
-        raise Exception(f"Cannot run beagle with pool_operatorwise: {args.pool_operatorwise}")
+        raise Exception(f"Cannot run PoS with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.profile:
         run_sgrl_with_run_profiling(args, device)

@@ -324,7 +324,7 @@ class SIGNNet(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge  # not used in SIGN
-        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for beagle
+        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
 
     def _centre_pool_helper(self, batch, h):
         # center pooling

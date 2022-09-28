@@ -75,7 +75,7 @@
         "train_mf": false,
 
         "sign_k": 3,
-        "sign_type": "beagle",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": false,
         "init_features": ""

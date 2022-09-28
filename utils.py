@@ -416,9 +416,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
     if sign_kwargs:
         if not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign']:
-            # optimized beagle [PoS] flow
+            # optimized PoS flow
 
-            beagle_data_list = []
+            pos_data_list = []
 
             a_global_list = []
             g_global_list = []
@@ -473,11 +473,11 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     subgraph_features = torch.vstack([src_features, dst_features])
 
                     data[f'x{global_index + 1}'] = subgraph_features
-                beagle_data_list.append(data)
-            return beagle_data_list
+                pos_data_list.append(data)
+            return pos_data_list
         elif not rw_kwargs['rw_m'] and not powers_of_A and sign_kwargs['optimize_sign']:
-            # optimized golden [SuP] flow
-            golden_data_list = []
+            # optimized SuP flow
+            sup_data_list = []
 
             for src, dst in tqdm(link_index.t().tolist()):
                 tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
@@ -545,14 +545,14 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                         [updated_features[operator_index], updated_features[operator_index + 1]]
                     )
 
-                golden_data_list.append(data)
+                sup_data_list.append(data)
 
-            return golden_data_list
+            return sup_data_list
         elif not rw_kwargs['rw_m']:
-            # SIGN + SEAL flow; includes both golden and beagle flows
+            # SIGN + SEAL flow; includes both SuP and PoS flows
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
-                    # golden flow
+                    # SuP flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -574,13 +574,13 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                     data_list.append(data)
                 else:
-                    # beagle flow
+                    # PoS flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
                     # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
                     # check against the nodes that is received in tmp before the relabeling occurs
-                    beagle_data_list = []
+                    pos_data_list = []
                     for index, power_of_a in enumerate(powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
                                              max_nodes_per_hop, node_features=x, y=y,
@@ -590,14 +590,15 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                         }
 
                         data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
-                        beagle_data_list.append(data)
+                        pos_data_list.append(data)
 
                     sign_t = TunedSIGN(sign_kwargs['sign_k'])
-                    data = sign_t.beagle_data_creation(beagle_data_list)
+                    data = sign_t.PoS_data_creation(pos_data_list)
                     data_list.append(data)
         else:
             # SIGN + ScaLed flow (research is pending for this)
             # TODO: this is not yet fully implemented and tested
+            raise NotImplementedError("SIGN + ScaLed is not developed (yet).")
             for src, dst in tqdm(link_index.t().tolist()):
                 rw_kwargs.update({'sign': True})
                 data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
