@@ -1359,7 +1359,7 @@ if __name__ == '__main__':
 
     seed_everything(args.seed)
 
-    if args.model == "SIGN" and not args.init_features:
+    if args.model == "SIGN" and not args.init_features and not args.use_feature:
         raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
 
     if args.model == "SIGN" and any([args.dynamic_train, args.dynamic_test, args.dynamic_val]):
