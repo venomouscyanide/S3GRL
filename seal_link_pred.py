@@ -49,7 +49,7 @@ from ogbl_baselines.n2v import run_and_save_n2v
 from profiler_utils import profile_helper
 from tuned_SIGN import TunedSIGN
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR, calc_ratio_helperg
+    Logger, AA, CN, PPR, calc_ratio_helper
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
