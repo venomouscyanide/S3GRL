@@ -109,13 +109,12 @@ def sgrl_master_controller(config, results_json):
     with open(config) as config_file:
         config = json.load(config_file)
 
-    for dataset, ds_config in config['datasets'].items():
+    for identifier, ds_config in config['datasets'].items():
         ds_params = ds_config['ds_params']
         runs = ds_params['runs']
         seeds = ds_params['seeds']
-        identifier = ds_params['id']
+        dataset = ds_params['dataset']
 
-        dataset = dataset
         kwargs = ds_config['hyperparams_per_run']
 
         best_test_scores = []

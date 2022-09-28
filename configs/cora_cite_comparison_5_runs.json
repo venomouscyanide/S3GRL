@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Cora": {
+    "Cora_SuP_NoOpt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -10,7 +10,7 @@
           400,
           500
         ],
-        "id": "Cora_SuP_NoOpt"
+        "dataset": "Cora"
       },
       "hyperparams_per_run": {
         "fast_split": false,
