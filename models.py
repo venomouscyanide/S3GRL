@@ -1,7 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-
 import math
 import numpy as np
 import torch
@@ -328,7 +324,7 @@ class SIGNNet(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge  # not used in SIGN
-        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for beagle
+        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
 
     def _centre_pool_helper(self, batch, h):
         # center pooling

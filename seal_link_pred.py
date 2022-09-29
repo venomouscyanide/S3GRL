@@ -1,10 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
 from timeit import default_timer
 
-import numpy as np
-import networkx as nx
 import torch
 import shutil
 
@@ -16,11 +11,8 @@ import os.path as osp
 from shutil import copy
 import copy as cp
 
-import torch_geometric.utils
 from torch_geometric import seed_everything
-from networkx import Graph
 from torch_geometric.loader import DataLoader
-from torch_geometric.nn import GCNConv, SAGEConv
 from torch_geometric.profile import profileit, timeit
 from torch_geometric.transforms import OneHotDegree
 from tqdm import tqdm
@@ -28,14 +20,13 @@ import pdb
 
 from sklearn.metrics import roc_auc_score, average_precision_score
 import scipy.sparse as ssp
-from torch.nn import BCEWithLogitsLoss, Embedding
+from torch.nn import BCEWithLogitsLoss
 
 from torch_sparse import coalesce, SparseTensor
 
 from torch_geometric.datasets import Planetoid, AttributedGraphDataset
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 from torch_geometric.utils import to_undirected, to_dense_adj
-from torch_geometric import transforms as T
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
@@ -46,7 +37,7 @@ from baselines.gnn_link_pred import train_gnn
 from baselines.mf import train_mf
 from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
-from data_utils import load_splitted_data, read_label, read_edges
+from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
 from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
@@ -55,7 +46,7 @@ from ogbl_baselines.n2v import run_and_save_n2v
 from profiler_utils import profile_helper
 from tuned_SIGN import TunedSIGN
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR, calc_ratio_helper, do_seal_edge_split
+    Logger, AA, CN, PPR, calc_ratio_helper
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -153,7 +144,7 @@ class SEALDataset(InMemoryDataset):
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
             })
-            if sign_type == 'beagle':
+            if sign_type == 'PoS':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -280,7 +271,7 @@ class SEALDynamicDataset(Dataset):
         self.unique_nodes = {}
         if self.rw_kwargs.get('M'):
             print("Start caching random walk unique nodes")
-            # if in dynamic SWEAL mode, need to cache the unique nodes of random walks before get() due to below error
+            # if in dynamic ScaLed mode, need to cache the unique nodes of random walks before get() due to below error
             # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
             # To use CUDA with multiprocessing, you must use the 'spawn' start method
             for link in self.links:
@@ -294,7 +285,7 @@ class SEALDynamicDataset(Dataset):
 
         self.powers_of_A = []
         if self.args.model == 'SIGN':
-            if self.sign_type == 'beagle':
+            if self.sign_type == 'PoS':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -329,7 +320,7 @@ class SEALDynamicDataset(Dataset):
         if self.args.model == 'SIGN':
             if not self.rw_kwargs.get('m'):
                 if not self.powers_of_A:
-                    # golden flow
+                    # SuP flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -350,14 +341,14 @@ class SEALDynamicDataset(Dataset):
                     data = sign_t(data, self.args.sign_k)
 
                 else:
-                    # beagle flow
+                    # PoS flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
                     # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
                     # check against the nodes that is received in tmp before the relabeling occurs
 
-                    beagle_data_list = []
+                    pos_data_list = []
                     for index, power_of_a in enumerate(self.powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, self.num_hops, power_of_a, self.ratio_per_hop,
                                              self.max_nodes_per_hop, node_features=self.data.x,
@@ -367,10 +358,10 @@ class SEALDynamicDataset(Dataset):
                         }
 
                         data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
-                        beagle_data_list.append(data)
+                        pos_data_list.append(data)
 
                     sign_t = TunedSIGN(self.args.sign_k)
-                    data = sign_t.beagle_data_creation(beagle_data_list)
+                    data = sign_t.PoS_data_creation(pos_data_list)
 
 
             else:
@@ -380,7 +371,7 @@ class SEALDynamicDataset(Dataset):
                 data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                       self.max_nodes_per_hop, node_features=self.data.x,
                                       y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
-                sign_t = TunedSIGN(self.args.num_layers)
+                sign_t = TunedSIGN(self.args.sign_k)
                 data = sign_t(data, self.args.sign_k)
 
         else:
@@ -418,7 +409,7 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
@@ -444,7 +435,7 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             x = data.x if args.use_feature else None
@@ -482,7 +473,7 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             pos_logits = model(xs, data.batch)
         else:
             pos_logits = model(pos_num_nodes, pos_data.z, pos_data.edge_index, data.batch, pos_x, pos_edge_weight,
@@ -498,7 +489,7 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             neg_logits = model(xs, data.batch)
         else:
             neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
@@ -538,7 +529,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
@@ -560,7 +551,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs = [data.x.to(device)]
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
-                xs = [data[f'x{args.num_layers}'].to(device)]
+                xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
@@ -681,89 +672,6 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     results['AP'] = (valid_ap, test_ap)
 
     return results
-
-
-class SWEALArgumentParser:
-    def __init__(self, dataset, fast_split, model, sortpool_k, num_layers, hidden_channels, batch_size, num_hops,
-                 ratio_per_hop, max_nodes_per_hop, node_label, use_feature, use_edge_weight, lr, epochs, runs,
-                 train_percent, val_percent, test_percent, dynamic_train, dynamic_val, dynamic_test, num_workers,
-                 train_node_embedding, pretrained_node_embedding, use_valedges_as_input, eval_steps, log_steps,
-                 data_appendix, save_appendix, keep_old, continue_from, only_test, test_multiple_models, use_heuristic,
-                 m, M, dropedge, calc_ratio, checkpoint_training, delete_dataset, pairwise, loss_fn, neg_ratio,
-                 profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
-                 seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type, pool_operatorwise):
-        # Data Settings
-        self.dataset = dataset
-        self.fast_split = fast_split
-        self.delete_dataset = delete_dataset
-
-        # GNN Settings
-        self.model = model
-        self.sortpool_k = sortpool_k
-        self.num_layers = num_layers
-        self.hidden_channels = hidden_channels
-        self.batch_size = batch_size
-
-        # Subgraph extraction settings
-        self.num_hops = num_hops
-        self.ratio_per_hop = ratio_per_hop
-        self.max_nodes_per_hop = max_nodes_per_hop
-        self.node_label = node_label
-        self.use_feature = use_feature
-        self.use_edge_weight = use_edge_weight
-
-        # Training settings
-        self.lr = lr
-        self.epochs = epochs
-        self.runs = runs
-        self.train_percent = train_percent
-        self.val_percent = val_percent
-        self.test_percent = test_percent
-        self.dynamic_train = dynamic_train
-        self.dynamic_val = dynamic_val
-        self.dynamic_test = dynamic_test
-        self.num_workers = num_workers
-        self.train_node_embedding = train_node_embedding
-        self.pretrained_node_embedding = pretrained_node_embedding
-
-        # Testing settings
-        self.use_valedges_as_input = use_valedges_as_input
-        self.eval_steps = eval_steps
-        self.log_steps = log_steps
-        self.checkpoint_training = checkpoint_training
-        self.data_appendix = data_appendix
-        self.save_appendix = save_appendix
-        self.keep_old = keep_old
-        self.continue_from = continue_from
-        self.only_test = only_test
-        self.test_multiple_models = test_multiple_models
-        self.use_heuristic = use_heuristic
-
-        # SWEAL
-        self.m = m
-        self.M = M
-        self.dropedge = dropedge
-        self.calc_ratio = calc_ratio
-        self.pairwise = pairwise
-        self.loss_fn = loss_fn
-        self.neg_ratio = neg_ratio
-        self.profile = profile
-        self.split_val_ratio = split_val_ratio
-        self.split_test_ratio = split_test_ratio
-        self.train_mlp = train_mlp
-        self.dropout = dropout
-        self.train_gae = train_gae
-        self.base_gae = base_gae
-        self.dataset_stats = dataset_stats
-        self.seed = seed
-        self.dataset_split_num = dataset_split_num
-        self.train_n2v = train_n2v
-        self.train_mf = train_mf
-
-        # SIGN related
-        self.sign_k = sign_k
-        self.sign_type = sign_type
-        self.pool_operatorwise = pool_operatorwise
 
 
 def run_sgrl_learning(args, device):
@@ -1320,10 +1228,11 @@ def run_sgrl_learning(args, device):
                 print(key, file=f)
                 loggers[key].print_statistics(run, f=f)
 
+    best_test_scores = []
     for key in loggers.keys():
         print(key)
         loggers[key].add_info(args.epochs, args.runs)
-        loggers[key].print_statistics()
+        best_test_scores += [loggers[key].print_statistics()]
         with open(log_file, 'a') as f:
             print(key, file=f)
             loggers[key].print_statistics(f=f)
@@ -1335,7 +1244,7 @@ def run_sgrl_learning(args, device):
             shutil.rmtree(path)
 
     print("fin.")
-    return total_prep_time
+    return total_prep_time, best_test_scores[0]
 
 
 @timeit()
@@ -1436,7 +1345,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['golden', 'beagle'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
@@ -1450,7 +1359,7 @@ if __name__ == '__main__':
 
     seed_everything(args.seed)
 
-    if args.model == "SIGN" and not args.init_features:
+    if args.model == "SIGN" and not args.init_features and not args.use_feature:
         raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
 
     if args.model == "SIGN" and any([args.dynamic_train, args.dynamic_test, args.dynamic_val]):
@@ -1460,13 +1369,13 @@ if __name__ == '__main__':
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
     if args.sign_type == 'beagle' and not args.pool_operatorwise:
-        raise Exception(f"Cannot run beagle with pool_operatorwise: {args.pool_operatorwise}")
+        raise Exception(f"Cannot run PoS with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.profile:
         run_sgrl_with_run_profiling(args, device)
     else:
         start = default_timer()
-        total_prep_time = run_sgrl_learning(args, device)
+        total_prep_time, _ = run_sgrl_learning(args, device)
         end = default_timer()
         print(f"Time taken for dataset prep: {total_prep_time:.2f} seconds")
         print(f"Time taken for run: {end - start:.2f} seconds")

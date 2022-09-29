@@ -15,10 +15,10 @@ class TunedSIGN(SIGN):
                 data.pop(f'x{idx}')
         return data
 
-    def beagle_data_creation(self, beagle_data_list):
-        original_data = beagle_data_list[0]
+    def PoS_data_creation(self, pos_data_list):
+        original_data = pos_data_list[0]
 
-        for index, data in enumerate(beagle_data_list, start=1):
+        for index, data in enumerate(pos_data_list, start=1):
             assert data.edge_index is not None
             row, col = data.edge_index
             adj_t = SparseTensor(row=col, col=row, value=torch.tensor(data.edge_weight),

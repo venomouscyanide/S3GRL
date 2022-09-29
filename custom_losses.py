@@ -1,5 +1,5 @@
 # Adapted from PLNLP: https://github.com/zhitao-wang/PLNLP/blob/19923b5f9ffe94c257ca354ade849071560a92f4/plnlp/loss.py\
-# a dump of pairwise loss functions to help improve SWEAL
+# a dump of pairwise loss functions to help improve ScaLed
 import torch
 
 
