@@ -432,7 +432,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             list_of_training_edges = link_index.t().tolist()
             num_training_egs = len(list_of_training_edges)
 
-            for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
+            print("Setting up A Global List")
+            for index, power_of_a in tqdm(enumerate(normalized_powers_of_A, start=0), ncols=70):
                 a_global_list.append(torch.ones(size=[num_training_egs * 2, A.shape[0]]))
 
                 for link_number in range(0, num_training_egs * 2, 2):
@@ -444,10 +445,12 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     a_global_list[index][link_number, :] = interim_src
                     a_global_list[index][link_number + 1, :] = interim_dst
 
-            for operator_id in range(len(normalized_powers_of_A)):
+            print("Setting up G Global List")
+            for operator_id in tqdm(range(len(normalized_powers_of_A)), ncols=70):
                 g_global_list.append(a_global_list[operator_id] @ x)
 
-            for index, src_dst_x in enumerate(g_global_list, start=0):
+            print("Setting up G H Global List")
+            for index, src_dst_x in tqdm(enumerate(g_global_list, start=0), ncols=70):
                 g_h_global_list.append(torch.ones(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
 
                 for link_number in range(0, num_training_egs * 2, 2):
@@ -458,7 +461,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     g_h_global_list[index][link_number + 1] = torch.hstack(
                         [h_dst[0], g_global_list[index][link_number + 1]])
 
-            for link_number in range(0, num_training_egs * 2, 2):
+            print("Finishing Prep with creation of data")
+            for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                 src, dst = list_of_training_edges[int(link_number / 2)]
                 data = Data(
                     x=torch.hstack(
