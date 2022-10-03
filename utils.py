@@ -436,7 +436,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             for index, power_of_a in tqdm(enumerate(normalized_powers_of_A, start=0), ncols=70):
                 a_global_list.append(torch.ones(size=[num_training_egs * 2, A.shape[0]]))
 
-                for link_number in range(0, num_training_egs * 2, 2):
+                for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                     src, dst = list_of_training_edges[int(link_number / 2)]
                     interim_src = power_of_a[src, :].to_dense()
                     interim_src[0, dst] = 0
@@ -453,7 +453,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             for index, src_dst_x in tqdm(enumerate(g_global_list, start=0), ncols=70):
                 g_h_global_list.append(torch.ones(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
 
-                for link_number in range(0, num_training_egs * 2, 2):
+                for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                     src, dst = list_of_training_edges[int(link_number / 2)]
                     h_src = normalized_powers_of_A[index][src, src].to_dense()
                     h_dst = normalized_powers_of_A[index][dst, dst].to_dense()
@@ -472,7 +472,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     y=y,
                 )
 
-                for global_index, all_i_operators in enumerate(g_h_global_list):
+                for global_index, all_i_operators in tqdm(enumerate(g_h_global_list), ncols=70):
                     src_features = g_h_global_list[global_index][link_number]
                     dst_features = g_h_global_list[global_index][link_number + 1]
                     subgraph_features = torch.vstack([src_features, dst_features])
