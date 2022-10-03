@@ -1040,6 +1040,7 @@ def run_sgrl_learning(args, device):
 
     time_for_prep_end = default_timer()
     total_prep_time = time_for_prep_end - time_for_prep_start
+    print(f"Total Prep time: {total_prep_time} sec")
 
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
