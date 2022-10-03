@@ -158,6 +158,7 @@ class SEALDataset(InMemoryDataset):
                 deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
                 adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
 
+                print("Begin taking powers of A")
                 powers_of_A = [adj_t]
                 for sign_k in range(2, self.args.sign_k + 1):
                     powers_of_A += [adj_t @ powers_of_A[-1]]
