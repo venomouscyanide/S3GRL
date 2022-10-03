@@ -422,11 +422,12 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
             a_global_list = []
             g_global_list = []
-            normalized_powers_of_A = []
+            normalized_powers_of_A = powers_of_A
             g_h_global_list = []
 
-            for index in range(len(powers_of_A)):
-                normalized_powers_of_A.append(torch.tensor(powers_of_A[index].todense()))
+            # new_powers_of_A = []
+            # for index in range(len(new)):
+            #     new_powers_of_A.append(torch.tensor(new[index].todense()))
 
             list_of_training_edges = link_index.t().tolist()
             num_training_egs = len(list_of_training_edges)
@@ -436,10 +437,10 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 for link_number in range(0, num_training_egs * 2, 2):
                     src, dst = list_of_training_edges[int(link_number / 2)]
-                    interim_src = power_of_a[src, :].clone().detach()
-                    interim_src[dst] = 0
-                    interim_dst = power_of_a[dst, :].clone().detach()
-                    interim_dst[src] = 0
+                    interim_src = power_of_a[src, :].to_dense()
+                    interim_src[0, dst] = 0
+                    interim_dst = power_of_a[dst, :].to_dense()
+                    interim_dst[0, src] = 0
                     a_global_list[index][link_number, :] = interim_src
                     a_global_list[index][link_number + 1, :] = interim_dst
 
@@ -451,11 +452,11 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 for link_number in range(0, num_training_egs * 2, 2):
                     src, dst = list_of_training_edges[int(link_number / 2)]
-                    h_src = normalized_powers_of_A[index][src][src]
-                    h_dst = normalized_powers_of_A[index][dst][dst]
-                    g_h_global_list[index][link_number] = torch.hstack([h_src, g_global_list[index][link_number]])
+                    h_src = normalized_powers_of_A[index][src, src].to_dense()
+                    h_dst = normalized_powers_of_A[index][dst, dst].to_dense()
+                    g_h_global_list[index][link_number] = torch.hstack([h_src[0], g_global_list[index][link_number]])
                     g_h_global_list[index][link_number + 1] = torch.hstack(
-                        [h_dst, g_global_list[index][link_number + 1]])
+                        [h_dst[0], g_global_list[index][link_number + 1]])
 
             for link_number in range(0, num_training_egs * 2, 2):
                 src, dst = list_of_training_edges[int(link_number / 2)]

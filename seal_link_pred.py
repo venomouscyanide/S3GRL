@@ -162,8 +162,10 @@ class SEALDataset(InMemoryDataset):
                 for sign_k in range(2, self.args.sign_k + 1):
                     powers_of_A += [adj_t @ powers_of_A[-1]]
 
-                for index in range(len(powers_of_A)):
-                    powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
+                # print("Starting to convert to dense to ")
+                # new_powers_of_A = [0, 0, 0]
+                # for index in range(len(powers_of_A)):
+                #     new_powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
 
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")
