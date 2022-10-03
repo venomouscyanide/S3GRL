@@ -160,7 +160,7 @@ class SEALDataset(InMemoryDataset):
 
                 print("Begin taking powers of A")
                 powers_of_A = [adj_t]
-                for sign_k in range(2, self.args.sign_k + 1):
+                for sign_k in tqdm(range(2, self.args.sign_k + 1), ncols=70):
                     powers_of_A += [adj_t @ powers_of_A[-1]]
 
                 # print("Starting to convert to dense to ")
