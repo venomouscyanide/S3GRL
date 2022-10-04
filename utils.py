@@ -9,7 +9,7 @@ import time
 from pprint import pprint
 
 import torch_geometric.utils
-from scipy.sparse import lil_matrix, dok_array
+from scipy.sparse import dok_matrix
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
@@ -434,7 +434,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
                 print(f"Constructing A[{index}]")
                 a_global_list.append(
-                    dok_array((num_training_egs * 2, A.shape[0]), dtype=np.float32)
+                    dok_matrix((num_training_egs * 2, A.shape[0]), dtype=np.float32)
                 )
                 power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
                 list_of_lilmtrx = []
