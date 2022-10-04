@@ -5,11 +5,13 @@ import json
 import sys
 import math
 import os
+import time
 from pprint import pprint
 
 import torch_geometric.utils
+from scipy.sparse import lil_matrix, dok_array
 from torch_geometric.transforms import SIGN
-from torch_sparse import SparseTensor, spspmm
+from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
 import random
 import numpy as np
@@ -431,24 +433,37 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             print("Setting up A Global List")
             for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
                 print(f"Constructing A[{index}]")
-                a_global_list.append(torch.empty(size=[num_training_egs * 2, A.shape[0]]))
-
+                a_global_list.append(
+                    dok_array((num_training_egs * 2, A.shape[0]), dtype=np.float32)
+                )
+                power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
+                l = []
                 for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                     src, dst = list_of_training_edges[int(link_number / 2)]
-                    interim_src = power_of_a[src, :].to_dense()
+                    interim_src = power_of_a_scipy_lil.getrow(src)
                     interim_src[0, dst] = 0
-                    interim_dst = power_of_a[dst, :].to_dense()
+                    interim_dst = power_of_a_scipy_lil.getrow(dst)
                     interim_dst[0, src] = 0
-                    a_global_list[index][link_number, :] = interim_src
-                    a_global_list[index][link_number + 1, :] = interim_dst
-                a_global_list[index] = a_global_list[index].to_sparse()
+                    l.append(interim_src)
+                    l.append(interim_dst)
 
+                to_update = a_global_list[index]
+                print("Converting to DOK")
+                for overall_row, item in tqdm(enumerate(l), ncols=70):
+                    data = item.data
+                    rows = item.rows
+
+                    to_update[overall_row, rows[0]] = data[0]
+
+                idx, values = from_scipy(a_global_list[index])
+                a_global_list[index] = torch.sparse_coo_tensor(idx, values, size=[num_training_egs * 2, A.shape[0]],
+                                                               dtype=torch.float32)
             print("Setting up G Global List")
             original_x = x.detach()
             x = x.to_sparse()
             for operator_id in tqdm(range(len(normalized_powers_of_A)), ncols=70):
-                mult_index, mult_value = spspmm(a_global_list[operator_id].indices(),
-                                                a_global_list[operator_id].values(), x.indices(),
+                mult_index, mult_value = spspmm(a_global_list[operator_id].coalesce().indices(),
+                                                a_global_list[operator_id].coalesce().values(), x.indices(),
                                                 x.values(), a_global_list[0].size()[0], a_global_list[0].size()[1],
                                                 x.size()[1])
                 g_global_list.append(torch.sparse_coo_tensor(mult_index, mult_value, size=[a_global_list[0].size()[0],
