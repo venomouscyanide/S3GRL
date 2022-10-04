@@ -152,7 +152,6 @@ class SEALDataset(InMemoryDataset):
                 adj_t = SparseTensor(row=row, col=col,
                                      sparse_sizes=(num_nodes, num_nodes)
                                      )
-                adj_t = adj_t.to_device(device)
 
                 deg = adj_t.sum(dim=1).to(torch.float)
                 deg_inv_sqrt = deg.pow(-0.5)
