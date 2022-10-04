@@ -437,19 +437,19 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     dok_array((num_training_egs * 2, A.shape[0]), dtype=np.float32)
                 )
                 power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
-                l = []
+                list_of_lilmtrx = []
                 for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                     src, dst = list_of_training_edges[int(link_number / 2)]
                     interim_src = power_of_a_scipy_lil.getrow(src)
                     interim_src[0, dst] = 0
                     interim_dst = power_of_a_scipy_lil.getrow(dst)
                     interim_dst[0, src] = 0
-                    l.append(interim_src)
-                    l.append(interim_dst)
+                    list_of_lilmtrx.append(interim_src)
+                    list_of_lilmtrx.append(interim_dst)
 
                 to_update = a_global_list[index]
                 print("Converting to DOK")
-                for overall_row, item in tqdm(enumerate(l), ncols=70):
+                for overall_row, item in tqdm(enumerate(list_of_lilmtrx), ncols=70):
                     data = item.data
                     rows = item.rows
 
@@ -481,7 +481,6 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                         [h_src[0], g_global_list[index][link_number]])
                     g_h_global_list[index][link_number + 1] = torch.hstack(
                         [h_dst[0], g_global_list[index][link_number + 1]])
-                # g_h_global_list[index] = a_global_list[index].to_sparse()
 
             print("Finishing Prep with creation of data")
             x = original_x
