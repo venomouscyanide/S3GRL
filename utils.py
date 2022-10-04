@@ -9,7 +9,7 @@ from pprint import pprint
 
 import torch_geometric.utils
 from torch_geometric.transforms import SIGN
-from torch_sparse import SparseTensor
+from torch_sparse import SparseTensor, spspmm
 from tqdm import tqdm
 import random
 import numpy as np
@@ -444,8 +444,14 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                 a_global_list[index] = a_global_list[index].to_sparse()
 
             print("Setting up G Global List")
+            original_x = x.detach()
+            x = x.to_sparse()
             for operator_id in tqdm(range(len(normalized_powers_of_A)), ncols=70):
-                g_global_list.append(a_global_list[operator_id] @ x)
+                mult_index, mult_value = spspmm(a_global_list[operator_id].indices(),
+                                                a_global_list[operator_id].values(), x.indices(),
+                                                x.values(), a_global_list[0].size()[0], a_global_list[0].size()[1],
+                                                x.size()[1])
+                g_global_list.append(torch.sparse_coo_tensor(mult_index, mult_value).to_dense())
 
             print("Setting up G H Global List")
             for index, src_dst_x in enumerate(g_global_list, start=0):
@@ -455,12 +461,14 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     src, dst = list_of_training_edges[int(link_number / 2)]
                     h_src = normalized_powers_of_A[index][src, src].to_dense()
                     h_dst = normalized_powers_of_A[index][dst, dst].to_dense()
-                    g_h_global_list[index][link_number] = torch.hstack([h_src[0], g_global_list[index][link_number]])
+                    g_h_global_list[index][link_number] = torch.hstack(
+                        [h_src[0], g_global_list[index][link_number]])
                     g_h_global_list[index][link_number + 1] = torch.hstack(
                         [h_dst[0], g_global_list[index][link_number + 1]])
                 # g_h_global_list[index] = a_global_list[index].to_sparse()
 
             print("Finishing Prep with creation of data")
+            x = original_x
             for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                 src, dst = list_of_training_edges[int(link_number / 2)]
                 data = Data(
