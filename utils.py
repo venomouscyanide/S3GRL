@@ -9,7 +9,7 @@ import time
 from pprint import pprint
 
 import torch_geometric.utils
-from scipy.sparse import lil_matrix, dok_array
+from scipy.sparse import lil_matrix, dok_array, dok_matrix
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
@@ -434,7 +434,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
                 print(f"Constructing A[{index}]")
                 a_global_list.append(
-                    dok_array((num_training_egs * 2, A.shape[0]), dtype=np.float32)
+                    dok_matrix((num_training_egs * 2, A.shape[0]), dtype=np.float32)
                 )
                 power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
                 list_of_lilmtrx = []
@@ -536,23 +536,38 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                 for _ in range(K - 1):
                     powers_of_a.append(subgraph @ powers_of_a[-1])
 
-                all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
+                all_a_values = dok_matrix((K * 2, subgraph.size(0)), dtype=np.float32)
 
-                for operator_index in range(0, K * 2, 2):
-                    all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-                        powers_of_a[operator_index // 2][[0, 1], :].to_dense()
-                    )
+                for index, item in enumerate(powers_of_a):
+                    powers_of_a[index] = powers_of_a[index].to_scipy().tolil()
 
-                all_ax_values = all_a_values @ subgraph_features
+                for link_index in range(0, K * 2, 2):
+                    all_a_values[link_index, :] = powers_of_a[link_index // 2].getrow(0)
+                    all_a_values[link_index + 1, :] = powers_of_a[link_index // 2].getrow(1)
+
+                idx, values = from_scipy(all_a_values)
+                all_a_values = torch.sparse_coo_tensor(idx, values, size=[K * 2, subgraph.size(0)],
+                                                       dtype=torch.float32)
+                subgraph_features_sparse = subgraph_features.to_sparse()
+
+                mult_index, mult_value = spspmm(all_a_values.coalesce().indices(),
+                                                all_a_values.coalesce().values(), subgraph_features_sparse.indices(),
+                                                subgraph_features_sparse.values(), all_a_values.size()[0],
+                                                all_a_values.size()[1],
+                                                subgraph_features_sparse.size()[1])
+
+                all_ax_values = torch.sparse_coo_tensor(mult_index, mult_value, size=[all_a_values.size()[0],
+                                                                                      subgraph_features_sparse.size()[
+                                                                                          -1]]).to_dense()
 
                 updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
-                for operator_index in range(0, K * 2, 2):
-                    label_src = all_a_values[operator_index][0]
-                    label_dst = all_a_values[operator_index + 1][1]
+                for link_index in range(0, K * 2, 2):
+                    label_src = all_a_values[link_index][0]
+                    label_dst = all_a_values[link_index + 1][1]
 
-                    updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-                    updated_features[operator_index + 1, :] = torch.hstack(
-                        [label_dst, all_ax_values[operator_index + 1]])
+                    updated_features[link_index, :] = torch.hstack([label_src, all_ax_values[link_index]])
+                    updated_features[link_index + 1, :] = torch.hstack(
+                        [label_dst, all_ax_values[link_index + 1]])
 
                 data = Data(
                     x=torch.hstack(
@@ -562,9 +577,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     y=y,
                 )
 
-                for operator_index in range(0, K * 2, 2):
-                    data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-                        [updated_features[operator_index], updated_features[operator_index + 1]]
+                for link_index in range(0, K * 2, 2):
+                    data[f'x{link_index // 2 + 1}'] = torch.vstack(
+                        [updated_features[link_index], updated_features[link_index + 1]]
                     )
 
                 sup_data_list.append(data)
