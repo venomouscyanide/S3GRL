@@ -451,7 +451,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                                                 a_global_list[operator_id].values(), x.indices(),
                                                 x.values(), a_global_list[0].size()[0], a_global_list[0].size()[1],
                                                 x.size()[1])
-                g_global_list.append(torch.sparse_coo_tensor(mult_index, mult_value).to_dense())
+                g_global_list.append(torch.sparse_coo_tensor(mult_index, mult_value, size=[a_global_list[0].size()[0],
+                                                                                           x.size()[-1]]).to_dense())
 
             print("Setting up G H Global List")
             for index, src_dst_x in enumerate(g_global_list, start=0):
