@@ -443,7 +443,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     interim_dst = power_of_a_scipy_lil.getrowview(dst)
                     interim_dst[0, src] = 0
                     a_global_list[index][link_number, :] = torch.tensor(interim_src.todense())
-                    a_global_list[index][link_number + 1, :] = torch.tensor(interim_src.todense())
+                    a_global_list[index][link_number + 1, :] = torch.tensor(interim_dst.todense())
                 a_global_list[index] = a_global_list[index].to_sparse()
 
             print("Setting up G Global List")
