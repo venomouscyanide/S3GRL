@@ -432,8 +432,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             print("Setting up A Global List")
             for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
                 print(f"Constructing A[{index}]")
-                a_global_list.append(lil_matrix((num_training_egs * 2, A.shape[0]), dtype=np.float32))
-                # a_global_list.append(torch.empty(size=[num_training_egs * 2, A.shape[0]]))
+                # a_global_list.append(lil_matrix((num_training_egs * 2, A.shape[0]), dtype=np.float32))
+                a_global_list.append(torch.empty(size=[num_training_egs * 2, A.shape[0]]))
                 power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
 
                 for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
@@ -442,11 +442,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     interim_src[0, dst] = 0
                     interim_dst = power_of_a_scipy_lil.getrowview(dst)
                     interim_dst[0, src] = 0
-                    a_global_list[index][link_number, :] = interim_src
-                    a_global_list[index][link_number + 1, :] = interim_dst
-                idx, values = from_scipy(a_global_list[index])
-                a_global_list[index] = torch.sparse_coo_tensor(idx, values, size=[num_training_egs * 2, A.shape[0]],
-                                                               dtype=torch.float32)
+                    a_global_list[index][link_number, :] = torch.tensor(interim_src.todense())
+                    a_global_list[index][link_number + 1, :] = torch.tensor(interim_src.todense())
+                a_global_list[index] = a_global_list[index].to_sparse()
 
             print("Setting up G Global List")
             original_x = x.detach()
