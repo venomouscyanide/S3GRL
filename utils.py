@@ -482,7 +482,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
         elif not rw_kwargs['rw_m'] and not powers_of_A and sign_kwargs['optimize_sign']:
             # optimized SuP flow
             sup_data_list = []
-
+            print("Start with SuP data prep")
             for src, dst in tqdm(link_index.t().tolist()):
                 tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                      max_nodes_per_hop, node_features=x, y=y,
@@ -490,13 +490,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 u, v, r = ssp.find(tmp[1])
                 u, v = torch.LongTensor(u), torch.LongTensor(v)
-                # r = torch.LongTensor(r)
-                edge_index = torch.stack([u, v], 0)
-
-                temp_data = Data(edge_index=edge_index)
-                row, col = temp_data.edge_index
-                adj_t = SparseTensor(row=row, col=col,
-                                     sparse_sizes=(temp_data.num_nodes, temp_data.num_nodes))
+                adj_t = SparseTensor(row=u, col=v,
+                                     sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
 
                 deg = adj_t.sum(dim=1).to(torch.float)
                 deg_inv_sqrt = deg.pow(-0.5)
@@ -518,7 +513,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                 for _ in range(K - 1):
                     powers_of_a.append(subgraph @ powers_of_a[-1])
 
-                all_a_values = torch.ones(size=[K * 2, subgraph.size(0)])
+                all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
 
                 for operator_index in range(0, K * 2, 2):
                     all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
@@ -527,7 +522,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 all_ax_values = all_a_values @ subgraph_features
 
-                updated_features = torch.ones(size=[K * 2, all_ax_values[0].size()[-1] + 1])
+                updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
                 for operator_index in range(0, K * 2, 2):
                     label_src = all_a_values[operator_index][0]
                     label_dst = all_a_values[operator_index + 1][1]
