@@ -449,7 +449,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
             print("Setting up G H Global List")
             for index, src_dst_x in enumerate(g_global_list, start=0):
-                g_h_global_list.append(torch.ones(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
+                g_h_global_list.append(torch.empty(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
                 print(f"Setting up G H Global [{index}]")
                 for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
                     src, dst = list_of_training_edges[int(link_number / 2)]
@@ -458,6 +458,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     g_h_global_list[index][link_number] = torch.hstack([h_src[0], g_global_list[index][link_number]])
                     g_h_global_list[index][link_number + 1] = torch.hstack(
                         [h_dst[0], g_global_list[index][link_number + 1]])
+                g_h_global_list[index] = a_global_list[index].to_sparse()
 
             print("Finishing Prep with creation of data")
             for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
