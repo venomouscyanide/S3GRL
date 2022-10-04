@@ -163,10 +163,11 @@ class SEALDataset(InMemoryDataset):
                 for sign_k in tqdm(range(2, self.args.sign_k + 1), ncols=70):
                     powers_of_A += [adj_t @ powers_of_A[-1]]
 
-                # print("Starting to convert to dense to ")
-                # new_powers_of_A = [0, 0, 0]
-                # for index in range(len(powers_of_A)):
-                #     new_powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
+                if not sign_kwargs['optimize_sign']:
+                    print("Starting to convert to dense to ")
+                    new_powers_of_A = [0, 0, 0]
+                    for index in range(len(powers_of_A)):
+                        new_powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
 
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")
