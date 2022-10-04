@@ -9,7 +9,7 @@ import time
 from pprint import pprint
 
 import torch_geometric.utils
-from scipy.sparse import lil_matrix
+from scipy.sparse import lil_matrix, dok_array
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
@@ -433,10 +433,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             print("Setting up A Global List")
             for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
                 print(f"Constructing A[{index}]")
-                # a_global_list.append(
-                #     lil_matrix(np.zeros((num_training_egs * 2, A.shape[0])), (num_training_egs * 2, A.shape[0]),
-                #                dtype=np.float32))
-                # a_global_list.append(torch.empty(size=[num_training_egs * 2, A.shape[0]]))
+                a_global_list.append(
+                    dok_array((num_training_egs * 2, A.shape[0]), dtype=np.float32)
+                )
                 power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
                 l = []
                 for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
@@ -447,11 +446,16 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     interim_dst[0, src] = 0
                     l.append(interim_src)
                     l.append(interim_dst)
-                list_of_dense = [x.todense() for x in l]
-                sparse_stacked = lil_matrix(list_of_dense)
-                print("Sleep. Ram?")
-                time.sleep(50000000)
-                idx, values = from_scipy(sparse_stacked)
+
+                to_update = a_global_list[index]
+                print("Converting to DOK")
+                for overall_row, item in tqdm(enumerate(l), ncols=70):
+                    data = item.data
+                    rows = item.rows
+
+                    to_update[overall_row, rows[0]] = data[0]
+
+                idx, values = from_scipy(a_global_list[index])
                 a_global_list[index] = torch.sparse_coo_tensor(idx, values, size=[num_training_egs * 2, A.shape[0]],
                                                                dtype=torch.float32)
             print("Setting up G Global List")
