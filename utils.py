@@ -9,7 +9,7 @@ import time
 from pprint import pprint
 
 import torch_geometric.utils
-from scipy.sparse import lil_matrix, csr_array
+from scipy.sparse import lil_matrix
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
