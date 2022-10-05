@@ -301,6 +301,7 @@ class GIN(torch.nn.Module):
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
                  use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False):
+        # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
         self.use_feature = use_feature
