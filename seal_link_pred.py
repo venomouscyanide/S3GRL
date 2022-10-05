@@ -1108,7 +1108,8 @@ def run_sgrl_learning(args, device):
         elif args.model == "SIGN":
             # num_layers in SIGN is simply sign_k
             model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
-                            args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise).to(device)
+                            args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
+                            dropout=args.dropout).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:
