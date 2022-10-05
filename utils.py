@@ -547,8 +547,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
                 for operator_index in range(0, K * 2, 2):
-                    label_src = all_a_values[operator_index][0]
-                    label_dst = all_a_values[operator_index + 1][1]
+                    label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+                    label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
 
                     updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
                     updated_features[operator_index + 1, :] = torch.hstack(
