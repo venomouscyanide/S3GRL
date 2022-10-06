@@ -149,7 +149,7 @@ class SEALDataset(InMemoryDataset):
                 num_nodes = self.data.num_nodes
 
                 row, col = edge_index
-                adj_t = SparseTensor(row=col, col=row,
+                adj_t = SparseTensor(row=row, col=col,
                                      sparse_sizes=(num_nodes, num_nodes)
                                      )
 
@@ -158,12 +158,14 @@ class SEALDataset(InMemoryDataset):
                 deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
                 adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
 
+                print("Begin taking powers of A")
                 powers_of_A = [adj_t]
-                for sign_k in range(2, self.args.sign_k + 1):
+                for sign_k in tqdm(range(2, self.args.sign_k + 1), ncols=70):
                     powers_of_A += [adj_t @ powers_of_A[-1]]
 
-                for index in range(len(powers_of_A)):
-                    powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
+                if not sign_kwargs['optimize_sign']:
+                    for index in range(len(powers_of_A)):
+                        powers_of_A[index] = ssp.csr_matrix(powers_of_A[index].to_dense())
 
         if self.rw_kwargs.get('calc_ratio', False):
             print(f"Calculating preprocessing stats for {self.split}")
@@ -1038,6 +1040,7 @@ def run_sgrl_learning(args, device):
 
     time_for_prep_end = default_timer()
     total_prep_time = time_for_prep_end - time_for_prep_start
+    print(f"Total Prep time: {total_prep_time} sec")
 
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
@@ -1105,7 +1108,8 @@ def run_sgrl_learning(args, device):
         elif args.model == "SIGN":
             # num_layers in SIGN is simply sign_k
             model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
-                            args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise).to(device)
+                            args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
+                            dropout=args.dropout).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:

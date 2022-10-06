@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor
+import torch.nn.functional as F
 
 
 class TunedSIGN(SIGN):
@@ -27,6 +28,20 @@ class TunedSIGN(SIGN):
             assert data.x is not None
 
             original_data[f'x{index}'] = (adj_t @ data.x)
+        max_dim = (original_data[f'x'].size()[0])
+
+        for created_op in range(1, self.K + 1):
+            max_dim = max(max_dim, original_data[f'x{created_op}'].size()[0])
+
+        for operator in range(1, self.K + 1):
+            if original_data[f'x{operator}'].size()[0] == max_dim:
+                continue
+            original_data[f'x{operator}'] = F.pad(original_data[f'x{operator}'],
+                                                  (0, 0, 0, max_dim - original_data[f'x{operator}'].size()[0]))
+
+        if original_data['x'].size()[0] < max_dim:
+            original_data['x'] = F.pad(original_data[f'x'],
+                                       (0, 0, 0, max_dim - original_data[f'x'].size()[0]))
 
         # the following keys are useless in SIGN-esque training
         del original_data['node_id']
