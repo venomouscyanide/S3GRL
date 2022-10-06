@@ -4,6 +4,7 @@ from timeit import default_timer
 
 import torch
 import numpy as np
+from torch_geometric import seed_everything
 
 from seal_link_pred import run_sgrl_learning
 
@@ -130,6 +131,7 @@ def sgrl_master_controller(config, results_json):
             )
             print(f"Run {run} of {dataset} with id {identifier}")
             args = SGRLArgumentParser(**kwargs)
+            seed_everything(args.seed)
 
             start = default_timer()
             total_prep_time, best_test_score = run_sgrl_learning(args, device)
