@@ -567,6 +567,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'rocauc':
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
     elif args.eval_metric == 'auc':
         results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
@@ -617,6 +619,9 @@ def test_multiple_models(models, val_loader, device, emb, test_loader, evaluator
         elif args.eval_metric == 'mrr':
             Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i],
                                         pos_test_pred[i], neg_test_pred[i], evaluator))
+        elif args.eval_metric == 'rocauc':
+            Results.append(evaluate_ogb_rocauc(pos_val_pred[i], neg_val_pred[i],
+                                               pos_test_pred[i], neg_test_pred[i], evaluator))
         elif args.eval_metric == 'auc':
             Results.append(evaluate_auc(val_pred[i], val_true[i],
                                         test_pred[i], test_pred[i]))
@@ -657,6 +662,22 @@ def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evalu
 
     results['MRR'] = (valid_mrr, test_mrr)
 
+    return results
+
+
+def evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator):
+    valid_rocauc = evaluator.eval({
+        'y_pred_pos': pos_val_pred,
+        'y_pred_neg': neg_val_pred,
+    })[f'rocauc']
+
+    test_rocauc = evaluator.eval({
+        'y_pred_pos': pos_test_pred,
+        'y_pred_neg': neg_test_pred,
+    })[f'rocauc']
+
+    results = {}
+    results['rocauc'] = (valid_rocauc, test_rocauc)
     return results
 
 
@@ -715,6 +736,13 @@ def run_sgrl_learning(args, device):
         dataset = PygLinkPropPredDataset(name=args.dataset)
         split_edge = dataset.get_edge_split()
         data = dataset[0]
+
+        if args.dataset.startswith('ogbl-vessel'):
+            # normalize node features
+            data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
+            data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
+            data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
+
     elif args.dataset.startswith('attributed'):
         dataset_name = args.dataset.split('-')[-1]
         path = osp.join('dataset', dataset_name)
@@ -806,6 +834,9 @@ def run_sgrl_learning(args, device):
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
         directed = True
+    elif args.dataset.startswith('ogbl-vessel'):
+        args.eval_metric = 'rocauc'
+        directed = False
     elif args.dataset.startswith('ogbl'):
         args.eval_metric = 'hits'
         directed = False
@@ -833,6 +864,10 @@ def run_sgrl_learning(args, device):
     elif args.eval_metric == 'mrr':
         loggers = {
             'MRR': Logger(args.runs, args),
+        }
+    elif args.eval_metric == 'rocauc':
+        loggers = {
+            'rocauc': Logger(args.runs, args),
         }
     elif args.eval_metric == 'auc':
         loggers = {
@@ -874,6 +909,8 @@ def run_sgrl_learning(args, device):
             test_true = torch.cat([torch.ones(pos_test_pred.size(0), dtype=int),
                                    torch.zeros(neg_test_pred.size(0), dtype=int)])
             results = evaluate_auc(val_pred, val_true, test_pred, test_true)
+        elif args.eval_metric == 'rocauc':
+            results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
 
         for key, result in results.items():
             loggers[key].add_result(0, result)
