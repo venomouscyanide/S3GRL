@@ -1285,6 +1285,7 @@ def run_sgrl_learning(args, device):
             shutil.rmtree(path)
 
     print("fin.")
+    # TODO; change logic for HITS@K
     return total_prep_time, best_test_scores[0]
 
 

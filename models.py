@@ -310,8 +310,7 @@ class SIGNNet(torch.nn.Module):
         self.lins = torch.nn.ModuleList()
         initial_channels = hidden_channels
 
-        if self.use_feature:
-            initial_channels += train_dataset.num_features - hidden_channels
+        initial_channels += train_dataset.num_features - hidden_channels
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
 
