@@ -522,7 +522,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "eye"
@@ -597,7 +597,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "eye"
@@ -672,7 +672,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "eye"
@@ -974,7 +974,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "eye"
@@ -1049,7 +1049,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "eye"
@@ -1124,7 +1124,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "eye"
