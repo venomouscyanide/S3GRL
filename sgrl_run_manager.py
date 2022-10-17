@@ -101,9 +101,6 @@ def sgrl_master_controller(config, results_json):
     """
     Wrapper to run sgrl methods to capture the results in a cleaner fashion
     """
-    # TODO; make this available in args
-    device = torch.device(f'cuda:0' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
 
     exp_results = {}
 
@@ -129,7 +126,10 @@ def sgrl_master_controller(config, results_json):
                     "seed": seed,
                 }
             )
-            print(f"Run {run} of {dataset} with id {identifier}")
+
+            device = torch.device(f'{kwargs["cuda_device"]}' if torch.cuda.is_available() else 'cpu')
+            print(f"Run {run} of {dataset} with id {identifier} using device {device}")
+
             args = SGRLArgumentParser(**kwargs)
             seed_everything(args.seed)
 
