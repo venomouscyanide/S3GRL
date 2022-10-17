@@ -127,7 +127,7 @@ def sgrl_master_controller(config, results_json):
                 }
             )
 
-            device = torch.device(f'{kwargs["cuda_device"]}' if torch.cuda.is_available() else 'cpu')
+            device = torch.device(f'cuda:{kwargs["cuda_device"]}' if torch.cuda.is_available() else 'cpu')
             print(f"Run {run} of {dataset} with id {identifier} using device {device}")
 
             args = SGRLArgumentParser(**kwargs)
