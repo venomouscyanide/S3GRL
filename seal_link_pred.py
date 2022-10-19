@@ -39,6 +39,7 @@ from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
+from n2v_prep import node_2_vec_pretrain
 from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
 from ogbl_baselines.mlp_on_n2v import train_n2v_emb
@@ -828,8 +829,9 @@ def run_sgrl_learning(args, device):
         one_hot = OneHotDegree(max_degree=1024)
         data = one_hot(data)
     elif init_features == "eye":
-        # if no features, we simply set x to be identity matrix as seen in GAE paper
         data.x = torch.eye(data.num_nodes)
+    elif init_features == "n2v":
+        data.x = node_2_vec_pretrain(data.edge_index, args.hidden_channels, device)
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1392,7 +1394,7 @@ if __name__ == '__main__':
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
                         help='Choose to augment node features with either one-hot encoding or their degree values',
-                        choices=['degree', 'eye'])
+                        choices=['degree', 'eye', 'n2v'])
 
     args = parser.parse_args()
 
