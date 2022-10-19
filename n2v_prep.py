@@ -5,8 +5,8 @@ from torch_geometric.nn import Node2Vec
 from tqdm import tqdm
 
 
-def node_2_vec_pretrain(edge_index, emd_dim, device):
-    n2v = Node2Vec(edge_index, embedding_dim=emd_dim, walk_length=20,
+def node_2_vec_pretrain(edge_index, num_nodes, emd_dim, device):
+    n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emd_dim, walk_length=20,
                    context_size=10, walks_per_node=10,
                    num_negative_samples=1, p=1, q=1, sparse=True).to(device)
     loader = n2v.loader(batch_size=32, shuffle=True)
