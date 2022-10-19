@@ -287,11 +287,8 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         z = torch.zeros(len(dists), dtype=torch.long)
     if sign_pyg_kwargs:
         # SIGN PyG graph construction flow
-        if sign_pyg_kwargs['use_feature'] and node_features is not None:
-            node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
-        else:
-            # flow never really enters here due to check in main()
-            node_features = z
+        assert node_features is not None, "Node features cannot be None. Check logic."
+        node_features = torch.cat([z.reshape(z.size()[0], 1), node_features.to(torch.float)], -1)
         data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, node_id=node_ids, num_nodes=num_nodes)
     else:
         data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z,
