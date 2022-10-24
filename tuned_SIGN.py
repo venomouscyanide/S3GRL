@@ -5,8 +5,9 @@ from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, from_scipy, spspmm
 import torch.nn.functional as F
 from tqdm import tqdm
-import scipy.sparse as ssp
 
+import scipy.sparse as ssp
+import numpy as np
 
 
 class TunedSIGN(SIGN):
