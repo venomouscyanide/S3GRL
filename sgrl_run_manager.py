@@ -19,7 +19,7 @@ class SGRLArgumentParser:
                  neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
                  seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type, pool_operatorwise, optimize_sign,
-                 init_features, n2v_dim):
+                 init_features, n2v_dim=256):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
