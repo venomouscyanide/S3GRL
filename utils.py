@@ -422,7 +422,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs)
-
+            combined_data_list = pos_data_list + sup_data_list
+            return combined_data_list
         elif not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign']:
             # optimized PoS flow
             pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
