@@ -6,7 +6,7 @@ from torch_sparse import SparseTensor, from_scipy, spspmm
 import torch.nn.functional as F
 from tqdm import tqdm
 import scipy.sparse as ssp
-from utils import k_hop_subgraph
+
 
 
 class TunedSIGN(SIGN):
@@ -149,6 +149,7 @@ class OptimizedSignOperations:
     @staticmethod
     def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y, sign_kwargs):
         # optimized SuP flow
+        from utils import k_hop_subgraph
         sup_data_list = []
         print("Start with SuP data prep")
         for src, dst in tqdm(link_index.t().tolist()):
