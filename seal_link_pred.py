@@ -145,7 +145,7 @@ class SEALDataset(InMemoryDataset):
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
             })
-            if sign_type == 'PoS':
+            if sign_type == 'PoS' or sign_type == "hybrid":
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -1389,7 +1389,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS', 'hybrid'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
@@ -1412,8 +1412,11 @@ if __name__ == '__main__':
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
-    if args.sign_type == 'beagle' and not args.pool_operatorwise:
+    if (args.sign_type == 'PoS' or args.sign_type == 'hybrid') and not args.pool_operatorwise:
         raise Exception(f"Cannot run PoS with pool_operatorwise: {args.pool_operatorwise}")
+
+    if args.sign_type == 'hybrid' and not args.optimize_sign:
+        raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
 
     if args.profile:
         run_sgrl_with_run_profiling(args, device)
