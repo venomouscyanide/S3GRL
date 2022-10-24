@@ -843,7 +843,7 @@ def run_sgrl_learning(args, device):
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
-        data.x = node_2_vec_pretrain(data.edge_index, data.num_nodes, args.hidden_channels, device)
+        data.x = node_2_vec_pretrain(data.edge_index, data.num_nodes, args.n2v_dim, device)
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1410,6 +1410,7 @@ if __name__ == '__main__':
     parser.add_argument('--init_features', type=str, default='',
                         help='Choose to augment node features with either one-hot encoding or their degree values',
                         choices=['degree', 'eye', 'n2v'])
+    parser.add_argument('--n2v_dim', type=int, default=128)
 
     args = parser.parse_args()
 
