@@ -414,16 +414,28 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     data_list = []
 
     if sign_kwargs:
-        if rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign'] and sign_kwargs['sign_type'] == 'hybrid':
-            # TODO; finish up this flow. first test if current refactoring breaks AUC with main branch
+        if not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign'] \
+                and sign_kwargs['sign_type'] == 'hybrid':
             print("Prepping PoS data")
             pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
+
+            sign_k = sign_kwargs['sign_k']
+            if sign_k == 1:
+                return pos_data_list
+
             print("Prepping SuP data")
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs)
-            combined_data_list = pos_data_list + sup_data_list
-            return combined_data_list
+            combined_data = []
+            for sup_data, pos_data in zip(sup_data_list, pos_data_list):
+                data = sup_data
+
+                for k in range(sign_k + 1, sign_k * 2):
+                    data[f'x{k}'] = pos_data[f'x{k - sign_k + 1}']
+
+                combined_data.append(data)
+            return combined_data
         elif not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign']:
             # optimized PoS flow
             pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)

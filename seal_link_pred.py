@@ -408,9 +408,12 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -434,9 +437,12 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
         data = data.to(device)
         optimizer.zero_grad()
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -1146,7 +1152,10 @@ def run_sgrl_learning(args, device):
                         args.use_feature, node_embedding=emb).to(device)
         elif args.model == "SIGN":
             # num_layers in SIGN is simply sign_k
-            model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            model = SIGNNet(args.hidden_channels, sign_k, max_z, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
                             dropout=args.dropout).to(device)
 
