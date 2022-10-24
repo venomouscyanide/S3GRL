@@ -149,9 +149,9 @@ def sgrl_master_controller(config, results_json):
 
         exp_results[identifier] = {
             "results": {
-                "Average Dataset Prep Time": f"{prep_times.mean():.5f} ± {prep_times.std():.5f}",
-                "Average Runtime": f"{total_run_times.mean():.5f} ± {total_run_times.std():.5f}",
-                "Average Test AUC": f"{best_test_scores.mean():.5f} ± {best_test_scores.std():.5f}",
+                "Average Dataset Prep Time": f"{prep_times.mean():.2f} ± {prep_times.std():.2f}",
+                "Average Runtime": f"{total_run_times.mean():.2f} ± {total_run_times.std():.2f}",
+                "Average Test AUC": f"{best_test_scores.mean():.2f} ± {best_test_scores.std():.2f}",
             },
             "config_dump": ds_config
         }
