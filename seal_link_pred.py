@@ -534,9 +534,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -556,9 +559,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
