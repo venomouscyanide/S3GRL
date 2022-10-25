@@ -13,7 +13,7 @@ def node_2_vec_pretrain(edge_index, num_nodes, emd_dim, device):
     optimizer = torch.optim.SparseAdam(list(n2v.parameters()), lr=0.01)
     n2v.train()
 
-    print('Prepping n2v embeddings')
+    print(f'Prepping n2v embeddings with hidden_dim: {emd_dim}')
     for i in tqdm(range(201), ncols=70):
         total_loss = 0
         for pos_rw, neg_rw in loader:

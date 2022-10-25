@@ -145,7 +145,7 @@ class SEALDataset(InMemoryDataset):
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
             })
-            if sign_type == 'PoS':
+            if sign_type == 'PoS' or sign_type == "hybrid":
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -408,9 +408,12 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -434,9 +437,12 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
         data = data.to(device)
         optimizer.zero_grad()
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -528,9 +534,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -550,9 +559,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
         node_id = data.node_id if emb else None
         num_nodes = data.num_nodes
         if args.model == 'SIGN':
-            if args.sign_k != -1:
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
                 xs = [data.x.to(device)]
-                xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             logits = model(xs, data.batch)
@@ -831,7 +843,7 @@ def run_sgrl_learning(args, device):
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
-        data.x = node_2_vec_pretrain(data.edge_index, data.num_nodes, args.hidden_channels, device)
+        data.x = node_2_vec_pretrain(data.edge_index, data.num_nodes, args.n2v_dim, device)
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1146,7 +1158,10 @@ def run_sgrl_learning(args, device):
                         args.use_feature, node_embedding=emb).to(device)
         elif args.model == "SIGN":
             # num_layers in SIGN is simply sign_k
-            model = SIGNNet(args.hidden_channels, args.sign_k, max_z, train_dataset,
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            model = SIGNNet(args.hidden_channels, sign_k, max_z, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
                             dropout=args.dropout).to(device)
 
@@ -1389,12 +1404,13 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS', 'hybrid'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
                         help='Choose to augment node features with either one-hot encoding or their degree values',
                         choices=['degree', 'eye', 'n2v'])
+    parser.add_argument('--n2v_dim', type=int, default=128)
 
     args = parser.parse_args()
 
@@ -1412,8 +1428,11 @@ if __name__ == '__main__':
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
-    if args.sign_type == 'beagle' and not args.pool_operatorwise:
+    if (args.sign_type == 'PoS' or args.sign_type == 'hybrid') and not args.pool_operatorwise:
         raise Exception(f"Cannot run PoS with pool_operatorwise: {args.pool_operatorwise}")
+
+    if args.sign_type == 'hybrid' and not args.optimize_sign:
+        raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
 
     if args.profile:
         run_sgrl_with_run_profiling(args, device)

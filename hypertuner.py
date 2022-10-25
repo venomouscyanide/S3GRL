@@ -46,7 +46,7 @@ class ManualTuner:
                                           split_test_ratio=split_test_ratio, train_mlp=False, dropout=0.50,
                                           train_gae=False, base_gae="", dataset_stats=False, seed=seed,
                                           dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3, sign_type='',
-                                          pool_operatorwise=False, optimize_sign=False, init_features='')
+                                          pool_operatorwise=False, optimize_sign=False, init_features='', n2v_dim=256)
 
         run_sgrl_learning(scaled_parser, device)
 

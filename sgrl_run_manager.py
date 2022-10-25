@@ -19,7 +19,7 @@ class SGRLArgumentParser:
                  neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
                  seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type, pool_operatorwise, optimize_sign,
-                 init_features):
+                 init_features, n2v_dim=256):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -95,6 +95,7 @@ class SGRLArgumentParser:
         self.pool_operatorwise = pool_operatorwise
         self.optimize_sign = optimize_sign
         self.init_features = init_features
+        self.n2v_dim = n2v_dim
 
 
 def sgrl_master_controller(config, results_json):
@@ -148,9 +149,9 @@ def sgrl_master_controller(config, results_json):
 
         exp_results[identifier] = {
             "results": {
-                "Average Dataset Prep Time": f"{prep_times.mean():.5f} ± {prep_times.std():.5f}",
-                "Average Runtime": f"{total_run_times.mean():.5f} ± {total_run_times.std():.5f}",
-                "Average Test AUC": f"{best_test_scores.mean():.5f} ± {best_test_scores.std():.5f}",
+                "Average Dataset Prep Time": f"{prep_times.mean():.2f} ± {prep_times.std():.2f}",
+                "Average Runtime": f"{total_run_times.mean():.2f} ± {total_run_times.std():.2f}",
+                "Average Test AUC": f"{best_test_scores.mean():.2f} ± {best_test_scores.std():.2f}",
             },
             "config_dump": ds_config
         }
