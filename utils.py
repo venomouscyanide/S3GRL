@@ -1,17 +1,10 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
 import json
 import sys
 import math
 import os
-import time
 from pprint import pprint
 
 import torch_geometric.utils
-from scipy.sparse import dok_matrix
-from torch_geometric.transforms import SIGN
-from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
 import random
 import numpy as np
