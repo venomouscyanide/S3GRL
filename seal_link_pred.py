@@ -311,6 +311,10 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
+        # TODO: add support for dynamic PoS and SuP
+        if self.args.model == 'SIGN':
+            raise NotImplementedError("PoS and SuP support in dynamic mode is not implemented (yet)")
+
         src, dst = self.links[idx]
         y = self.labels[idx]
 
