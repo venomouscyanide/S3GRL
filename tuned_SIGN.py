@@ -146,9 +146,9 @@ class OptimizedSignOperations:
             pos_data_list.append(data)
         return pos_data_list
 
-
     @staticmethod
-    def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y, sign_kwargs):
+    def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+                           sign_kwargs, rw_kwargs):
         # optimized SuP flow
         from utils import k_hop_subgraph
         sup_data_list = []
@@ -156,7 +156,7 @@ class OptimizedSignOperations:
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc)
+                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
 
             u, v, r = ssp.find(tmp[1])
             u, v = torch.LongTensor(u), torch.LongTensor(v)

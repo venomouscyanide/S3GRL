@@ -145,6 +145,12 @@ class SEALDataset(InMemoryDataset):
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
             })
+
+            if not self.rw_kwargs.get('m'):
+                rw_kwargs = None
+            else:
+                rw_kwargs.update({"sign": True})
+
             if sign_type == 'PoS' or sign_type == "hybrid":
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
