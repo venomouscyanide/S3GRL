@@ -50,7 +50,7 @@
         "test_multiple_models": false,
         "use_heuristic": null,
         "m": 2,
-        "M": 500,
+        "M": 250,
         "cuda_device": 0,
         "dropedge": 0.0,
         "calc_ratio": false,
