@@ -84,7 +84,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         return nodes, subgraph, dists, node_features, y
     else:
-        # Start of core-logic for S.C.A.L.E.D.
+        # Start of core-logic for ScaLed.
         rw_m = rw_kwargs['rw_m']
         rw_M = rw_kwargs['rw_M']
         sparse_adj = rw_kwargs['sparse_adj']
@@ -113,6 +113,30 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index, relabel_nodes=True,
                                                                    num_nodes=data_org.num_nodes)
+        y = torch.tensor([y], dtype=torch.int)
+        x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
+
+        org_src = src
+        org_dst = dst
+        if rw_kwargs.get('sign'):
+            node_features = x
+
+            # push src, dst to the front
+            nodes.insert(0, nodes.pop(nodes.index(org_dst)))
+            nodes.insert(0, nodes.pop(nodes.index(org_src)))
+
+            subgraph = A[nodes, :][:, nodes]
+
+            # mask src-target and target-src connections
+            subgraph[0, 1] = 0
+            subgraph[1, 0] = 0
+
+            dists = torch.ones(size=[len(rw_set)])
+            dists = dists.index_fill_(0, torch.tensor([0, 1]), 0).to(int).tolist()
+
+            y = int(y)
+
+            return nodes, subgraph, dists, node_features, y
 
         src_index = rw_set.index(src)
         dst_index = rw_set.index(dst)
@@ -133,26 +157,10 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         else:
             raise NotImplementedError(f"ScaLed does not support {rw_kwargs['node_label']} labeling trick yet.")
 
-        y = torch.tensor([y], dtype=torch.int)
-        x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
-        if not rw_kwargs.get('sign'):
-            data_revised = Data(x=x, z=z_revised,
-                                edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
-                                num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
-        else:
-            node_features = x
-            subgraph = A[nodes, :][:, nodes]
-
-            subgraph[src, dst] = 0
-            subgraph[dst, src] = 0
-
-            dists = torch.ones(size=[len(rw_set)])
-            dists = dists.index_fill_(0, torch.tensor([0, 1]), 0).to(int).tolist()
-
-            y = int(y)
-
-            return nodes, subgraph, dists, node_features, y
-        # end of core-logic for S.C.A.L.E.D.
+        data_revised = Data(x=x, z=z_revised,
+                            edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
+                            num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
+        # end of core-logic for ScaLed
         return data_revised
 
 
