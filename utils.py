@@ -425,6 +425,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
     if sign_kwargs:
         if powers_of_A and sign_kwargs['optimize_sign'] and sign_kwargs['sign_type'] == 'hybrid':
+            # Keep in mind that in hybrid, you do not need to set sign_k to 5. Just set it at the individual level.
+            # ie; the operators per model you want. If you need 5 in total, use sign_k as 3. This is confusing,
+            # but, works.
             # optimized hybrid (PoS + SuP) flow. We do not support non-optimized hybrid flow.
             sign_k = sign_kwargs['sign_k']
 
