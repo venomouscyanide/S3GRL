@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "USAir_hybrid_Opt": {
+    "USAir_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -20,7 +20,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -49,8 +49,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -69,14 +69,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "NS_hybrid_Opt": {
+    "NS_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -96,7 +95,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -125,8 +124,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -145,14 +144,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "Power_hybrid_Opt": {
+    "Power_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -172,7 +170,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -201,8 +199,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -221,14 +219,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "Celegans_hybrid_Opt": {
+    "Celegans_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -248,7 +245,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -277,8 +274,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -297,14 +294,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "Router_hybrid_Opt": {
+    "Router_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -324,7 +320,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -353,8 +349,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -373,14 +369,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "PB_hybrid_Opt": {
+    "PB_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -400,7 +395,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -429,8 +424,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -449,14 +444,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "Ecoli_hybrid_Opt": {
+    "Ecoli_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -476,7 +470,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -505,8 +499,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -525,14 +519,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     },
-    "Yeast_hybrid_Opt": {
+    "Yeast_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -552,7 +545,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -581,8 +574,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 2,
+        "M": 20,
         "cuda_device": 1,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -601,11 +594,10 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "n2v",
-        "n2v_dim": 256
+        "init_features": "n2v"
       }
     }
   }

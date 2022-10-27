@@ -1,17 +1,10 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
 import json
 import sys
 import math
 import os
-import time
 from pprint import pprint
 
 import torch_geometric.utils
-from scipy.sparse import dok_matrix
-from torch_geometric.transforms import SIGN
-from torch_sparse import SparseTensor, spspmm, from_scipy
 from tqdm import tqdm
 import random
 import numpy as np
@@ -91,7 +84,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         return nodes, subgraph, dists, node_features, y
     else:
-        # Start of core-logic for S.C.A.L.E.D.
+        # Start of core-logic for ScaLed.
         rw_m = rw_kwargs['rw_m']
         rw_M = rw_kwargs['rw_M']
         sparse_adj = rw_kwargs['sparse_adj']
@@ -120,6 +113,30 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         sub_nodes, sub_edge_index, mapping, _ = org_k_hop_subgraph(rw_set, 0, edge_index, relabel_nodes=True,
                                                                    num_nodes=data_org.num_nodes)
+        y = torch.tensor([y], dtype=torch.int)
+        x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
+
+        org_src = src
+        org_dst = dst
+        if rw_kwargs.get('sign'):
+            # push src, dst to the front
+            nodes.insert(0, nodes.pop(nodes.index(org_dst)))
+            nodes.insert(0, nodes.pop(nodes.index(org_src)))
+
+            subgraph = A[nodes, :][:, nodes]
+
+            node_features = node_features[nodes]
+
+            # mask src-target and target-src connections
+            subgraph[0, 1] = 0
+            subgraph[1, 0] = 0
+
+            dists = torch.ones(size=[len(rw_set)])
+            dists = dists.index_fill_(0, torch.tensor([0, 1]), 0).to(int).tolist()
+
+            y = int(y)
+
+            return nodes, subgraph, dists, node_features, y
 
         src_index = rw_set.index(src)
         dst_index = rw_set.index(dst)
@@ -133,24 +150,17 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         # Calculate node labeling.
         if rw_kwargs['node_label'] == 'zo':
             z_revised = torch.zeros(size=[len(rw_set)])
-            z_revised.index_fill_(0, torch.tensor([src, dst]), 1)
+            z_revised.index_fill_(0, torch.tensor([0, 1]), 1)
         elif rw_kwargs['node_label'] == 'drnl':
             z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
                                                 num_nodes=sub_nodes.size(0))
         else:
             raise NotImplementedError(f"ScaLed does not support {rw_kwargs['node_label']} labeling trick yet.")
 
-        y = torch.tensor([y], dtype=torch.int)
-        x = data_org.x[sub_nodes] if hasattr(data_org.x, 'size') else None
-        if not rw_kwargs.get('sign'):
-            data_revised = Data(x=x, z=z_revised,
-                                edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
-                                num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
-        else:
-            node_features = torch.cat([z_revised.reshape(z_revised.size()[0], 1), x.to(torch.float)], -1)
-            data_revised = Data(node_features, edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
-                                num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
-        # end of core-logic for S.C.A.L.E.D.
+        data_revised = Data(x=x, z=z_revised,
+                            edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
+                            num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
+        # end of core-logic for ScaLed
         return data_revised
 
 
@@ -414,14 +424,17 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
     data_list = []
 
     if sign_kwargs:
-        if not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign'] \
-                and sign_kwargs['sign_type'] == 'hybrid':
+        if powers_of_A and sign_kwargs['optimize_sign'] and sign_kwargs['sign_type'] == 'hybrid':
+            # Keep in mind that in hybrid, you do not need to set sign_k to 5. Just set it at the individual level.
+            # ie; the operators per model you want. If you need 5 in total, use sign_k as 3. This is confusing,
+            # but, works.
+            # optimized hybrid (PoS + SuP) flow. We do not support non-optimized hybrid flow.
             sign_k = sign_kwargs['sign_k']
 
             print("Prepping SuP data")
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
-                                                                       sign_kwargs)
+                                                                       sign_kwargs, rw_kwargs)
             if sign_k == 1:
                 return sup_data_list
 
@@ -437,17 +450,17 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                 combined_data.append(data)
             return combined_data
-        elif not rw_kwargs['rw_m'] and powers_of_A and sign_kwargs['optimize_sign']:
+        elif powers_of_A and sign_kwargs['optimize_sign']:
             # optimized PoS flow
             pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
             return pos_data_list
-        elif not rw_kwargs['rw_m'] and not powers_of_A and sign_kwargs['optimize_sign']:
+        elif not powers_of_A and sign_kwargs['optimize_sign']:
             # optimized SuP flow
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
-                                                                       sign_kwargs)
+                                                                       sign_kwargs, rw_kwargs)
             return sup_data_list
-        elif not rw_kwargs['rw_m']:
+        elif not sign_kwargs['optimize_sign']:
             # SIGN + SEAL flow; includes both SuP and PoS flows
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
@@ -460,7 +473,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                          max_nodes_per_hop, node_features=x, y=y,
-                                         directed=directed, A_csc=A_csc)
+                                         directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
 
                     sign_pyg_kwargs = {
                         'use_feature': sign_kwargs['use_feature'],
@@ -483,7 +496,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     for index, power_of_a in enumerate(powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
                                              max_nodes_per_hop, node_features=x, y=y,
-                                             directed=directed, A_csc=A_csc)
+                                             directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
                         sign_pyg_kwargs = {
                             'use_feature': sign_kwargs['use_feature'],
                         }
@@ -495,18 +508,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     data = sign_t.PoS_data_creation(pos_data_list)
                     data_list.append(data)
         else:
-            # SIGN + ScaLed flow (research is pending for this)
-            # TODO: this is not yet fully implemented and tested
-            raise NotImplementedError("SIGN + ScaLed is not developed (yet).")
-            for src, dst in tqdm(link_index.t().tolist()):
-                rw_kwargs.update({'sign': True})
-                data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                      max_nodes_per_hop, node_features=x, y=y,
-                                      directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
-                sign_t = TunedSIGN(sign_kwargs['num_layers'])
-                data = sign_t(data, sign_kwargs['sign_k'])
-
-                data_list.append(data)
+            # No match found
+            raise NotImplementedError("No matching configuration for model data prep found. Please check code.")
         return data_list
 
     for src, dst in tqdm(link_index.t().tolist()):

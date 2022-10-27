@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Cora_hybrid_Opt": {
+    "Cora_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -20,7 +20,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -49,8 +49,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 3,
+        "M": 20,
         "cuda_device": 0,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -69,14 +69,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "",
-        "n2v_dim": -1
+        "init_features": ""
       }
     },
-    "CiteSeer_hybrid_Opt": {
+    "CiteSeer_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -96,7 +95,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -125,8 +124,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 3,
+        "M": 20,
         "cuda_device": 0,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -145,14 +144,13 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "",
-        "n2v_dim": -1
+        "init_features": ""
       }
     },
-    "Pubmed_hybrid_Opt": {
+    "Pubmed_ScaLed_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -172,7 +170,7 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 1,
+        "num_hops": -1,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
@@ -201,8 +199,8 @@
         "only_test": false,
         "test_multiple_models": false,
         "use_heuristic": null,
-        "m": 0,
-        "M": 0,
+        "m": 3,
+        "M": 20,
         "cuda_device": 0,
         "dropedge": 0.0,
         "calc_ratio": false,
@@ -221,11 +219,10 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "hybrid",
+        "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
-        "init_features": "",
-        "n2v_dim": -1
+        "init_features": ""
       }
     }
   }
