@@ -119,13 +119,13 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         org_src = src
         org_dst = dst
         if rw_kwargs.get('sign'):
-            node_features = x
-
             # push src, dst to the front
             nodes.insert(0, nodes.pop(nodes.index(org_dst)))
             nodes.insert(0, nodes.pop(nodes.index(org_src)))
 
             subgraph = A[nodes, :][:, nodes]
+
+            node_features = node_features[nodes]
 
             # mask src-target and target-src connections
             subgraph[0, 1] = 0
