@@ -169,9 +169,7 @@ class OptimizedSignOperations:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
         print("Postprocessing and creating datalist")
-
-        return sup_raw_data_list
-        # sup_final_list = []
+        sup_final_list = []
         # for data_dict in sup_raw_data_list:
         #     data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'))
         #     for key, value in data_dict.items():
