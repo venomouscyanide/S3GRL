@@ -199,26 +199,30 @@ class SEALDataset(InMemoryDataset):
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
+            sup_final_list = []
+            for data_dict in neg_list:
+                data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
+                for key, value in data_dict.items():
+                    value_copy = cp.deepcopy(value)
+                    del value
+                    data[key] = value_copy
+                sup_final_list.append(data)
+
             print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
+            for data_dict in pos_list:
+                data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
+                for key, value in data_dict.items():
+                    value_copy = cp.deepcopy(value)
+                    del value
+                    data[key] = value_copy
+                sup_final_list.append(data)
 
-            if self.sign_type == 'SuP' and sign_kwargs['optimize_sign']:
-                print("Postprocessing and creating datalist")
-
-                sup_final_list = []
-                for data_dict in pos_list + neg_list:
-                    data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
-                    for key, value in data_dict.items():
-                        data[key] = value
-                    sup_final_list.append(data)
-                torch.save(self.collate(sup_final_list), self.processed_paths[0])
-                del sup_final_list
-            else:
-                torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
-                del pos_list, neg_list
+            torch.save(self.collate(sup_final_list), self.processed_paths[0])
+            del pos_list, neg_list
         else:
             if self.pos_pairwise:
                 pos_list = extract_enclosing_subgraphs(
@@ -1469,7 +1473,6 @@ if __name__ == '__main__':
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
 
     if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
-
         torch.multiprocessing.set_sharing_strategy('file_system')
         torch.multiprocessing.set_start_method('spawn', force=True)
     if args.profile:
