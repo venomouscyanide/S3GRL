@@ -203,7 +203,7 @@ class SEALDataset(InMemoryDataset):
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
-            if sign_type == 'SuP' and sign_kwargs['optimize_sign']:
+            if self.sign_type == 'SuP' and sign_kwargs['optimize_sign']:
                 print("Postprocessing and creating datalist")
 
                 sup_final_list = []
@@ -213,9 +213,10 @@ class SEALDataset(InMemoryDataset):
                         data[key] = value
                     sup_final_list.append(data)
                 torch.save(self.collate(sup_final_list), self.processed_paths[0])
+                del sup_final_list
             else:
                 torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
-            del pos_list, neg_list
+                del pos_list, neg_list
         else:
             if self.pos_pairwise:
                 pos_list = extract_enclosing_subgraphs(
@@ -1463,6 +1464,9 @@ if __name__ == '__main__':
 
     if args.sign_type == 'hybrid' and not args.optimize_sign:
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
+
+    if args.sign_type == 'SuP' and args.optimize_sign:
+        torch.multiprocessing.set_sharing_strategy('file_system')
 
     if args.profile:
         run_sgrl_with_run_profiling(args, device)

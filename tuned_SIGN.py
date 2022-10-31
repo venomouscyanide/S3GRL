@@ -161,7 +161,7 @@ class OptimizedSignOperations:
                          sign_kwargs, rw_kwargs))
 
         cpu_count = 2
-        torch.multiprocessing.set_sharing_strategy('file_system')
+
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
