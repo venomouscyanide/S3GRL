@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 import scipy.sparse as ssp
 import numpy as np
-from multiprocessing import Pool, cpu_count
+from torch.multiprocessing import Pool, cpu_count
 
 
 class TunedSIGN(SIGN):
