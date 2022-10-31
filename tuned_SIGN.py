@@ -160,13 +160,22 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = multiprocessing.cpu_count() // 8  # leave 5 for other
+        cpu_count = multiprocessing.cpu_count() - 1  # leave 5 for other
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
+        print("Preprocessing and calculating raw ops")
         with Pool(processes=cpu_count) as pool:
-            sup_data_list = pool.starmap(get_individual_sup_data, args)
+            sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
-        return sup_data_list
+        print("Postprocessing and creating datalist")
+        sup_final_list = []
+        for data_dict in sup_raw_data_list:
+            data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'))
+            for key, value in data_dict.items():
+                data[key] = value
+            sup_final_list.append(data)
+        
+        return sup_raw_data_list
 
 
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
@@ -215,16 +224,16 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
         updated_features[operator_index + 1, :] = torch.hstack(
             [label_dst, all_ax_values[operator_index + 1]])
 
-    # data = Data(
-    #     x=torch.hstack(
-    #         [torch.tensor([[1], [1]]),
-    #          torch.vstack([subgraph_features[0], subgraph_features[1]]),
-    #          ]),
-    #     y=y,
-    # )
-    #
-    # for operator_index in range(0, K * 2, 2):
-    #     data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-    #         [updated_features[operator_index], updated_features[operator_index + 1]]
-    #     )
-    # return data
+    data = {}
+
+    data['x'] = torch.hstack(
+        [torch.tensor([[1], [1]]),
+         torch.vstack([subgraph_features[0], subgraph_features[1]]),
+         ])
+    data['y'] = y
+
+    for operator_index in range(0, K * 2, 2):
+        data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+            [updated_features[operator_index], updated_features[operator_index + 1]]
+        )
+    return data
