@@ -194,10 +194,10 @@ class SEALDataset(InMemoryDataset):
 
         if not self.pairwise:
             print("Setting up Positive Subgraphs")
-            pos_list = extract_enclosing_subgraphs(
-                pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
-                powers_of_A=powers_of_A, data=self.data)
+            # pos_list = extract_enclosing_subgraphs(
+            #     pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
+            #     self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
+            #     powers_of_A=powers_of_A, data=self.data)
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
