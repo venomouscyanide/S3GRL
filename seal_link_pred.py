@@ -203,7 +203,18 @@ class SEALDataset(InMemoryDataset):
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
-            torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
+            if sign_type == 'SuP' and sign_kwargs['optimize_sign']:
+                print("Postprocessing and creating datalist")
+
+                sup_final_list = []
+                for data_dict in pos_list + neg_list:
+                    data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
+                    for key, value in data_dict.items():
+                        data[key] = value
+                    sup_final_list.append(data)
+                torch.save(self.collate(sup_final_list), self.processed_paths[0])
+            else:
+                torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
             if self.pos_pairwise:

@@ -168,16 +168,7 @@ class OptimizedSignOperations:
         with Pool(processes=cpu_count) as pool:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
-        print("Postprocessing and creating datalist")
-
-        sup_final_list = []
-        for data_dict in sup_raw_data_list:
-            data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
-            for key, value in data_dict.items():
-                data[key] = value
-            sup_final_list.append(data)
-
-        return sup_final_list
+        return sup_raw_data_list
 
 
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
