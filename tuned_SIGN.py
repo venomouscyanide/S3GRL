@@ -164,7 +164,7 @@ class OptimizedSignOperations:
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
-
+        torch.multiprocessing.set_sharing_strategy('file_system')
         with torch.multiprocessing.Pool(processes=cpu_count) as pool:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
