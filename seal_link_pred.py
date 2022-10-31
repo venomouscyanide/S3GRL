@@ -126,10 +126,8 @@ class SEALDataset(InMemoryDataset):
 
         cached_pos_rws = cached_neg_rws = None
         if self.rw_kwargs.get('m'):
-            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, device, self.rw_kwargs['m'],
-                                             self.rw_kwargs['M'])
-            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, device, self.rw_kwargs['m'],
-                                             self.rw_kwargs['M'])
+            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.rw_kwargs['m'], self.rw_kwargs['M'])
+            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.rw_kwargs['m'], self.rw_kwargs['M'])
 
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
@@ -1467,7 +1465,7 @@ if __name__ == '__main__':
     if args.sign_type == 'hybrid' and not args.optimize_sign:
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
 
-    if args.sign_type == 'SuP' and args.optimize_sign:
+    if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
         torch.multiprocessing.set_sharing_strategy('file_system')
 
     if args.profile:
