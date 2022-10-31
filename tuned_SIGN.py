@@ -159,12 +159,12 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = 1
+        cpu_count = 4
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
-        with torch.multiprocessing.Pool(processes=cpu_count) as pool:
+        with torch.multiprocessing.get_context('spawn').Pool(processes=cpu_count) as pool:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
         return sup_raw_data_list
