@@ -215,16 +215,16 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
         updated_features[operator_index + 1, :] = torch.hstack(
             [label_dst, all_ax_values[operator_index + 1]])
 
-    data = Data(
-        x=torch.hstack(
-            [torch.tensor([[1], [1]]),
-             torch.vstack([subgraph_features[0], subgraph_features[1]]),
-             ]),
-        y=y,
-    )
-
-    for operator_index in range(0, K * 2, 2):
-        data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-            [updated_features[operator_index], updated_features[operator_index + 1]]
-        )
-    return data
+    # data = Data(
+    #     x=torch.hstack(
+    #         [torch.tensor([[1], [1]]),
+    #          torch.vstack([subgraph_features[0], subgraph_features[1]]),
+    #          ]),
+    #     y=y,
+    # )
+    #
+    # for operator_index in range(0, K * 2, 2):
+    #     data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+    #         [updated_features[operator_index], updated_features[operator_index + 1]]
+    #     )
+    # return data
