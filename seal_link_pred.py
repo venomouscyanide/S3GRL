@@ -1447,7 +1447,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+    torch.cuda.is_available = lambda: False
+    device = 'cpu'
     print(f"Using device: {device}")
 
     seed_everything(args.seed)
@@ -1468,7 +1469,7 @@ if __name__ == '__main__':
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
 
     if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
-        torch.cuda.is_available = lambda: False
+
         torch.multiprocessing.set_sharing_strategy('file_system')
         torch.multiprocessing.set_start_method('spawn', force=True)
     if args.profile:
