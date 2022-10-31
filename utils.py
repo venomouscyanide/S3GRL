@@ -429,14 +429,15 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
         os.remove(f'saved_calc_ratio{dataset_name}.npz')
 
 
-def create_rw_cache(sparse_adj, edges, rw_m, rw_M):
+def create_rw_cache(sparse_adj, edges, device, rw_m, rw_M):
     mapped_rw_cache = {}
     row, col, _ = sparse_adj.csr()
 
-    starting_nodes = torch.unique(torch.tensor(edges.flatten(), dtype=torch.long, device='cpu'))
+    starting_nodes = torch.unique(torch.tensor(edges.flatten(), dtype=torch.long, device=device))
     start = starting_nodes.repeat(rw_M)
     node_ids, _ = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)
-
+    node_ids = node_ids.to('cpu')
+    
     for seq in node_ids:
         key = int(seq[0])
         if type(mapped_rw_cache.get(key)) == torch.Tensor:

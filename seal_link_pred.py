@@ -126,8 +126,10 @@ class SEALDataset(InMemoryDataset):
 
         cached_pos_rws = cached_neg_rws = None
         if self.rw_kwargs.get('m'):
-            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.rw_kwargs['m'], self.rw_kwargs['M'])
-            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.rw_kwargs['m'], self.rw_kwargs['M'])
+            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, device, self.rw_kwargs['m'],
+                                             self.rw_kwargs['M'])
+            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, device, self.rw_kwargs['m'],
+                                             self.rw_kwargs['M'])
 
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
