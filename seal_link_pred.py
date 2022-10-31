@@ -47,7 +47,7 @@ from ogbl_baselines.n2v import run_and_save_n2v
 from profiler_utils import profile_helper
 from tuned_SIGN import TunedSIGN
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
-    Logger, AA, CN, PPR, calc_ratio_helper
+    Logger, AA, CN, PPR, calc_ratio_helper, create_rw_cache
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -124,6 +124,13 @@ class SEALDataset(InMemoryDataset):
 
         # Extract enclosing subgraphs for pos and neg edges
 
+        cached_pos_rws = cached_neg_rws = None
+        if self.rw_kwargs.get('m'):
+            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, device, self.rw_kwargs['m'],
+                                             self.rw_kwargs['M'])
+            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, device, self.rw_kwargs['m'],
+                                             self.rw_kwargs['M'])
+
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
             "rw_M": self.rw_kwargs.get('M'),
@@ -132,6 +139,8 @@ class SEALDataset(InMemoryDataset):
             "device": self.device,
             "data": self.data,
             "node_label": self.node_label,
+            "cached_pos_rws": cached_pos_rws,
+            "cached_neg_rws": cached_neg_rws,
         }
 
         sign_kwargs = {}
