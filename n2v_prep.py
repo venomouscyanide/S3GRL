@@ -14,7 +14,7 @@ def node_2_vec_pretrain(edge_index, num_nodes, emd_dim, device):
     n2v.train()
 
     print(f'Prepping n2v embeddings with hidden_dim: {emd_dim}')
-    for i in tqdm(range(201), ncols=70):
+    for i in tqdm(range(1), ncols=70):
         total_loss = 0
         for pos_rw, neg_rw in loader:
             optimizer.zero_grad()
