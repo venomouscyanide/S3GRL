@@ -160,7 +160,7 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = multiprocessing.cpu_count() - 1  # leave 1 for other
+        cpu_count = multiprocessing.cpu_count() - 5  # leave 5 for other
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         with Pool(processes=cpu_count) as pool:
