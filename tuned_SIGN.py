@@ -1,5 +1,3 @@
-import multiprocessing
-
 import torch
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
@@ -10,7 +8,6 @@ from tqdm import tqdm
 
 import scipy.sparse as ssp
 import numpy as np
-from torch.multiprocessing import Pool, cpu_count
 
 
 class TunedSIGN(SIGN):
@@ -165,7 +162,7 @@ class OptimizedSignOperations:
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
-        with Pool(processes=cpu_count) as pool:
+        with torch.multiprocessing.Pool(processes=cpu_count) as pool:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
         return sup_raw_data_list

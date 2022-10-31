@@ -204,7 +204,7 @@ class SEALDataset(InMemoryDataset):
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
-            
+
             if self.sign_type == 'SuP' and sign_kwargs['optimize_sign']:
                 print("Postprocessing and creating datalist")
 
