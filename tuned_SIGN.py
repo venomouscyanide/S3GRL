@@ -161,9 +161,7 @@ class OptimizedSignOperations:
 
         cpu_count = 7
         sup_raw_data_list = []
-        print(args[0])
-        time.sleep((10000))
-        
+
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
