@@ -490,7 +490,14 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs, rw_kwargs)
-            return sup_data_list
+            sup_final_list = []
+            for data_dict in sup_data_list:
+                data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'))
+                for key, value in data_dict.items():
+                    data[key] = value
+                sup_final_list.append(data)
+
+            return sup_final_list
         elif not sign_kwargs['optimize_sign']:
             # SIGN + SEAL flow; includes both SuP and PoS flows
             for src, dst in tqdm(link_index.t().tolist()):
