@@ -160,7 +160,7 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = multiprocessing.cpu_count() - 1  # leave 5 for other
+        cpu_count = 10
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
@@ -174,7 +174,7 @@ class OptimizedSignOperations:
             for key, value in data_dict.items():
                 data[key] = value
             sup_final_list.append(data)
-        
+
         return sup_raw_data_list
 
 
