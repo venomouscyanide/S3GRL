@@ -160,16 +160,13 @@ class OptimizedSignOperations:
                          sign_kwargs, rw_kwargs))
 
         cpu_count = 7
-        sup_raw_data_list = []
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
 
-        with torch.multiprocessing.Pool(processes=2) as pool:
-
-            for arg in tqdm(args):
-                sup_raw_data_list.append(pool.apply(get_individual_sup_data, arg))
+        with torch.multiprocessing.Pool(processes=cpu_count) as pool:
+            sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
         return sup_raw_data_list
 
