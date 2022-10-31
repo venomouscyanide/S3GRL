@@ -1,3 +1,5 @@
+import multiprocessing
+
 import torch
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
@@ -8,6 +10,7 @@ from tqdm import tqdm
 
 import scipy.sparse as ssp
 import numpy as np
+from multiprocessing import Pool, cpu_count
 
 
 class TunedSIGN(SIGN):
@@ -150,70 +153,78 @@ class OptimizedSignOperations:
     def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                            sign_kwargs, rw_kwargs):
         # optimized SuP flow
-        from utils import k_hop_subgraph
-        sup_data_list = []
+
         print("Start with SuP data prep")
-        for src, dst in tqdm(link_index.t().tolist()):
-            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                 max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+        args = []
+        for src, dst in link_index.t().tolist():
+            args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+                         sign_kwargs, rw_kwargs))
 
-            u, v, r = ssp.find(tmp[1])
-            u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v,
-                                 sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
+        cpu_count = multiprocessing.cpu_count() - 1  # leave 1 for other
+        print(f"Calculating SuP data using {cpu_count} parallel processes")
 
-            deg = adj_t.sum(dim=1).to(torch.float)
-            deg_inv_sqrt = deg.pow(-0.5)
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
-            subgraph_features = tmp[3]
-            subgraph = adj_t
-
-            if subgraph.size(1) == 0 and subgraph.size(0) == 0:
-                # empty enclosing subgraph
-                continue
-
-            assert subgraph_features is not None
-
-            powers_of_a = [subgraph]
-            K = sign_kwargs['sign_k']
-
-            for _ in range(K - 1):
-                powers_of_a.append(subgraph @ powers_of_a[-1])
-
-            all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
-
-            for operator_index in range(0, K * 2, 2):
-                all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-                    powers_of_a[operator_index // 2][[0, 1], :].to_dense()
-                )
-
-            all_ax_values = all_a_values @ subgraph_features
-
-            updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
-            for operator_index in range(0, K * 2, 2):
-                label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-                label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
-
-                updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-                updated_features[operator_index + 1, :] = torch.hstack(
-                    [label_dst, all_ax_values[operator_index + 1]])
-
-            data = Data(
-                x=torch.hstack(
-                    [torch.tensor([[1], [1]]),
-                     torch.vstack([subgraph_features[0], subgraph_features[1]]),
-                     ]),
-                y=y,
-            )
-
-            for operator_index in range(0, K * 2, 2):
-                data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-                    [updated_features[operator_index], updated_features[operator_index + 1]]
-                )
-
-            sup_data_list.append(data)
+        with Pool(processes=cpu_count) as pool:
+            sup_data_list = pool.starmap(get_individual_sup_data, args)
 
         return sup_data_list
+
+
+def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+                            sign_kwargs, rw_kwargs):
+    from utils import k_hop_subgraph
+    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                         max_nodes_per_hop, node_features=x, y=y,
+                         directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+
+    u, v, r = ssp.find(tmp[1])
+    u, v = torch.LongTensor(u), torch.LongTensor(v)
+    adj_t = SparseTensor(row=u, col=v,
+                         sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
+
+    deg = adj_t.sum(dim=1).to(torch.float)
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+    subgraph_features = tmp[3]
+    subgraph = adj_t
+
+    assert subgraph_features is not None
+
+    powers_of_a = [subgraph]
+    K = sign_kwargs['sign_k']
+
+    for _ in range(K - 1):
+        powers_of_a.append(subgraph @ powers_of_a[-1])
+
+    all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
+
+    for operator_index in range(0, K * 2, 2):
+        all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
+            powers_of_a[operator_index // 2][[0, 1], :].to_dense()
+        )
+
+    all_ax_values = all_a_values @ subgraph_features
+
+    updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
+    for operator_index in range(0, K * 2, 2):
+        label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+        label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+
+        updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
+        updated_features[operator_index + 1, :] = torch.hstack(
+            [label_dst, all_ax_values[operator_index + 1]])
+
+    data = Data(
+        x=torch.hstack(
+            [torch.tensor([[1], [1]]),
+             torch.vstack([subgraph_features[0], subgraph_features[1]]),
+             ]),
+        y=y,
+    )
+
+    for operator_index in range(0, K * 2, 2):
+        data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+            [updated_features[operator_index], updated_features[operator_index + 1]]
+        )
+    return data
