@@ -100,6 +100,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
             raise ValueError(f"Value of y is set to {y}, not 0/1")
 
         if cached_rw_sequences:
+            print("Using Cache")
             rw_nodes_src = cached_rw_sequences[src]
             rw_nodes_dst = cached_rw_sequences[dst]
             nodes = torch.unique(torch.cat([rw_nodes_src, rw_nodes_dst])).tolist()
