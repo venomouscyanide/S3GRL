@@ -163,8 +163,11 @@ class OptimizedSignOperations:
 
         print("Preprocessing and calculating raw ops")
         sup_raw_data_list = []
-
+        print(args[0])
+        breakpoint()
         with torch.multiprocessing.Pool(processes=2) as pool:
+
+
             for arg in tqdm(args):
                 sup_raw_data_list.append(pool.apply(get_individual_sup_data, arg))
 
