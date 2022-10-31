@@ -163,6 +163,9 @@ class OptimizedSignOperations:
 
         print("Preprocessing and calculating raw ops")
         sup_raw_data_list = []
+        print(rw_kwargs['cached_pos_rws'])
+        from time import sleep
+        sleep(100000)
         with torch.multiprocessing.Pool(processes=2) as pool:
             for arg in tqdm(args):
                 sup_raw_data_list.append(pool.apply(get_individual_sup_data, arg))
