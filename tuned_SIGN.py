@@ -167,13 +167,17 @@ class OptimizedSignOperations:
         ray.init(num_cpus=cpu_count)
         # ray.put(args)
         sup_final_list = []
+
         result_ids = []
+
         for arg in args:
             # sup_final_list.append(data)
             result_ids.append(get_individual_sup_data.remote(*arg))
             # result_ids.append(solve_system.remote(K_id, F))
 
+        print(result_ids)
         sup_final_list = ray.get(result_ids)
+
         # with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
         #     sup_final_list = []
         #     for data in tqdm(pool.starmap(get_individual_sup_data, args)):
@@ -189,7 +193,7 @@ class OptimizedSignOperations:
         return sup_final_list
 
 
-@ray.remote
+@ray.remote(num_cpus=32)
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
     from utils import k_hop_subgraph
