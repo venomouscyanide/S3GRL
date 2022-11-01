@@ -159,7 +159,7 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = 40
+        cpu_count = 16
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
