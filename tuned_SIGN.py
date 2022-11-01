@@ -171,7 +171,7 @@ class OptimizedSignOperations:
         start = time.time()
         for arg in tqdm(args):
             # sup_final_list.append(data)
-            result_ids.append(get.remote())
+            result_ids.append(get.remote(*args))
             # result_ids.append(solve_system.remote(K_id, F))
 
         print("Result id gathered. Waiting")
@@ -194,7 +194,7 @@ class OptimizedSignOperations:
 
 
 @ray.remote
-def get():
+def get(*args):
     time.sleep(100)
 
 
