@@ -12,6 +12,8 @@ import scipy.sparse as ssp
 import numpy as np
 
 
+
+
 class TunedSIGN(SIGN):
     """
     Custom SIGN class for SuP and PoS
@@ -165,7 +167,7 @@ class OptimizedSignOperations:
 
         with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
             sup_final_list = []
-            for data in tqdm(pool.starmap(get_individual_sup_data, args)):
+            for data in tqdm(pool.starmap(get, args)):
                 sup_final_list.append(copy.deepcopy(data))
                 del data
 
@@ -177,6 +179,30 @@ class OptimizedSignOperations:
         pool.terminate()
         return sup_final_list
 
+def get(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+                            sign_kwargs, rw_kwargs):
+    # SuP flow
+
+    # debug code with graphistry
+    # networkx_G = to_networkx(data)  # the full graph
+    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
+    # check against the nodes that is received in tmp before the relabeling occurs
+    from utils import k_hop_subgraph, construct_pyg_graph
+
+    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                         max_nodes_per_hop, node_features=x, y=y,
+                         directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+
+    sign_pyg_kwargs = {
+        'use_feature': sign_kwargs['use_feature'],
+    }
+
+    data = construct_pyg_graph(*tmp, 'zo', sign_pyg_kwargs)
+
+    sign_t = TunedSIGN(sign_kwargs['sign_k'])
+    data = sign_t(data, sign_kwargs['sign_k'])
+
+    return data
 
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
