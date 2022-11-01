@@ -1444,8 +1444,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     torch.cuda.is_available = lambda: False
-    device = 'cpu'
-    # device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+    # device = 'cpu'
+    device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
     seed_everything(args.seed)
@@ -1466,7 +1466,7 @@ if __name__ == '__main__':
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
     import ray
 
-    ray.init(num_cpus=20)
+    ray.init(num_cpus=20, num_gpus=4)
 
     if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
         # os.environ["OMP_NUM_THREADS"] = "1"
