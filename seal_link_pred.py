@@ -1442,8 +1442,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # torch.cuda.is_available = lambda: False
-    device = torch.device(f'cuda:{args.cuda_device}' if torch.cuda.is_available() else 'cpu')
+    torch.cuda.is_available = lambda: False
+    device = 'cpu'
     print(f"Using device: {device}")
 
     seed_everything(args.seed)
