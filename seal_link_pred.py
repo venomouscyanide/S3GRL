@@ -191,10 +191,7 @@ class SEALDataset(InMemoryDataset):
                               self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
                               self.args.dataset, self.args.seed)
             exit()
-        torch.set_num_threads(1)
-        print(torch.get_num_threads())
-        torch.set_num_interop_threads(1)
-        print(torch.get_num_interop_threads())
+    
         if not self.pairwise:
 
             print("Setting up Positive Subgraphs")
