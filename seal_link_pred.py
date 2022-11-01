@@ -203,27 +203,29 @@ class SEALDataset(InMemoryDataset):
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
             sup_final_list = []
-            for data_dict in neg_list:
-                data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
-                for key, value in data_dict.items():
-                    value_copy = cp.deepcopy(value)
-                    del value
-                    data[key] = value_copy
-                sup_final_list.append(data)
+            # for data_dict in neg_list:
+            #     data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
+            #     for key, value in data_dict.items():
+            #         value_copy = cp.deepcopy(value)
+            #         del value
+            #         data[key] = value_copy
+            #     sup_final_list.append(data)
 
             print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
-            for data_dict in pos_list:
-                data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
-                for key, value in data_dict.items():
-                    value_copy = cp.deepcopy(value)
-                    del value
-                    data[key] = value_copy
-                sup_final_list.append(data)
-
+            # for data_dict in pos_list:
+            #     data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
+            #     for key, value in data_dict.items():
+            #         value_copy = cp.deepcopy(value)
+            #         del value
+            #         data[key] = value_copy
+            #     sup_final_list.append(data)
+            #
+            print("sleeping")
+            time.sleep(10000)
             torch.save(self.collate(sup_final_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
@@ -1460,7 +1462,7 @@ if __name__ == '__main__':
     print(f"Using device: {device}")
 
     seed_everything(args.seed)
-    
+
     if args.model == "SIGN" and not args.init_features and not args.use_feature:
         raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
 
