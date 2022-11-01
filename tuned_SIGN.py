@@ -1,3 +1,4 @@
+import multiprocessing
 import time
 from multiprocessing import get_context
 
@@ -167,6 +168,9 @@ class OptimizedSignOperations:
         print("Preprocessing and calculating raw ops")
         with get_context("spawn").Pool(processes=cpu_count) as pool:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
+
+        pool.close()
+        pool.terminate()
 
         return sup_raw_data_list
 
