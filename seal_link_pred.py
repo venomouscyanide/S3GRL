@@ -212,6 +212,9 @@ class SEALDataset(InMemoryDataset):
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
 
+            print("sleeping")
+            time.sleep(10000)
+            
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
@@ -226,8 +229,7 @@ class SEALDataset(InMemoryDataset):
             #         data[key] = value_copy
             #     sup_final_list.append(data)
             #
-            print("sleeping")
-            time.sleep(10000)
+
             torch.save(self.collate(sup_final_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
