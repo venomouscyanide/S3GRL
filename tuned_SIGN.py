@@ -1,3 +1,4 @@
+import copy
 import gc
 import multiprocessing
 import time
@@ -172,9 +173,22 @@ class OptimizedSignOperations:
 
         pool.close()
         pool.terminate()
-        gc.collect()
+
+        sup_final_list = []
+        for index, data_dict in enumerate(sup_raw_data_list):
+            x = data_dict['x'].detach()
+            y = data_dict['y']
+            data_dict.pop('x')
+            data_dict.pop('y')
+            data = Data(x=x, y=y, device='cpu')
+            for key, value in data_dict.items():
+                value_copy = value.detach()
+                data[key] = value_copy
+            sup_final_list.append(data)
+            sup_raw_data_list[index] = None
+
         del sup_raw_data_list
-        return []
+        return sup_final_list
 
 
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
