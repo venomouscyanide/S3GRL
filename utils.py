@@ -435,6 +435,7 @@ def create_rw_cache(sparse_adj, edges, device, rw_m, rw_M):
     starting_nodes = torch.unique(torch.tensor(edges.flatten(), dtype=torch.long, device=device))
     start = starting_nodes.repeat(rw_M)
     node_ids, _ = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)
+    node_ids = node_ids.to('cpu')
 
     for seq in node_ids:
         key = int(seq[0])
