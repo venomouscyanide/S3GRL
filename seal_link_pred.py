@@ -1458,7 +1458,9 @@ if __name__ == '__main__':
     print(f"Using device: {device}")
 
     seed_everything(args.seed)
-
+    print("Sleeping")
+    time.sleep(10000)
+    
     if args.model == "SIGN" and not args.init_features and not args.use_feature:
         raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
 
