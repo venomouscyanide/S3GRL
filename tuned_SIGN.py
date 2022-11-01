@@ -158,20 +158,21 @@ class OptimizedSignOperations:
         print("Start with SuP data prep")
         args = []
         for src, dst in link_index.t().tolist():
-            args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
-                         sign_kwargs, rw_kwargs))
+            args.append((src, dst))
 
         cpu_count = 32
+        put_ids = ray.put(num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y, sign_kwargs, rw_kwargs)
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         sup_final_list = []
-
         result_ids = []
+        result_ids.append(get_individual_sup_data.remote(*args))
+
         start = time.time()
         for arg in tqdm(args):
             # sup_final_list.append(data)
-            result_ids.append(get.remote(*args))
+            result_ids.append(get.remote(args[1], args[2], *put_ids))
             # result_ids.append(solve_system.remote(K_id, F))
 
         print("Result id gathered. Waiting")
