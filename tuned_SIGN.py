@@ -164,7 +164,7 @@ class OptimizedSignOperations:
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
-        ray.put(args)
+        # ray.put(args)
         sup_final_list = []
         result_ids = []
         for arg in args:
