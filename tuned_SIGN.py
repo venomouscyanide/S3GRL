@@ -162,7 +162,11 @@ class OptimizedSignOperations:
         cpu_count = 4
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
-
+        import os
+        os.environ["OMP_NUM_THREADS"] = "1"
+        torch.set_num_interop_threads(1)
+        torch.set_num_threads(1)
+        print(torch.get_num_interop_threads(), torch.get_num_threads())
         with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
             sup_final_list = []
             for data in tqdm(pool.starmap(get_individual_sup_data, args)):
