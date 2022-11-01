@@ -169,7 +169,7 @@ class OptimizedSignOperations:
 
         result_ids = []
         start = time.time()
-        for arg in args:
+        for arg in tqdm(args):
             # sup_final_list.append(data)
             result_ids.append(get_individual_sup_data.remote(*arg))
             # result_ids.append(solve_system.remote(K_id, F))
