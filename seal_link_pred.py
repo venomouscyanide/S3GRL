@@ -992,7 +992,7 @@ def run_sgrl_learning(args, device):
         rw_kwargs.update({'calc_ratio': True})
 
     time_for_prep_start = default_timer()
-    
+
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Train data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
@@ -1460,8 +1460,6 @@ if __name__ == '__main__':
     print(f"Using device: {device}")
 
     seed_everything(args.seed)
-    print("Sleeping")
-    time.sleep(10000)
     
     if args.model == "SIGN" and not args.init_features and not args.use_feature:
         raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
