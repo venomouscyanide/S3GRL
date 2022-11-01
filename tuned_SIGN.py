@@ -167,20 +167,18 @@ class OptimizedSignOperations:
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
-        print("Preprocessing and calculating raw ops")
-        with multiprocessing.Pool(processes=cpu_count) as pool:
-            sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
+        with multiprocessing.Pool(cpu_count) as pool:
+            sup_final_list = []
+            for data in tqdm(pool.starmap(get_individual_sup_data, args)):
+                sup_final_list.append(copy.deepcopy(data))
+                del data
+
+        # print("Preprocessing and calculating raw ops")
+        # with multiprocessing.Pool(processes=cpu_count) as pool:
+        #     sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
         pool.close()
         pool.terminate()
-
-        sup_final_list = []
-        for index, data_dict in enumerate(sup_raw_data_list):
-            data = copy.deepcopy(data_dict)
-            sup_final_list.append(data)
-            sup_raw_data_list[index] = None
-
-        del sup_raw_data_list
         return sup_final_list
 
 
