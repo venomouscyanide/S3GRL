@@ -176,18 +176,20 @@ class OptimizedSignOperations:
 
         sup_final_list = []
         for index, data_dict in enumerate(sup_raw_data_list):
-            x = data_dict['x'].detach()
+            x = copy.deepcopy(data_dict['x'])
             y = data_dict['y']
             data_dict.pop('x')
             data_dict.pop('y')
             data = Data(x=x, y=y, device='cpu')
             for key, value in data_dict.items():
-                value_copy = value.detach()
+                value_copy = copy.deepcopy(value)
                 data[key] = value_copy
             sup_final_list.append(data)
             sup_raw_data_list[index] = None
 
         del sup_raw_data_list
+        print("sleep")
+        time.sleep(100000)
         return sup_final_list
 
 
