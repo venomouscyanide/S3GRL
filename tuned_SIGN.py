@@ -12,8 +12,6 @@ import scipy.sparse as ssp
 import numpy as np
 
 
-
-
 class TunedSIGN(SIGN):
     """
     Custom SIGN class for SuP and PoS
@@ -161,13 +159,13 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = 8
+        cpu_count = 2
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
             sup_final_list = []
-            for data in tqdm(pool.starmap(get, args)):
+            for data in tqdm(pool.starmap(get_individual_sup_data, args)):
                 sup_final_list.append(copy.deepcopy(data))
                 del data
 
@@ -179,30 +177,6 @@ class OptimizedSignOperations:
         pool.terminate()
         return sup_final_list
 
-def get(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
-                            sign_kwargs, rw_kwargs):
-    # SuP flow
-
-    # debug code with graphistry
-    # networkx_G = to_networkx(data)  # the full graph
-    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
-    # check against the nodes that is received in tmp before the relabeling occurs
-    from utils import k_hop_subgraph, construct_pyg_graph
-
-    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                         max_nodes_per_hop, node_features=x, y=y,
-                         directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
-
-    sign_pyg_kwargs = {
-        'use_feature': sign_kwargs['use_feature'],
-    }
-
-    data = construct_pyg_graph(*tmp, 'zo', sign_pyg_kwargs)
-
-    sign_t = TunedSIGN(sign_kwargs['sign_k'])
-    data = sign_t(data, sign_kwargs['sign_k'])
-
-    return data
 
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
@@ -224,8 +198,11 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
     adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
 
-    subgraph_features = tmp[3]
-    subgraph = adj_t
+    subgraph_features = tmp[3].detach().numpy()
+    subgraph = adj_t.to_dense().detach().numpy()
+
+    del adj_t
+    del tmp
 
     assert subgraph_features is not None
 
@@ -235,36 +212,35 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
     for _ in range(K - 1):
         powers_of_a.append(subgraph @ powers_of_a[-1])
 
-    all_a_values = torch.empty(size=[K * 2, subgraph.size(0)], device=device)
+    all_a_values = np.zeros(shape=[K * 2, subgraph.shape[0]])
 
     for operator_index in range(0, K * 2, 2):
         all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-            powers_of_a[operator_index // 2][[0, 1], :].to_dense(), device=device
-        )
+            powers_of_a[operator_index // 2][[0, 1], :])
 
     all_ax_values = all_a_values @ subgraph_features
 
-    updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1], device=device)
-    for operator_index in range(0, K * 2, 2):
-        label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-        label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
-
-        updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-        updated_features[operator_index + 1, :] = torch.hstack(
-            [label_dst, all_ax_values[operator_index + 1]])
-
-    data = Data(
-        x=torch.hstack(
-            [torch.tensor([[1], [1]]),
-             torch.vstack([subgraph_features[0], subgraph_features[1]]),
-             ]),
-        y=y,
-        device=device
-    )
-
-    for operator_index in range(0, K * 2, 2):
-        data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-            [updated_features[operator_index], updated_features[operator_index + 1]]
-        )
-    data = data
-    return data
+    # updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1], device=device)
+    # for operator_index in range(0, K * 2, 2):
+    #     label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+    #     label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+    #
+    #     updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
+    #     updated_features[operator_index + 1, :] = torch.hstack(
+    #         [label_dst, all_ax_values[operator_index + 1]])
+    #
+    # data = Data(
+    #     x=torch.hstack(
+    #         [torch.tensor([[1], [1]]),
+    #          torch.vstack([subgraph_features[0], subgraph_features[1]]),
+    #          ]),
+    #     y=y,
+    #     device=device
+    # )
+    #
+    # for operator_index in range(0, K * 2, 2):
+    #     data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+    #         [updated_features[operator_index], updated_features[operator_index + 1]]
+    #     )
+    # data = data
+    return None
