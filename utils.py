@@ -92,18 +92,30 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         device = rw_kwargs['device']
         data_org = rw_kwargs['data']
 
-        if rw_kwargs.get('unique_nodes'):
-            nodes = rw_kwargs.get('unique_nodes')[(src, dst)]
+        if y == 1:
+            cached_rw_sequences = rw_kwargs['cached_pos_rws']
+        elif y == 0:
+            cached_rw_sequences = rw_kwargs['cached_neg_rws']
         else:
-            row, col, _ = sparse_adj.csr()
-            starting_nodes = torch.tensor([src, dst], dtype=torch.long, device=device)
-            start = starting_nodes.repeat(rw_M)
-            rw = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)[0]
-            if debug:
-                from networkx import write_gexf
-                draw_graph(to_networkx(data_org))
-                write_gexf(torch_geometric.utils.to_networkx(data_org), path='gephi.gexf')
-            nodes = torch.unique(rw.flatten()).tolist()
+            raise ValueError(f"Value of y is set to {y}, not 0/1")
+
+        if cached_rw_sequences:
+            rw_nodes_src = cached_rw_sequences[src]
+            rw_nodes_dst = cached_rw_sequences[dst]
+            nodes = torch.unique(torch.cat([rw_nodes_src, rw_nodes_dst])).tolist()
+        else:
+            if rw_kwargs.get('unique_nodes'):
+                nodes = rw_kwargs.get('unique_nodes')[(src, dst)]
+            else:
+                row, col, _ = sparse_adj.csr()
+                starting_nodes = torch.tensor([src, dst], dtype=torch.long, device=device)
+                start = starting_nodes.repeat(rw_M)
+                rw = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)[0]
+                if debug:
+                    from networkx import write_gexf
+                    draw_graph(to_networkx(data_org))
+                    write_gexf(torch_geometric.utils.to_networkx(data_org), path='gephi.gexf')
+                nodes = torch.unique(rw.flatten()).tolist()
 
         rw_set = nodes
         # import torch_geometric
@@ -414,6 +426,27 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
             json.dump(stats_dict, stats_file, ensure_ascii=False)
 
         os.remove(f'saved_calc_ratio{dataset_name}.npz')
+
+
+def create_rw_cache(sparse_adj, edges, device, rw_m, rw_M):
+    print("Setting up rw cache")
+    mapped_rw_cache = {}
+    row, col, _ = sparse_adj.csr()
+
+    starting_nodes = torch.unique(torch.tensor(edges.flatten(), dtype=torch.long, device=device))
+    start = starting_nodes.repeat(rw_M)
+    node_ids, _ = torch.ops.torch_cluster.random_walk(row, col, start, rw_m, 1, 1)
+    node_ids = node_ids.to('cpu')
+
+    for seq in node_ids:
+        key = int(seq[0])
+        if type(mapped_rw_cache.get(key)) == torch.Tensor:
+            values_to_add = torch.cat([mapped_rw_cache[key], seq])
+            mapped_rw_cache[key] = torch.unique(values_to_add)
+        else:
+            mapped_rw_cache[key] = torch.unique(seq)
+
+    return mapped_rw_cache
 
 
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
