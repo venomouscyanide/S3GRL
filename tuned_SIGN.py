@@ -167,7 +167,7 @@ class OptimizedSignOperations:
 
         print("Preprocessing and calculating raw ops")
         with get_context("spawn").Pool(processes=cpu_count) as pool:
-            sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
+            sup_raw_data_list = pool.starmap(get_individual_sup_data, args, chunksize=128)
 
         pool.close()
         pool.terminate()
