@@ -1460,8 +1460,8 @@ if __name__ == '__main__':
 
     if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
         os.environ["OMP_NUM_THREADS"] = "1"
-        # torch.set_num_interop_threads(1)
-        # torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        torch.set_num_threads(1)
         # torch.multiprocessing.set_sharing_strategy('file_system')
         # torch.multiprocessing.set_start_method('spawn', force=True)
     if args.profile:
