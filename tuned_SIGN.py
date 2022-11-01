@@ -159,7 +159,7 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = 16
+        cpu_count = 8
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
@@ -180,16 +180,17 @@ class OptimizedSignOperations:
 
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
+    device = rw_kwargs['device']
     from utils import k_hop_subgraph
     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, node_features=x, y=y,
                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
 
     u, v, r = ssp.find(tmp[1])
-    u, v = torch.LongTensor(u), torch.LongTensor(v)
+    u, v = torch.LongTensor(u, device=device), torch.LongTensor(v, device=device)
     adj_t = SparseTensor(row=u, col=v,
                          sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
-
+    adj_t.to_device(device)
     deg = adj_t.sum(dim=1).to(torch.float)
     deg_inv_sqrt = deg.pow(-0.5)
     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
@@ -206,16 +207,16 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
     for _ in range(K - 1):
         powers_of_a.append(subgraph @ powers_of_a[-1])
 
-    all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
+    all_a_values = torch.empty(size=[K * 2, subgraph.size(0)], device=device)
 
     for operator_index in range(0, K * 2, 2):
         all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-            powers_of_a[operator_index // 2][[0, 1], :].to_dense()
+            powers_of_a[operator_index // 2][[0, 1], :].to_dense(), device=device
         )
 
     all_ax_values = all_a_values @ subgraph_features
 
-    updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
+    updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1], device=device)
     for operator_index in range(0, K * 2, 2):
         label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
         label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
@@ -236,4 +237,5 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
         data[f'x{operator_index // 2 + 1}'] = torch.vstack(
             [updated_features[operator_index], updated_features[operator_index + 1]]
         )
+    data = data.to(device=device)
     return data
