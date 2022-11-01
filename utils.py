@@ -429,6 +429,7 @@ def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_la
 
 
 def create_rw_cache(sparse_adj, edges, device, rw_m, rw_M):
+    print("Setting up rw cache")
     mapped_rw_cache = {}
     row, col, _ = sparse_adj.csr()
 
