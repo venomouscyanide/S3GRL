@@ -200,7 +200,7 @@ def get(*args):
     time.sleep(100)
 
 
-@ray.remote
+@ray.remote(num_gpus=4)
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
     from utils import k_hop_subgraph
