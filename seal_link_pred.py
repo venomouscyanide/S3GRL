@@ -214,7 +214,7 @@ class SEALDataset(InMemoryDataset):
 
             print("sleeping")
             time.sleep(10000)
-            
+
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,

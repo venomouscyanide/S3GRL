@@ -1,4 +1,5 @@
 import time
+from multiprocessing import get_context
 
 import torch
 from scipy.sparse import dok_matrix
@@ -164,7 +165,7 @@ class OptimizedSignOperations:
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         print("Preprocessing and calculating raw ops")
-        with torch.multiprocessing.get_context('spawn').Pool(processes=cpu_count) as pool:
+        with get_context("spawn").Pool(processes=cpu_count) as pool:
             sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
 
         return sup_raw_data_list
