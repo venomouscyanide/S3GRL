@@ -159,7 +159,7 @@ class OptimizedSignOperations:
             args.append((src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                          sign_kwargs, rw_kwargs))
 
-        cpu_count = 2
+        cpu_count = 4
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
@@ -215,32 +215,30 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
     all_a_values = np.zeros(shape=[K * 2, subgraph.shape[0]])
 
     for operator_index in range(0, K * 2, 2):
-        all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-            powers_of_a[operator_index // 2][[0, 1], :])
+        all_a_values[[operator_index, operator_index + 1], :] = powers_of_a[operator_index // 2][[0, 1], :]
 
     all_ax_values = all_a_values @ subgraph_features
 
-    # updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1], device=device)
-    # for operator_index in range(0, K * 2, 2):
-    #     label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-    #     label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
-    #
-    #     updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-    #     updated_features[operator_index + 1, :] = torch.hstack(
-    #         [label_dst, all_ax_values[operator_index + 1]])
-    #
-    # data = Data(
-    #     x=torch.hstack(
-    #         [torch.tensor([[1], [1]]),
-    #          torch.vstack([subgraph_features[0], subgraph_features[1]]),
-    #          ]),
-    #     y=y,
-    #     device=device
-    # )
-    #
-    # for operator_index in range(0, K * 2, 2):
-    #     data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-    #         [updated_features[operator_index], updated_features[operator_index + 1]]
-    #     )
-    # data = data
-    return None
+    updated_features = np.zeros(shape=[K * 2, all_ax_values[0].shape[-1] + 1])
+    for operator_index in range(0, K * 2, 2):
+        label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+        label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+
+        updated_features[operator_index, :] = np.hstack([label_src, all_ax_values[operator_index]])
+        updated_features[operator_index + 1, :] = np.hstack(
+            [label_dst, all_ax_values[operator_index + 1]])
+
+    data = Data(
+        x=torch.hstack(
+            [torch.tensor([[1], [1]], dtype=torch.float),
+             torch.tensor(np.vstack([subgraph_features[0], subgraph_features[1]]), dtype=torch.float),
+             ]),
+        y=y,
+        device=device
+    )
+
+    for operator_index in range(0, K * 2, 2):
+        data[f'x{operator_index // 2 + 1}'] = torch.tensor(np.vstack(
+            [updated_features[operator_index], updated_features[operator_index + 1]]
+        ), dtype=torch.float)
+    return data
