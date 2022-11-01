@@ -197,40 +197,19 @@ class SEALDataset(InMemoryDataset):
         print(torch.get_num_interop_threads())
         if not self.pairwise:
 
-
-            # for data_dict in neg_list:
-            #     data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
-            #     for key, value in data_dict.items():
-            #         value_copy = cp.deepcopy(value)
-            #         del value
-            #         data[key] = value_copy
-            #     sup_final_list.append(data)
-
             print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
 
-            print("sleeping")
-            time.sleep(10000)
-
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=powers_of_A, data=self.data)
-            sup_final_list = []
-            # for data_dict in pos_list:
-            #     data = Data(x=data_dict.pop('x'), y=data_dict.pop('y'), device='cpu')
-            #     for key, value in data_dict.items():
-            #         value_copy = cp.deepcopy(value)
-            #         del value
-            #         data[key] = value_copy
-            #     sup_final_list.append(data)
-            #
 
-            torch.save(self.collate(sup_final_list), self.processed_paths[0])
+            torch.save(self.collate(neg_list + pos_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
             if self.pos_pairwise:
