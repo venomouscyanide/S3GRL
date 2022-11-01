@@ -11,7 +11,6 @@ from tqdm import tqdm
 
 import scipy.sparse as ssp
 import numpy as np
-import ray
 
 
 class TunedSIGN(SIGN):
@@ -150,35 +149,35 @@ class OptimizedSignOperations:
             pos_data_list.append(data)
         return pos_data_list
 
-    @staticmethod
-    def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+    def get_SuP_prepped_ds(self, link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                            sign_kwargs, rw_kwargs):
         # optimized SuP flow
 
-        print("Start with SuP data prep")
-        args = []
-        for src, dst in link_index.t().tolist():
-            args.append((src, dst))
+        cpu_count = 8
+        values_to_put = [num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y, sign_kwargs,
+                         rw_kwargs]
 
-        cpu_count = 40
-        values_to_put = [num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y, sign_kwargs, rw_kwargs]
-        put_ids = []
-        for value in values_to_put:
-            put_ids.append(ray.put(value))
-
-        print(f"Calculating SuP data using {cpu_count} parallel processes")
+        # put_ids = []
+        # for value in values_to_put:
+        #     put_ids.append(ray.put(value))
+        #
+        # print(f"Calculating SuP data using {cpu_count} parallel processes")
 
         sup_final_list = []
-        result_ids = []
-        start = time.time()
-        for arg in tqdm(args):
-            # sup_final_list.append(data)
-            result_ids.append(get_individual_sup_data.remote(arg[0], arg[1], *put_ids))
-            # result_ids.append(solve_system.remote(K_id, F))
+        # result_ids = []
+        # start = time.time()
+        # for arg in tqdm(args):
+        #     # sup_final_list.append(data)
+        #     result_ids.append(get_individual_sup_data.remote(arg[0], arg[1], *put_ids))
+        #     # result_ids.append(solve_system.remote(K_id, F))
 
-        print("Result id gathered. Waiting")
-        sup_final_list = ray.get(result_ids)
-        print("duration =", time.time() - start)
+        # print("Result id gathered. Waiting")
+        # sup_final_list = ray.get(result_ids)
+        # print("duration =", time.time() - start)
+
+        # queue = torch.multiprocessing.Queue()
+        # for val in values_to_put:
+        #     queue.put(val)
 
         # with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
         #     sup_final_list = []
@@ -186,23 +185,44 @@ class OptimizedSignOperations:
         #         sup_final_list.append(copy.deepcopy(data))
         #         del data
 
-        # print("Preprocessing and calculating raw ops")
-        # with multiprocessing.Pool(processes=cpu_count) as pool:
-        #     sup_raw_data_list = pool.starmap(get_individual_sup_data, args)
+        # list_of_vals = torch.multiprocessing.Manager().list(values_to_put)
 
-        # pool.close()
-        # pool.terminate()
+        print("Start with SuP data prep")
+        values_to_put[6].share_memory_()
+        values_to_put[9]['sparse_adj'].share_memory_()
+        values_to_put[9]['edge_index'].share_memory_()
+        values_to_put[9]['data'].share_memory_()
+        args = []
+        for src, dst in link_index.t().tolist():
+            args.append((src, dst, values_to_put))
+
+        # print("Preprocessing and calculating raw ops")
+        # with torch.multiprocessing.Pool(processes=cpu_count) as pool:
+        #     sup_final_list = pool.starmap(get_individual_sup_data, args)
+
+        with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
+            sup_final_list = []
+            for data in tqdm(pool.starmap(get_individual_sup_data, args)):
+                sup_final_list.append(copy.deepcopy(data))
+                del data
+
+        pool.close()
+        pool.terminate()
         return sup_final_list
 
 
-@ray.remote
-def get(*args):
-    time.sleep(100)
+def get_individual_sup_data(src, dst, list_of_vals):
+    num_hops = list_of_vals[0]
+    A = list_of_vals[1]
+    ratio_per_hop = list_of_vals[2]
+    max_nodes_per_hop = list_of_vals[3]
+    directed = list_of_vals[4]
+    A_csc = list_of_vals[5]
+    x = list_of_vals[6]
+    y = list_of_vals[7]
+    sign_kwargs = list_of_vals[8]
+    rw_kwargs = list_of_vals[9]
 
-
-@ray.remote(num_cpus=28)
-def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
-                            sign_kwargs, rw_kwargs):
     from utils import k_hop_subgraph
     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, node_features=x, y=y,

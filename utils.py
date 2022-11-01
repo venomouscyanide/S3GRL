@@ -464,7 +464,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             sign_k = sign_kwargs['sign_k']
 
             print("Prepping SuP data")
-            sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
+            sup_data_list = OptimizedSignOperations().get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs, rw_kwargs)
             if sign_k == 1:
@@ -488,7 +488,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             return pos_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign']:
             # optimized SuP flow
-            sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
+            sup_data_list = OptimizedSignOperations().get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs, rw_kwargs)
             return sup_data_list
