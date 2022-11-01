@@ -191,7 +191,7 @@ class SEALDataset(InMemoryDataset):
                               self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, self.split,
                               self.args.dataset, self.args.seed)
             exit()
-    
+
         if not self.pairwise:
 
             print("Setting up Positive Subgraphs")
