@@ -186,25 +186,25 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
                          max_nodes_per_hop, node_features=x, y=y,
                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
 
-    u, v, r = ssp.find(tmp[1])
-    u, v = torch.LongTensor(u), torch.LongTensor(v)
-    u = u.to(device)
-    v = v.to(device)
-    adj_t = SparseTensor(row=u, col=v,
-                         sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
-    adj_t.to_device(device)
-    deg = adj_t.sum(dim=1).to(torch.float)
-    deg_inv_sqrt = deg.pow(-0.5)
-    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-    adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
-    subgraph_features = tmp[3]
-    subgraph = adj_t
-
-    assert subgraph_features is not None
-
-    powers_of_a = [subgraph]
-    K = sign_kwargs['sign_k']
+    # u, v, r = ssp.find(tmp[1])
+    # u, v = torch.LongTensor(u), torch.LongTensor(v)
+    # u = u.to(device)
+    # v = v.to(device)
+    # adj_t = SparseTensor(row=u, col=v,
+    #                      sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
+    # adj_t.to_device(device)
+    # deg = adj_t.sum(dim=1).to(torch.float)
+    # deg_inv_sqrt = deg.pow(-0.5)
+    # deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    # adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+    #
+    # subgraph_features = tmp[3]
+    # subgraph = adj_t
+    #
+    # assert subgraph_features is not None
+    #
+    # powers_of_a = [subgraph]
+    # K = sign_kwargs['sign_k']
 
     # for _ in range(K - 1):
     #     powers_of_a.append(subgraph @ powers_of_a[-1])
