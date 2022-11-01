@@ -1344,6 +1344,7 @@ def run_sgrl_with_run_profiling(args, device):
 
 
 if __name__ == '__main__':
+    print(torch.get_num_interop_threads(), torch.get_num_threads())
     # Data settings
     parser = argparse.ArgumentParser(description='OGBL (SEAL)')
     parser.add_argument('--dataset', type=str, default='ogbl-collab')
