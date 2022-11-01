@@ -1466,7 +1466,7 @@ if __name__ == '__main__':
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
     import ray
 
-    ray.init(num_cpus=20, num_gpus=4)
+    ray.init(num_gpus=4)
 
     if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
         # os.environ["OMP_NUM_THREADS"] = "1"
