@@ -992,8 +992,7 @@ def run_sgrl_learning(args, device):
         rw_kwargs.update({'calc_ratio': True})
 
     time_for_prep_start = default_timer()
-    print("Sleeping")
-    time.sleep(10000)
+    
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Train data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
