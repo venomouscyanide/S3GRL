@@ -1,6 +1,5 @@
 from timeit import default_timer
 
-import ray
 import torch
 import shutil
 
@@ -1465,6 +1464,7 @@ if __name__ == '__main__':
 
     if args.sign_type == 'hybrid' and not args.optimize_sign:
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
+    import ray
 
     ray.init(num_cpus=40)
 
