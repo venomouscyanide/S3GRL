@@ -1,4 +1,5 @@
 import copy
+import time
 
 import torch
 from scipy.sparse import dok_matrix
@@ -164,19 +165,18 @@ class OptimizedSignOperations:
 
         print(f"Calculating SuP data using {cpu_count} parallel processes")
 
-        ray.init(num_cpus=cpu_count)
-        # ray.put(args)
         sup_final_list = []
 
         result_ids = []
-
+        start = time.time()
         for arg in args:
             # sup_final_list.append(data)
             result_ids.append(get_individual_sup_data.remote(*arg))
             # result_ids.append(solve_system.remote(K_id, F))
 
-        print(result_ids)
+        print("Result id gathered. Waiting")
         sup_final_list = ray.get(result_ids)
+        print("duration =", time.time() - start)
 
         # with torch.multiprocessing.get_context('spawn').Pool(cpu_count) as pool:
         #     sup_final_list = []
@@ -193,7 +193,7 @@ class OptimizedSignOperations:
         return sup_final_list
 
 
-@ray.remote(num_cpus=32)
+@ray.remote
 def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
     from utils import k_hop_subgraph
