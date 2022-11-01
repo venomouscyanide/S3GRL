@@ -187,7 +187,9 @@ def get_individual_sup_data(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_
                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
 
     u, v, r = ssp.find(tmp[1])
-    u, v = torch.LongTensor(u, device=device), torch.LongTensor(v, device=device)
+    u, v = torch.LongTensor(u), torch.LongTensor(v)
+    u = u.to(device)
+    v = v.to(device)
     adj_t = SparseTensor(row=u, col=v,
                          sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
     adj_t.to_device(device)
