@@ -1459,9 +1459,9 @@ if __name__ == '__main__':
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")
 
     if args.sign_type == 'SuP' and args.optimize_sign and args.m and args.M:
-        os.environ["OMP_NUM_THREADS"] = "1"
-        torch.set_num_interop_threads(1)
-        torch.set_num_threads(1)
+        # os.environ["OMP_NUM_THREADS"] = "1"
+        # torch.set_num_interop_threads(1)
+        # torch.set_num_threads(1)
         print(torch.get_num_interop_threads(), torch.get_num_threads())
         # torch.multiprocessing.set_sharing_strategy('file_system')
         # torch.multiprocessing.set_start_method('spawn', force=True)
