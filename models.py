@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_sort_pool, global_add_pool, global_mean_pool, MLP, \
     global_max_pool
 from torch_geometric.utils import dropout_adj
+from torch_scatter import scatter
 
 
 class GCN(torch.nn.Module):
@@ -326,13 +327,12 @@ class SIGNNet(torch.nn.Module):
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
-                if self.k_heuristic:
-                    self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
-                                   batch_norm=False)
-                else:
+                if not self.k_heuristic:
                     self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
                                    batch_norm=False)
-
+                else:
+                    self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
+                                   batch_norm=False)
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
@@ -347,9 +347,10 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h_a = h_src * h_dst
 
-            # TODO fix this
-            h_k = global_max_pool(h, batch)
-            h = torch.concat([h_a, h_k], dim=-1)
+            h_k_max = global_max_pool(h, batch)
+            # h_k_add = global_max_pool(h, batch)
+            # h_k_mean = global_max_pool(h, batch)
+            h = torch.concat([h_a, h_k_max], dim=-1)
 
         return h
 
