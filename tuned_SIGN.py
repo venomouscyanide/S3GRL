@@ -288,13 +288,12 @@ class OptimizedSignOperations:
 
             # inject label info into AX' ( K * (2 + k_heuristic) X (num_input_feat + 1))
             updated_features = torch.empty(size=[len(k_heuristic_indices) * K, all_ax_values[0].size()[-1] + 1])
-            for operator_index in range(0, len(k_heuristic_indices) * K, 2):
-                label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-                label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+            operator_index = 0
+            while operator_index < len(k_heuristic_indices) * K:
+                label = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+                updated_features[operator_index, :] = torch.hstack([label, all_ax_values[operator_index]])
 
-                updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-                updated_features[operator_index + 1, :] = torch.hstack(
-                    [label_dst, all_ax_values[operator_index + 1]])
+                operator_index += 1
 
             # convert AX' into PyG Data object
             x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(k_heuristic)])
