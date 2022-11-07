@@ -300,7 +300,8 @@ class GIN(torch.nn.Module):
 
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
-                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False):
+                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False,
+                 k_heuristic=0):
         # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
@@ -325,13 +326,26 @@ class SIGNNet(torch.nn.Module):
         self.dropout = dropout
         self.dropedge = dropedge  # not used in SIGN
         self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
+        self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
         _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-        h_src = h[center_indices]
-        h_dst = h[center_indices + 1]
-        h = (h_src * h_dst)
+        if not self.k_heuristic:
+            # batch_size X hidden_dim
+            h_src = h[center_indices]
+            h_dst = h[center_indices + 1]
+            h = (h_src * h_dst)
+        else:
+            # batch_size X hidden_dim
+            # for center in center_indices:
+                # h_src = h[center_indices]
+                # h_dst = h[center_indices + 1]
+                # h_a = h_src * h_dst
+
+            h = global_mean_pool(h, batch)
+                # h = torch.concat([h_a, h_k])
+
         return h
 
     def forward(self, xs, batch):

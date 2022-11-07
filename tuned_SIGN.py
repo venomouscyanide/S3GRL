@@ -230,6 +230,8 @@ class OptimizedSignOperations:
         print("Start with SuP data prep")
 
         k_heuristic = sign_kwargs['k_heuristic']
+        K = sign_kwargs['sign_k']
+        split_indices = np.array_split(range((k_heuristic + 2) * K), 3)
 
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
@@ -252,7 +254,6 @@ class OptimizedSignOperations:
             assert subgraph_features is not None
 
             powers_of_a = [subgraph]
-            K = sign_kwargs['sign_k']
 
             for _ in range(K - 1):
                 powers_of_a.append(subgraph @ powers_of_a[-1])
@@ -306,7 +307,6 @@ class OptimizedSignOperations:
                 y=y,
             )
 
-            split_indices = np.array_split(range(len(k_heuristic_indices) * K), 3)
             for operator_index in range(1, K + 1, 1):
                 data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
 
