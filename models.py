@@ -309,6 +309,11 @@ class SIGNNet(torch.nn.Module):
         self.node_embedding = node_embedding
 
         self.lins = torch.nn.ModuleList()
+
+        self.dropout = dropout
+        self.dropedge = dropedge  # not used in SIGN
+        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
+        self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
         initial_channels = hidden_channels
 
         initial_channels += train_dataset.num_features - hidden_channels
@@ -321,12 +326,13 @@ class SIGNNet(torch.nn.Module):
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
-            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout, batch_norm=False)
+                if self.k_heuristic:
+                    self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
+                                   batch_norm=False)
+                else:
+                    self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
+                                   batch_norm=False)
 
-        self.dropout = dropout
-        self.dropedge = dropedge  # not used in SIGN
-        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
-        self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
@@ -337,14 +343,13 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h = (h_src * h_dst)
         else:
-            # batch_size X hidden_dim
-            # for center in center_indices:
-                # h_src = h[center_indices]
-                # h_dst = h[center_indices + 1]
-                # h_a = h_src * h_dst
+            h_src = h[center_indices]
+            h_dst = h[center_indices + 1]
+            h_a = h_src * h_dst
 
-            h = global_mean_pool(h, batch)
-                # h = torch.concat([h_a, h_k])
+            # TODO fix this
+            h_k = global_max_pool(h, batch)
+            h = torch.concat([h_a, h_k], dim=-1)
 
         return h
 
