@@ -185,13 +185,15 @@ class OptimizedSignOperations:
 
             all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
 
+            # construct A ( (K * 2) X num_nodes)
             for operator_index in range(0, K * 2, 2):
                 all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
                     powers_of_a[operator_index // 2][[0, 1], :].to_dense()
                 )
-
+            # calculate AX ( (K * 2) X num_input_feat)
             all_ax_values = all_a_values @ subgraph_features
 
+            # inject label info into AX' ( (K * 2) X (num_input_feat + 1))
             updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
             for operator_index in range(0, K * 2, 2):
                 label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
@@ -201,6 +203,7 @@ class OptimizedSignOperations:
                 updated_features[operator_index + 1, :] = torch.hstack(
                     [label_dst, all_ax_values[operator_index + 1]])
 
+            # convert AX' into PyG Data object
             data = Data(
                 x=torch.hstack(
                     [torch.tensor([[1], [1]]),
@@ -215,5 +218,98 @@ class OptimizedSignOperations:
                 )
 
             sup_data_list.append(data)
+
+        return sup_data_list
+
+    @staticmethod
+    def get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+                            sign_kwargs, rw_kwargs):
+        # optimized k-heuristic SuP flow
+        from utils import k_hop_subgraph, neighbors
+        sup_data_list = []
+        print("Start with SuP data prep")
+
+        k_heuristic = sign_kwargs['k_heuristic']
+
+        for src, dst in tqdm(link_index.t().tolist()):
+            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                                 max_nodes_per_hop, node_features=x, y=y,
+                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+            csr_subgraph = tmp[1]
+            u, v, r = ssp.find(csr_subgraph)
+            u, v = torch.LongTensor(u), torch.LongTensor(v)
+            adj_t = SparseTensor(row=u, col=v,
+                                 sparse_sizes=(csr_subgraph.shape[0], csr_subgraph.shape[0]))
+
+            deg = adj_t.sum(dim=1).to(torch.float)
+            deg_inv_sqrt = deg.pow(-0.5)
+            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+            subgraph_features = tmp[3]
+            subgraph = adj_t
+
+            assert subgraph_features is not None
+
+            powers_of_a = [subgraph]
+            K = sign_kwargs['sign_k']
+
+            for _ in range(K - 1):
+                powers_of_a.append(subgraph @ powers_of_a[-1])
+
+            # source, target is always 0, 1
+            # one_hop_overlapping_nodes = neighbors({0}, tmp[1]).intersection(neighbors({1}, csr_subgraph))
+            one_hop_union_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
+            one_hop_union_nodes.remove(0)
+            one_hop_union_nodes.remove(1)
+            degree_vals = deg.tolist()
+            degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
+            sorted_one_hop_union = sorted(one_hop_union_nodes, key=lambda x: degree_dict[x], reverse=True)[
+                                   :k_heuristic]
+
+            if len(sorted_one_hop_union) < k_heuristic:
+                sorted_one_hop_union.extend([-1] * (k_heuristic - len(sorted_one_hop_union)))
+            k_heuristic_indices = [0, 1] + sorted_one_hop_union
+
+            all_a_values = torch.empty(size=[len(k_heuristic_indices) * K, subgraph.size(0)])
+            # construct A ( K * (2 + k_heuristic) X num_nodes)
+            for sign_k_val in range(0, K, 1):
+                for each_op_row in range(len(k_heuristic_indices)):
+                    node_id_idx = int(k_heuristic_indices[each_op_row])
+                    if node_id_idx == -1:
+                        val_of_row = torch.zeros(size=(1, powers_of_a[sign_k_val].size(-1)))
+                    else:
+                        val_of_row = powers_of_a[sign_k_val][node_id_idx, :].to_dense()
+                    all_a_values[(sign_k_val * len(k_heuristic_indices)) + each_op_row, :] = val_of_row
+
+            # calculate AX ( K * (2 + k_heuristic) X num_input_feat)
+            all_ax_values = all_a_values @ subgraph_features
+
+            # inject label info into AX' ( K * (2 + k_heuristic) X (num_input_feat + 1))
+            updated_features = torch.empty(size=[len(k_heuristic_indices) * K, all_ax_values[0].size()[-1] + 1])
+            for operator_index in range(0, len(k_heuristic_indices) * K, 2):
+                label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+                label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+
+                updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
+                updated_features[operator_index + 1, :] = torch.hstack(
+                    [label_dst, all_ax_values[operator_index + 1]])
+
+            # convert AX' into PyG Data object
+            x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(k_heuristic)])
+            k_heuristic_indices = [val for val in k_heuristic_indices if val != -1]
+            x_b = subgraph_features[k_heuristic_indices[: len(k_heuristic_indices) + 1]]
+            if len(k_heuristic_indices) < k_heuristic + 2:
+                x_b = torch.vstack([x_b, torch.zeros(size=(k_heuristic - len(one_hop_union_nodes), x_b.size(-1)))])
+            data = Data(
+                x=torch.hstack([x_a, x_b]),
+                y=y,
+            )
+
+            split_indices = np.array_split(range(len(k_heuristic_indices) * K), 3)
+            for operator_index in range(1, K + 1, 1):
+                data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
+
+                sup_data_list.append(data)
 
         return sup_data_list
