@@ -310,6 +310,6 @@ class OptimizedSignOperations:
             for operator_index in range(1, K + 1, 1):
                 data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
 
-                sup_data_list.append(data)
+            sup_data_list.append(data)
 
         return sup_data_list
