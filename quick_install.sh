@@ -6,8 +6,8 @@ conda install pytorch torchvision -c pytorch
 export CC=/opt/homebrew/Cellar/llvm/13.0.1_1/bin/clang # point to the brew clang compiler
 pip install torch-sparse==0.6.13
 pip install torch-scatter torch-sparse  torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
-pip install matplotlib
-pip install ogb
+pip install matplotlib==3.6.1
+pip install ogb==1.3.5
 pip install networkx
 pip install pytorch_memlab
 pip install class_resolver

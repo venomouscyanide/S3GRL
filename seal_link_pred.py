@@ -1431,7 +1431,7 @@ if __name__ == '__main__':
     parser.add_argument('--init_features', type=str, default='',
                         help='Choose to augment node features with either one-hot encoding or their degree values',
                         choices=['degree', 'eye', 'n2v'])
-    parser.add_argument('--n2v_dim', type=int, default=128)
+    parser.add_argument('--n2v_dim', type=int, default=256)
     parser.add_argument('--k_heuristic', type=int, default=0)
 
     args = parser.parse_args()
