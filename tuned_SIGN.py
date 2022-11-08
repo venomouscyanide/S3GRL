@@ -300,9 +300,9 @@ class OptimizedSignOperations:
 
             # convert AX' into PyG Data object
             x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(k_heuristic)])
-            k_heuristic_indices = [val for val in k_heuristic_indices if val != -1]
-            x_b = subgraph_features[k_heuristic_indices[: len(k_heuristic_indices) + 1]]
-            if len(k_heuristic_indices) < k_heuristic + 2:
+            updated_k_heuristic_indices = [val for val in k_heuristic_indices if val != -1]
+            x_b = subgraph_features[updated_k_heuristic_indices]
+            if len(updated_k_heuristic_indices) < k_heuristic + 2:
                 x_b = torch.vstack([x_b, torch.zeros(size=(k_heuristic - len(one_hop_union_nodes), x_b.size(-1)))])
             data = Data(
                 x=torch.hstack([x_a, x_b]),
