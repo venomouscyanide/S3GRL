@@ -327,12 +327,12 @@ class SIGNNet(torch.nn.Module):
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
-                if not self.k_heuristic:
-                    self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
-                                   batch_norm=False)
-                else:
-                    self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
-                                   batch_norm=False)
+        if not self.k_heuristic:
+            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
+                           batch_norm=False)
+        else:
+            self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
+                           batch_norm=False)
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
