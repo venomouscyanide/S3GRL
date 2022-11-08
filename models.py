@@ -347,10 +347,10 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h_a = h_src * h_dst
 
-            h_k_max = global_max_pool(h, batch)
-            # h_k_add = global_max_pool(h, batch)
-            # h_k_mean = global_max_pool(h, batch)
-            h = torch.concat([h_a, h_k_max], dim=-1)
+            # h_k_max = global_max_pool(h, batch)
+            # h_k_add = global_add_pool(h, batch)
+            h_k_mean = global_mean_pool(h, batch)
+            h = torch.concat([h_a, h_k_mean], dim=-1)
 
         return h
 
