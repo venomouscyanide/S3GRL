@@ -127,9 +127,9 @@ class SEALDataset(InMemoryDataset):
         cached_pos_rws = cached_neg_rws = None
         if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "SuP":
             # currently only cache for flows involving SuP + Optimized using the SIGN + ScaLed flow
-            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, device, self.rw_kwargs['m'],
+            cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.device, self.rw_kwargs['m'],
                                              self.rw_kwargs['M'])
-            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, device, self.rw_kwargs['m'],
+            cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.device, self.rw_kwargs['m'],
                                              self.rw_kwargs['M'])
 
         rw_kwargs = {
