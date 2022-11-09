@@ -387,7 +387,7 @@
       }
     },
 
-    "NS_ScaLed_k1_heu_SuP_Opt": {
+    "NS_ScaLed_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -773,7 +773,7 @@
       }
     },
 
-    "Power_ScaLed_k1_heu_SuP_Opt": {
+    "Power_ScaLed_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1159,7 +1159,7 @@
       }
     },
 
-    "Router_ScaLed_k1_heu_SuP_Opt": {
+    "Router_ScaLed_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
