@@ -1,7 +1,7 @@
 {
   "datasets": {
 
-    "USAir_ScaLed_k2_heu_SuP_Opt": {
+    "USAir_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -78,7 +78,7 @@
         "k_heuristic": 2
       }
     },
-    "USAir_ScaLed_k5_heu_SuP_Opt": {
+    "USAir_k5_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -155,7 +155,7 @@
         "k_heuristic": 5
       }
     },
-    "USAir_ScaLed_k10_heu_SuP_Opt": {
+    "USAir_k10_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -232,7 +232,7 @@
         "k_heuristic": 10
       }
     },
-    "USAir_ScaLed_k15_heu_SuP_Opt": {
+    "USAir_k15_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -309,7 +309,7 @@
         "k_heuristic": 15
       }
     },
-    "USAir_ScaLed_k20_heu_SuP_Opt": {
+    "USAir_k20_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -387,7 +387,7 @@
       }
     },
 
-    "NS_ScaLed_k2_heu_SuP_Opt": {
+    "NS_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -464,7 +464,7 @@
         "k_heuristic": 2
       }
     },
-    "NS_ScaLed_k5_heu_SuP_Opt": {
+    "NS_k5_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -541,7 +541,7 @@
         "k_heuristic": 5
       }
     },
-    "NS_ScaLed_k10_heu_SuP_Opt": {
+    "NS_k10_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -618,7 +618,7 @@
         "k_heuristic": 10
       }
     },
-    "NS_ScaLed_k15_heu_SuP_Opt": {
+    "NS_k15_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -695,7 +695,7 @@
         "k_heuristic": 15
       }
     },
-    "NS_ScaLed_k20_heu_SuP_Opt": {
+    "NS_k20_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -773,7 +773,7 @@
       }
     },
 
-    "Power_ScaLed_k2_heu_SuP_Opt": {
+    "Power_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -850,7 +850,7 @@
         "k_heuristic": 2
       }
     },
-    "Power_ScaLed_k5_heu_SuP_Opt": {
+    "Power_k5_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -927,7 +927,7 @@
         "k_heuristic": 5
       }
     },
-    "Power_ScaLed_k10_heu_SuP_Opt": {
+    "Power_k10_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1004,7 +1004,7 @@
         "k_heuristic": 10
       }
     },
-    "Power_ScaLed_k15_heu_SuP_Opt": {
+    "Power_k15_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1081,7 +1081,7 @@
         "k_heuristic": 15
       }
     },
-    "Power_ScaLed_k20_heu_SuP_Opt": {
+    "Power_k20_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1159,7 +1159,7 @@
       }
     },
 
-    "Router_ScaLed_k2_heu_SuP_Opt": {
+    "Router_k2_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1236,7 +1236,7 @@
         "k_heuristic": 2
       }
     },
-    "Router_ScaLed_k5_heu_SuP_Opt": {
+    "Router_k5_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1313,7 +1313,7 @@
         "k_heuristic": 5
       }
     },
-    "Router_ScaLed_k10_heu_SuP_Opt": {
+    "Router_k10_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1390,7 +1390,7 @@
         "k_heuristic": 10
       }
     },
-    "Router_ScaLed_k15_heu_SuP_Opt": {
+    "Router_k15_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1467,7 +1467,7 @@
         "k_heuristic": 15
       }
     },
-    "Router_ScaLed_k20_heu_SuP_Opt": {
+    "Router_k20_heu_SuP_Opt": {
       "ds_params": {
         "runs": 5,
         "seeds": [
