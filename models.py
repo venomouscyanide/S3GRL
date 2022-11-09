@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_sort_pool, global_add_pool, global_mean_pool, MLP, \
     global_max_pool
 from torch_geometric.utils import dropout_adj
+from torch_scatter import scatter
 
 
 class GCN(torch.nn.Module):
@@ -300,7 +301,8 @@ class GIN(torch.nn.Module):
 
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
-                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False):
+                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False,
+                 k_heuristic=0):
         # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
@@ -308,6 +310,11 @@ class SIGNNet(torch.nn.Module):
         self.node_embedding = node_embedding
 
         self.lins = torch.nn.ModuleList()
+
+        self.dropout = dropout
+        self.dropedge = dropedge  # not used in SIGN
+        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
+        self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
         initial_channels = hidden_channels
 
         initial_channels += train_dataset.num_features - hidden_channels
@@ -320,18 +327,31 @@ class SIGNNet(torch.nn.Module):
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
-            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout, batch_norm=False)
-
-        self.dropout = dropout
-        self.dropedge = dropedge  # not used in SIGN
-        self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
+        if not self.k_heuristic:
+            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
+                           batch_norm=False)
+        else:
+            self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
+                           batch_norm=False)
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
         _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-        h_src = h[center_indices]
-        h_dst = h[center_indices + 1]
-        h = (h_src * h_dst)
+        if not self.k_heuristic:
+            # batch_size X hidden_dim
+            h_src = h[center_indices]
+            h_dst = h[center_indices + 1]
+            h = (h_src * h_dst)
+        else:
+            h_src = h[center_indices]
+            h_dst = h[center_indices + 1]
+            h_a = h_src * h_dst
+
+            # h_k_max = global_max_pool(h, batch)
+            # h_k_add = global_add_pool(h, batch)
+            h_k_mean = global_mean_pool(h, batch)
+            h = torch.concat([h_a, h_k_mean], dim=-1)
+
         return h
 
     def forward(self, xs, batch):

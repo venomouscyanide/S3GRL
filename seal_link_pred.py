@@ -154,6 +154,7 @@ class SEALDataset(InMemoryDataset):
                 "use_feature": self.use_feature,
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
+                "k_heuristic": self.args.k_heuristic
             })
 
             if not self.rw_kwargs.get('m'):
@@ -1183,7 +1184,7 @@ def run_sgrl_learning(args, device):
                 sign_k = args.sign_k * 2 - 1
             model = SIGNNet(args.hidden_channels, sign_k, max_z, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
-                            dropout=args.dropout).to(device)
+                            dropout=args.dropout, k_heuristic=args.k_heuristic).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:
@@ -1430,7 +1431,8 @@ if __name__ == '__main__':
     parser.add_argument('--init_features', type=str, default='',
                         help='Choose to augment node features with either one-hot encoding or their degree values',
                         choices=['degree', 'eye', 'n2v'])
-    parser.add_argument('--n2v_dim', type=int, default=128)
+    parser.add_argument('--n2v_dim', type=int, default=256)
+    parser.add_argument('--k_heuristic', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -1440,7 +1442,7 @@ if __name__ == '__main__':
     seed_everything(args.seed)
 
     if args.model == "SIGN" and not args.init_features and not args.use_feature:
-        raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I and Deg.")
+        raise Exception("Need to init features to have SIGN work. (X) cannot be None. Choose bet. I, Deg and n2v.")
 
     if args.model == "SIGN" and any([args.dynamic_train, args.dynamic_test, args.dynamic_val]):
         raise Exception("SIGN does not support Dynamic Datasets (yet).")

@@ -462,6 +462,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             # ie; the operators per model you want. If you need 5 in total, use sign_k as 3. This is confusing,
             # but, works.
             # optimized hybrid (PoS + SuP) flow. We do not support non-optimized hybrid flow.
+            # SuP in hybrid is currently only vanilla SuP and not k-heuristic SuP.
             sign_k = sign_kwargs['sign_k']
 
             print("Prepping SuP data")
@@ -487,11 +488,17 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             # optimized PoS flow
             pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
             return pos_data_list
-        elif not powers_of_A and sign_kwargs['optimize_sign']:
+        elif not powers_of_A and sign_kwargs['optimize_sign'] and not sign_kwargs['k_heuristic']:
             # optimized SuP flow
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs, rw_kwargs)
+            return sup_data_list
+        elif not powers_of_A and sign_kwargs['optimize_sign'] and sign_kwargs['k_heuristic']:
+            # optimized k-heuristic SuP flow
+            sup_data_list = OptimizedSignOperations.get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
+                                                                        max_nodes_per_hop, directed, A_csc, x, y,
+                                                                        sign_kwargs, rw_kwargs)
             return sup_data_list
         elif not sign_kwargs['optimize_sign']:
             # SIGN + SEAL flow; includes both SuP and PoS flows
