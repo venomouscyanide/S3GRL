@@ -234,7 +234,7 @@ class OptimizedSignOperations:
 
         k_heuristic = sign_kwargs['k_heuristic']
         K = sign_kwargs['sign_k']
-        split_indices = np.array_split(range((k_heuristic + 2) * K), 3)
+        split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
