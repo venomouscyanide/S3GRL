@@ -262,13 +262,13 @@ class OptimizedSignOperations:
                 powers_of_a.append(subgraph @ powers_of_a[-1])
 
             # source, target is always 0, 1
-            # one_hop_overlapping_nodes = neighbors({0}, tmp[1]).intersection(neighbors({1}, csr_subgraph))
-            one_hop_union_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
-            one_hop_union_nodes.remove(0)
-            one_hop_union_nodes.remove(1)
+            one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
+            # one_hop_union_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
+            one_hop_nodes.remove(0)
+            one_hop_nodes.remove(1)
             degree_vals = deg.tolist()
             degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
-            sorted_one_hop_union = sorted(one_hop_union_nodes, key=lambda x: degree_dict[x], reverse=True)[
+            sorted_one_hop_union = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
                                    :k_heuristic]
 
             if len(sorted_one_hop_union) < k_heuristic:
@@ -303,7 +303,7 @@ class OptimizedSignOperations:
             updated_k_heuristic_indices = [val for val in k_heuristic_indices if val != -1]
             x_b = subgraph_features[updated_k_heuristic_indices]
             if len(updated_k_heuristic_indices) < k_heuristic + 2:
-                x_b = torch.vstack([x_b, torch.zeros(size=(k_heuristic - len(one_hop_union_nodes), x_b.size(-1)))])
+                x_b = torch.vstack([x_b, torch.zeros(size=(k_heuristic - len(one_hop_nodes), x_b.size(-1)))])
             data = Data(
                 x=torch.hstack([x_a, x_b]),
                 y=y,
