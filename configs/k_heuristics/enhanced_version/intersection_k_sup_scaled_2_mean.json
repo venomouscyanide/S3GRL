@@ -75,8 +75,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "NS_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -154,8 +154,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "Power_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -233,8 +233,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "Celegans_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -312,8 +312,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "Router_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -391,8 +391,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "PB_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -470,8 +470,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "Ecoli_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -549,8 +549,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     },
     "Yeast_ScaLed_k_heu_SuP_Opt_inter_mean": {
@@ -628,8 +628,8 @@
         "init_features": "n2v",
         "n2v_dim": 128,
         "k_heuristic": 2,
-        "k_pool_strategy": "intersection",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "intersection"
       }
     }
   }

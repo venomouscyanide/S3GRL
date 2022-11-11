@@ -75,8 +75,8 @@
         "init_features": "",
         "n2v_dim": -1,
         "k_heuristic": 10,
-        "k_pool_strategy": "union",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "union"
       }
     },
     "Citeseer_ScaLed_k_heu_SuP_Opt_union_mean": {
@@ -154,8 +154,8 @@
         "init_features": "",
         "n2v_dim": -1,
         "k_heuristic": 10,
-        "k_pool_strategy": "union",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "union"
       }
     },
     "pubmed_ScaLed_k_heu_SuP_Opt_union_mean": {
@@ -233,8 +233,8 @@
         "init_features": "",
         "n2v_dim": -1,
         "k_heuristic": 10,
-        "k_pool_strategy": "union",
-        "k_node_set_strategy": "mean"
+        "k_pool_strategy": "mean",
+        "k_node_set_strategy": "union"
       }
     }
   }
