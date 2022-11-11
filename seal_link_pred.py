@@ -1185,7 +1185,8 @@ def run_sgrl_learning(args, device):
                 sign_k = args.sign_k * 2 - 1
             model = SIGNNet(args.hidden_channels, sign_k, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
-                            dropout=args.dropout, k_heuristic=args.k_heuristic, k_pool_strategy=args.k_pool_strategy).to(device)
+                            dropout=args.dropout, k_heuristic=args.k_heuristic,
+                            k_pool_strategy=args.k_pool_strategy).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:
@@ -1435,7 +1436,8 @@ if __name__ == '__main__':
     parser.add_argument('--n2v_dim', type=int, default=256)
 
     parser.add_argument('--k_heuristic', type=int, default=0)
-    parser.add_argument('--k_node_set_strategy', type=str, default="", required=False, choices=['union', 'intersection'])
+    parser.add_argument('--k_node_set_strategy', type=str, default="", required=False,
+                        choices=['union', 'intersection'])
     parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
 
     args = parser.parse_args()

@@ -47,7 +47,7 @@ class ManualTuner:
                                            train_gae=False, base_gae="", dataset_stats=False, seed=seed,
                                            dataset_split_num=1, train_n2v=False, train_mf=False, sign_k=3, sign_type='',
                                            pool_operatorwise=False, optimize_sign=False, init_features='', n2v_dim=256,
-                                           k_heuristic=0)
+                                           k_heuristic=0, k_pool_strategy="", k_node_set_strategy="")
 
         run_sgrl_learning(scaled_parser, device)
 

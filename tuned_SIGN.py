@@ -262,9 +262,13 @@ class OptimizedSignOperations:
                 powers_of_a.append(subgraph @ powers_of_a[-1])
 
             # source, target is always 0, 1
-            one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
-            # one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
-
+            strat = sign_kwargs['k_node_set_strategy']
+            if strat == 'union':
+                one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
+            elif strat == 'intersection':
+                one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
+            else:
+                raise NotImplementedError(f"check strat {strat}")
             if 0 in one_hop_nodes:
                 one_hop_nodes.remove(0)
             if 1 in one_hop_nodes:
