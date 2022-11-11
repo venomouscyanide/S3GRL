@@ -263,9 +263,13 @@ class OptimizedSignOperations:
 
             # source, target is always 0, 1
             one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
-            # one_hop_union_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
-            one_hop_nodes.remove(0)
-            one_hop_nodes.remove(1)
+            # one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
+
+            if 0 in one_hop_nodes:
+                one_hop_nodes.remove(0)
+            if 1 in one_hop_nodes:
+                one_hop_nodes.remove(1)
+
             degree_vals = deg.tolist()
             degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
             sorted_one_hop_union = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[

@@ -1182,7 +1182,7 @@ def run_sgrl_learning(args, device):
             sign_k = args.sign_k
             if args.sign_type == 'hybrid':
                 sign_k = args.sign_k * 2 - 1
-            model = SIGNNet(args.hidden_channels, sign_k, max_z, train_dataset,
+            model = SIGNNet(args.hidden_channels, sign_k, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
                             dropout=args.dropout, k_heuristic=args.k_heuristic).to(device)
 
@@ -1432,7 +1432,10 @@ if __name__ == '__main__':
                         help='Choose to augment node features with either one-hot encoding or their degree values',
                         choices=['degree', 'eye', 'n2v'])
     parser.add_argument('--n2v_dim', type=int, default=256)
+
     parser.add_argument('--k_heuristic', type=int, default=0)
+    parser.add_argument('--k_node_set_strategy', type=str, default="", required=False, choices=['union', 'intersection'])
+    parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
 
     args = parser.parse_args()
 

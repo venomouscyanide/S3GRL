@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_sort_pool, global_add_pool, global_mean_pool, MLP, \
     global_max_pool
 from torch_geometric.utils import dropout_adj
-from torch_scatter import scatter
 
 
 class GCN(torch.nn.Module):
@@ -300,9 +299,8 @@ class GIN(torch.nn.Module):
 
 
 class SIGNNet(torch.nn.Module):
-    def __init__(self, hidden_channels, num_layers, max_z, train_dataset,
-                 use_feature=False, node_embedding=None, dropout=0.5, dropedge=0.0, pool_operatorwise=False,
-                 k_heuristic=0):
+    def __init__(self, hidden_channels, num_layers, train_dataset, use_feature=False, node_embedding=None, dropout=0.5,
+                 pool_operatorwise=False, k_heuristic=0):
         # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
@@ -312,7 +310,6 @@ class SIGNNet(torch.nn.Module):
         self.lins = torch.nn.ModuleList()
 
         self.dropout = dropout
-        self.dropedge = dropedge  # not used in SIGN
         self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
         self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
         initial_channels = hidden_channels
@@ -349,7 +346,13 @@ class SIGNNet(torch.nn.Module):
 
             # h_k_max = global_max_pool(h, batch)
             # h_k_add = global_add_pool(h, batch)
-            h_k_mean = global_mean_pool(h, batch)
+
+            mask = torch.ones(size=(batch.size()), dtype=torch.bool)
+            mask[center_indices] = False
+            mask[center_indices + 1] = False
+            trimmed_batch = batch[mask]
+
+            h_k_mean = global_mean_pool(h[mask], trimmed_batch)
             h = torch.concat([h_a, h_k_mean], dim=-1)
 
         return h
