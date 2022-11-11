@@ -276,12 +276,12 @@ class OptimizedSignOperations:
 
             degree_vals = deg.tolist()
             degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
-            sorted_one_hop_union = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
+            sorted_one_hop = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
                                    :k_heuristic]
 
-            if len(sorted_one_hop_union) < k_heuristic:
-                sorted_one_hop_union.extend([-1] * (k_heuristic - len(sorted_one_hop_union)))
-            k_heuristic_indices = [0, 1] + sorted_one_hop_union
+            if len(sorted_one_hop) < k_heuristic:
+                sorted_one_hop.extend([-1] * (k_heuristic - len(sorted_one_hop)))
+            k_heuristic_indices = [0, 1] + sorted_one_hop
 
             all_a_values = torch.empty(size=[len(k_heuristic_indices) * K, subgraph.size(0)])
             # construct A ( K * (2 + k_heuristic) X num_nodes)
