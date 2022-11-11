@@ -300,7 +300,7 @@ class GIN(torch.nn.Module):
 
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, train_dataset, use_feature=False, node_embedding=None, dropout=0.5,
-                 pool_operatorwise=False, k_heuristic=0):
+                 pool_operatorwise=False, k_heuristic=0, k_pool_strategy=""):
         # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
@@ -312,6 +312,8 @@ class SIGNNet(torch.nn.Module):
         self.dropout = dropout
         self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
         self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
+        self.k_pool_strategy = k_pool_strategy  # k-heuristic pool strat
+        self.hidden_channels = hidden_channels
         initial_channels = hidden_channels
 
         initial_channels += train_dataset.num_features - hidden_channels
@@ -328,7 +330,13 @@ class SIGNNet(torch.nn.Module):
             self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
                            batch_norm=False)
         else:
-            self.mlp = MLP([hidden_channels * (num_layers + 1) * 2, hidden_channels, 1], dropout=dropout,
+            if self.k_pool_strategy == "mean":
+                channels = 2
+            elif self.k_pool_strategy == "concat":
+                channels = 1 + self.k_heuristic
+            else:
+                raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
+            self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=False)
 
     def _centre_pool_helper(self, batch, h):
@@ -344,16 +352,20 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h_a = h_src * h_dst
 
-            # h_k_max = global_max_pool(h, batch)
-            # h_k_add = global_add_pool(h, batch)
-
             mask = torch.ones(size=(batch.size()), dtype=torch.bool)
             mask[center_indices] = False
             mask[center_indices + 1] = False
             trimmed_batch = batch[mask]
 
-            h_k_mean = global_mean_pool(h[mask], trimmed_batch)
-            h = torch.concat([h_a, h_k_mean], dim=-1)
+            if self.k_pool_strategy == 'mean':
+                h_k_mean = global_mean_pool(h[mask], trimmed_batch)
+
+                h = torch.concat([h_a, h_k_mean], dim=-1)
+            elif self.k_pool_strategy == 'concat':
+                h_k = h[mask].reshape(shape=(
+                center_indices.shape[0], self.hidden_channels * self.k_heuristic)
+                )
+                h = torch.concat([h_a, h_k], dim=-1)
 
         return h
 

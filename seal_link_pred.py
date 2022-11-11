@@ -154,7 +154,8 @@ class SEALDataset(InMemoryDataset):
                 "use_feature": self.use_feature,
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
-                "k_heuristic": self.args.k_heuristic
+                "k_heuristic": self.args.k_heuristic,
+                "k_node_set_strategy": self.args.k_node_set_strategy,
             })
 
             if not self.rw_kwargs.get('m'):
@@ -1184,7 +1185,7 @@ def run_sgrl_learning(args, device):
                 sign_k = args.sign_k * 2 - 1
             model = SIGNNet(args.hidden_channels, sign_k, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
-                            dropout=args.dropout, k_heuristic=args.k_heuristic).to(device)
+                            dropout=args.dropout, k_heuristic=args.k_heuristic, k_pool_strategy=args.k_pool_strategy).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:
