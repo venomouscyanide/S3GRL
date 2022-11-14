@@ -154,7 +154,8 @@ class SEALDataset(InMemoryDataset):
                 "use_feature": self.use_feature,
                 "sign_type": sign_type,
                 "optimize_sign": self.args.optimize_sign,
-                "k_heuristic": self.args.k_heuristic
+                "k_heuristic": self.args.k_heuristic,
+                "k_node_set_strategy": self.args.k_node_set_strategy,
             })
 
             if not self.rw_kwargs.get('m'):
@@ -1182,9 +1183,10 @@ def run_sgrl_learning(args, device):
             sign_k = args.sign_k
             if args.sign_type == 'hybrid':
                 sign_k = args.sign_k * 2 - 1
-            model = SIGNNet(args.hidden_channels, sign_k, max_z, train_dataset,
+            model = SIGNNet(args.hidden_channels, sign_k, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
-                            dropout=args.dropout, k_heuristic=args.k_heuristic).to(device)
+                            dropout=args.dropout, k_heuristic=args.k_heuristic,
+                            k_pool_strategy=args.k_pool_strategy).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:
@@ -1432,7 +1434,11 @@ if __name__ == '__main__':
                         help='Choose to augment node features with either one-hot encoding or their degree values',
                         choices=['degree', 'eye', 'n2v'])
     parser.add_argument('--n2v_dim', type=int, default=256)
+
     parser.add_argument('--k_heuristic', type=int, default=0)
+    parser.add_argument('--k_node_set_strategy', type=str, default="", required=False,
+                        choices=['union', 'intersection'])
+    parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
 
     args = parser.parse_args()
 
