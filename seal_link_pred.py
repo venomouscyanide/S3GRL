@@ -39,7 +39,6 @@ from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
-from n2v_prep import node_2_vec_pretrain
 from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
 from ogbl_baselines.mlp_on_n2v import train_n2v_emb
@@ -865,7 +864,9 @@ def run_sgrl_learning(args, device):
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
-        data.x = node_2_vec_pretrain(data.edge_index, data.num_nodes, args.n2v_dim, device)
+        print("load ", f"./Emb/{args.dataset}_64.pt")
+        data.x = torch.load(f"./Emb/{args.dataset}_{args.hidden_channels}.pt",
+                             map_location=torch.device('cpu')).detach()
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
