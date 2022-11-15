@@ -18,3 +18,4 @@ pip install scipy==1.9.3
 pip uninstall grpcio; conda install grpcio=1.43.0
 pip install ray==2.1.0
 pip install tabulate==0.9.0
+pip install tensorboardX==2.5.1 
