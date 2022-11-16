@@ -30,7 +30,7 @@ parser.add_argument('--split_test_ratio', type=float, default=0.1)
 parser.add_argument('--use_deg', action='store_true')
 parser.add_argument('--use_one', action='store_true')
 parser.add_argument('--use_nodeid', action='store_true')
-parser.add_argument('--hidden_channels', default=128)
+parser.add_argument('--hidden_channels', default=256)
 # Train settings
 parser.add_argument('--repeat', type=int, default=1)
 parser.add_argument('--path', type=str, default="Emb/")
