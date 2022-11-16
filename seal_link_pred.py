@@ -892,7 +892,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
-        data.x = node_2_vec_pretrain(data.edge_index, data.num_nodes, args.n2v_dim, device)
+        data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device)
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
