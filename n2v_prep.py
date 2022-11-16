@@ -1,4 +1,6 @@
 # Adapted from WalkPool codebase: https://github.com/DaDaCheng/WalkPooling/blob/main/software/node2vec.py
+from pathlib import Path
+
 import torch
 from torch_geometric.nn import Node2Vec
 from tqdm import tqdm
@@ -7,10 +9,10 @@ import os
 
 def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device):
     if not os.path.exists('Emb'):
-        os.makedirs('Emb')
+        os.makedirs(f'{Path.home()}/Emb')
 
-    if os.path.exists(f"Emb/{dataset}_{emb_dim}_seed{seed}.pt"):
-        return torch.load(f"Emb/{dataset}_{emb_dim}_seed{seed}.pt", map_location=torch.device('cpu')).detach()
+    if os.path.exists(f"{Path.home()}/Emb/{dataset}_{emb_dim}_seed{seed}.pt"):
+        return torch.load(f"{Path.home()}/Emb/{dataset}_{emb_dim}_seed{seed}.pt", map_location=torch.device('cpu')).detach()
 
     n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emb_dim, walk_length=20,
                    context_size=10, walks_per_node=10,
@@ -38,4 +40,5 @@ def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device):
     torch.cuda.empty_cache()
 
     print('Finish prepping n2v embeddings')
-    torch.save(output, f"Emb/{dataset}_{emb_dim}_seed{seed}.pt")
+    torch.save(output, f"{Path.home()}/Emb/{dataset}_{emb_dim}_seed{seed}.pt")
+    return output
