@@ -16,7 +16,14 @@ from utils import do_edge_split
 
 parser = argparse.ArgumentParser(description='')
 # Dataset settings
-parser.add_argument('--dataset', type=str, default='ppi_bp')
+parser.add_argument('--dataset', type=str, default='ogbl-collab')
+parser.add_argument('--fast_split', action='store_true',
+                    help="for large custom datasets (not OGB), do a fast data split")
+parser.add_argument('--neg_ratio', type=int, default=1,
+                    help="Compile neg_ratio times the positive samples for compiling neg_samples"
+                         "(only for Training data)")
+parser.add_argument('--split_val_ratio', type=float, default=0.05)
+parser.add_argument('--split_test_ratio', type=float, default=0.1)
 # Node feature settings.
 # deg means use node degree. one means use homogeneous embeddings.
 # nodeid means use pretrained node embeddings in ./Emb
@@ -33,6 +40,7 @@ parser.add_argument('--use_seed', action='store_true')
 parser.add_argument('--seed', type=int, default=0)
 
 args = parser.parse_args()
+
 
 def node_2_vec_pretrain(edge_index, num_nodes, emb_dim, device):
     n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emb_dim, walk_length=20,
@@ -61,7 +69,7 @@ def node_2_vec_pretrain(edge_index, num_nodes, emb_dim, device):
     torch.cuda.empty_cache()
 
     print('Finish prepping n2v embeddings')
-    torch.save(output, f"{args.path}{args.name}_{emb_dim}.pt")
+    torch.save(output, f"{args.path}{args.dataset}_{emb_dim}.pt")
 
 
 if args.dataset.startswith('ogbl'):
@@ -92,6 +100,7 @@ elif args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
     data = dataset[0]
     data.edge_index = split_edge['train']['edge'].t()
     import networkx as nx
+
     G = nx.Graph()
     G.add_edges_from(data.edge_index.T.detach().numpy())
 elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
@@ -101,6 +110,7 @@ elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli
     edges = read_edges(file_name, node_id_mapping)
 
     import networkx as nx
+
     G = nx.Graph(edges)
     edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
     data = Data(edge_index=edges_coo.view(2, -1))
@@ -110,6 +120,7 @@ elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli
     split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
                                test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
     data.edge_index = split_edge['train']['edge'].t()
+
 
     # backward compatibility
     class DummyDataset:
@@ -130,4 +141,4 @@ else:
 
 device = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu')
 
-node_2_vec_pretrain(data.edge_index, data.num_nodes, args.hidden_channels, args.device)
+node_2_vec_pretrain(data.edge_index, data.num_nodes, args.hidden_channels, device)
