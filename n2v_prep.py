@@ -4,6 +4,7 @@ from torch_geometric.nn import Node2Vec
 from tqdm import tqdm
 import os
 
+
 def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device):
     if not os.path.exists('Emb'):
         os.makedirs('Emb')
