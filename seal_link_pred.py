@@ -865,7 +865,7 @@ def run_sgrl_learning(args, device):
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
         print("load ", f"./Emb/{args.dataset}_64.pt")
-        data.x = torch.load(f"Emb/{args.dataset}_{args.hidden_channels}.pt",
+        data.x = torch.load(f"Emb/{args.dataset}_{args.hidden_channels}_seed{args.seed}.pt",
                              map_location=torch.device('cpu')).detach()
 
     if args.dataset.startswith('ogbl-citation'):

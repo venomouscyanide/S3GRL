@@ -9,6 +9,7 @@ from tqdm import tqdm
 from data_utils import read_label, read_edges
 from torch_geometric.utils import to_undirected
 from ogb.linkproppred import PygLinkPropPredDataset
+from torch_geometric import seed_everything
 
 import os.path as osp
 import os
@@ -30,17 +31,18 @@ parser.add_argument('--split_test_ratio', type=float, default=0.1)
 parser.add_argument('--use_deg', action='store_true')
 parser.add_argument('--use_one', action='store_true')
 parser.add_argument('--use_nodeid', action='store_true')
-parser.add_argument('--hidden_channels', default=256)
+parser.add_argument('--hidden_channels', type=int, default=256)
 # Train settings
 parser.add_argument('--repeat', type=int, default=1)
 parser.add_argument('--path', type=str, default="Emb/")
 parser.add_argument('--name', type=str, default="opt")
 parser.add_argument('--device', type=int, default=0)
 parser.add_argument('--use_seed', action='store_true')
-parser.add_argument('--seed', type=int, default=0)
+parser.add_argument('--seed', type=int, default=1)
 
 args = parser.parse_args()
 
+seed_everything(args.seed)
 
 def node_2_vec_pretrain(edge_index, num_nodes, emb_dim, device):
     n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emb_dim, walk_length=20,
@@ -69,7 +71,7 @@ def node_2_vec_pretrain(edge_index, num_nodes, emb_dim, device):
     torch.cuda.empty_cache()
 
     print('Finish prepping n2v embeddings')
-    torch.save(output, f"{args.path}{args.dataset}_{emb_dim}.pt")
+    torch.save(output, f"{args.path}{args.dataset}_{emb_dim}_seed{args.seed}.pt")
 
 
 if args.dataset.startswith('ogbl'):
