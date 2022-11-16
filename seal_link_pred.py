@@ -1,5 +1,7 @@
+from pathlib import Path
 from timeit import default_timer
 
+import ray
 import torch
 import shutil
 
@@ -11,6 +13,7 @@ import os.path as osp
 from shutil import copy
 import copy as cp
 
+from ray import tune
 from torch_geometric import seed_everything
 from torch_geometric.loader import DataLoader
 from torch_geometric.profile import profileit, timeit
@@ -732,7 +735,25 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     return results
 
 
-def run_sgrl_learning(args, device):
+def run_sgrl_learning_with_ray(config, hyper_param_class, device):
+    args = hyper_param_class
+    print(config)
+    if config:
+        print("Using override values for hypertuning")
+        # override defaults for each hyperparam tuning run
+        args.hidden_channels = config['hidden_channels']
+        args.batch_size = config['batch_size']
+        args.num_hops = config['num_hops']
+        args.lr = config['lr']
+        args.dropout = config['dropout']
+        args.sign_k = config['sign_k']
+        args.n2v_dim = config['n2v_dim']
+        args.k_heuristic = config['k_heuristic']
+
+    run_sgrl_learning(args, device, hypertuning=True)
+
+
+def run_sgrl_learning(args, device, hypertuning=False):
     if args.save_appendix == '':
         args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S") + f'_seed{args.seed}'
         if args.m and args.M:
@@ -799,7 +820,13 @@ def run_sgrl_learning(args, device):
         G.add_edges_from(data.edge_index.T.detach().numpy())
     elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
         # We consume the dataset split index as well
-        file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
+        if os.path.exists('data'):
+            file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
+        else:
+            # we consume user path
+            file_name = os.path.join(str(Path.home()), 'ExtendoScaLed', 'data', 'link_prediction', args.dataset.lower())
+            if not os.path.exists(file_name):
+                raise FileNotFoundError("Clone repo in your user path")
         node_id_mapping = read_label(file_name)
         edges = read_edges(file_name, node_id_mapping)
 
@@ -865,7 +892,8 @@ def run_sgrl_learning(args, device):
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
-        data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device)
+        data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device,
+                                     hypertuning)
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1274,6 +1302,8 @@ def run_sgrl_learning(args, device):
 
             if epoch % args.eval_steps == 0:
                 results = test(evaluator, model, val_loader, device, emb, test_loader, args)
+                if hypertuning:
+                    tune.report(val_loss=loss, val_accuracy=results['AUC'][0])
                 for key, result in results.items():
                     loggers[key].add_result(run, result)
 
