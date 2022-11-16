@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 
 import torch
 from ray import tune
@@ -144,7 +145,7 @@ def ray_tune_helper(identifier, output_path, dataset, sign_type):
     best_trial = result.get_best_trial("val_accuracy", "max", "last")
 
     print("Best trial config: {}".format(best_trial))
-    with open(f'{identifier}_best_result.json', "w") as file:
+    with open(f'{str(Path.home())}/{identifier}_best_result.json', "w") as file:
         json.dump(best_trial.config, file)
 
     print("Best trial final train loss: {}".format(best_trial.last_result["val_loss"]))
