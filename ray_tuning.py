@@ -17,9 +17,9 @@ from tuning_utils import TimeStopper
 
 class HyperParameterTuning:
     MAX_EPOCHS = 50
-    CPUS_AVAIL = 1
+    CPUS_AVAIL = 2
     GPUS_AVAIL = 0
-    NUM_SAMPLES = 1000
+    NUM_SAMPLES = 250
 
     seed = 42
 
