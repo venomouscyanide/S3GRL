@@ -43,6 +43,8 @@ parser.add_argument('--seed', type=int, default=1)
 args = parser.parse_args()
 
 seed_everything(args.seed)
+if not os.path.exists('Emb'):
+    os.makedirs('Emb')
 
 def node_2_vec_pretrain(edge_index, num_nodes, emb_dim, device):
     n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emb_dim, walk_length=20,
