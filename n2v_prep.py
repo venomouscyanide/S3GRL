@@ -8,11 +8,12 @@ import os
 
 
 def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device):
-    if not os.path.exists('Emb'):
-        os.makedirs(f'{Path.home()}/Emb')
+    emb_folder = f'{Path.home()}/Emb'
+    if not os.path.exists(emb_folder):
+        os.makedirs(emb_folder)
 
-    if os.path.exists(f"{Path.home()}/Emb/{dataset}_{emb_dim}_seed{seed}.pt"):
-        return torch.load(f"{Path.home()}/Emb/{dataset}_{emb_dim}_seed{seed}.pt", map_location=torch.device('cpu')).detach()
+    if os.path.exists(f"emb_folder/{dataset}_{emb_dim}_seed{seed}.pt"):
+        return torch.load(f"emb_folder/{dataset}_{emb_dim}_seed{seed}.pt", map_location=torch.device('cpu')).detach()
 
     n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emb_dim, walk_length=20,
                    context_size=10, walks_per_node=10,
@@ -40,5 +41,5 @@ def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device):
     torch.cuda.empty_cache()
 
     print('Finish prepping n2v embeddings')
-    torch.save(output, f"{Path.home()}/Emb/{dataset}_{emb_dim}_seed{seed}.pt")
+    torch.save(output, f"emb_folder/{dataset}_{emb_dim}_seed{seed}.pt")
     return output
