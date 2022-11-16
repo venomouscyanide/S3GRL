@@ -1,4 +1,6 @@
+# currently only supports non-attr datasets
 import argparse
+import json
 import os
 
 import torch
@@ -18,13 +20,7 @@ class HyperParameterTuning:
     GPUS_AVAIL = 0
     NUM_SAMPLES = 1000
 
-    sign_type = ""
     seed = 42
-
-    if sign_type == "kSuP":
-        k_heuristic = tune.choice([2, 4, 6, 8, 10])
-    else:
-        k_heuristic = 0
 
     CONFIG = {
         "hidden_channels": tune.choice([32, 64, 128, 256, 512, 1024]),
@@ -34,7 +30,7 @@ class HyperParameterTuning:
         "dropout": tune.uniform(lower=0.2, upper=0.8),
         "sign_k": tune.choice([2, 3, 5, 7]),
         "n2v_dim": tune.choice([32, 64, 128, 256, 512, 1024]),
-        "k_heuristic": k_heuristic
+        "k_heuristic": 0
     }
 
     base_config = {
@@ -103,15 +99,20 @@ class HyperParameterTuning:
             "init_features": "n2v",
             "n2v_dim": 128,  # configurable
             "k_heuristic": 0,  # configurable
-            "k_node_set_strategy": "mean",
-            "k_pool_strategy": "intersection",
+            "k_node_set_strategy": "intersection",
+            "k_pool_strategy": "mean",
         }}
 
 
 def ray_tune_helper(identifier, output_path, dataset, sign_type):
     hyper_class = HyperParameterTuning
     hyper_class.base_config['hyperparams_per_run']['dataset'] = dataset
-    hyper_class.sign_type = sign_type
+
+    if sign_type == "KSuP":
+        k_heuristic = tune.choice([2, 4, 6, 8, 10])
+    else:
+        k_heuristic = 0
+    hyper_class.CONFIG['k_heuristic'] = k_heuristic
 
     scheduler = ASHAScheduler(
         metric="val_loss",
@@ -141,8 +142,11 @@ def ray_tune_helper(identifier, output_path, dataset, sign_type):
         resume="AUTO"
     )
     best_trial = result.get_best_trial("val_accuracy", "max", "last")
-    print("Best trial config: {}".format(best_trial.config))
-    # TODO; write this config to file along with the identifier.
+
+    print("Best trial config: {}".format(best_trial))
+    with open(f'{identifier}_best_result.json', "w") as file:
+        json.dump(best_trial.config, file)
+
     print("Best trial final train loss: {}".format(best_trial.last_result["val_loss"]))
     print("Best trial final validation accuracy: {}".format(best_trial.last_result["val_accuracy"]))
 

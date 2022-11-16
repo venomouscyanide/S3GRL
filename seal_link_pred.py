@@ -1302,7 +1302,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             if epoch % args.eval_steps == 0:
                 results = test(evaluator, model, val_loader, device, emb, test_loader, args)
                 if hypertuning:
-                    tune.report(val_loss=loss, val_accuracy=results['AUC'])
+                    tune.report(val_loss=loss, val_accuracy=results['AUC'][0])
                 for key, result in results.items():
                     loggers[key].add_result(run, result)
 
