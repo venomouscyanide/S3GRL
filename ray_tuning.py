@@ -30,7 +30,7 @@ class HyperParameterTuning:
         "lr": tune.uniform(lower=0.0001, upper=0.0025),
         "dropout": tune.uniform(lower=0.2, upper=0.8),
         "sign_k": tune.choice([2, 3, 5, 7]),
-        "n2v_dim": tune.choice([32, 64, 128, 256, 512, 1024]),
+        "n2v_dim": tune.choice([32, 64, 128, 256]),
         "k_heuristic": 0
     }
 
