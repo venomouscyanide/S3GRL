@@ -7,8 +7,11 @@ from tqdm import tqdm
 import os
 
 
-def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device):
-    emb_folder = f'{Path.home()}/Emb'
+def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, hypertuning=False):
+    if hypertuning:
+        emb_folder = f'{Path.home()}/Emb'
+    else:
+        emb_folder = "Emb"
     if not os.path.exists(emb_folder):
         os.makedirs(emb_folder)
 
