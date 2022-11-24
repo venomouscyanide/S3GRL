@@ -317,18 +317,22 @@ class SIGNNet(torch.nn.Module):
         initial_channels = hidden_channels
 
         initial_channels += train_dataset.num_features - hidden_channels
+        initial_channels *= num_layers + 1
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
 
         if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
         else:
             for _ in range(num_layers + 1):
-                self.lins.append(Linear(initial_channels, hidden_channels))
+                if _ == 0:
+                    self.lins.append(Linear(initial_channels, hidden_channels))
+                else:
+                    self.lins.append(Linear(hidden_channels, hidden_channels))
         if not self.k_heuristic:
-            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
-                           batch_norm=False)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
+                           batch_norm=True)
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
@@ -337,7 +341,7 @@ class SIGNNet(torch.nn.Module):
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=False)
+                           batch_norm=True)
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
@@ -371,19 +375,21 @@ class SIGNNet(torch.nn.Module):
 
     def forward(self, xs, batch):
         hs = []
-        for x, lin in zip(xs, self.lins):
-            h = lin(x).relu()
-            h = F.dropout(h, p=self.dropout, training=self.training)
-            if self.pool_operatorwise:
-                h = self._centre_pool_helper(batch, h)
-            hs.append(h)
+        x = torch.cat(xs, -1)
 
-        h = torch.cat(hs, dim=-1)
+        for index, (_, lin) in enumerate(zip(xs, self.lins)):
+            x = lin(x).relu()
+            x = F.dropout(x, p=self.dropout, training=self.training)
+            if self.pool_operatorwise and index == 0:
+                x = self._centre_pool_helper(batch, x)
+            # hs.append(x)
+
+        # h = torch.cat(hs, dim=-1)
 
         if not self.pool_operatorwise:
-            h = self._centre_pool_helper(batch, h)
+            h = self._centre_pool_helper(batch, x)
 
-        h = self.mlp(h)
+        h = self.mlp(x)
         return h
 
     def reset_parameters(self):
