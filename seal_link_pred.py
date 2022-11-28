@@ -855,7 +855,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
         dataset = DummyDataset(root=f'dataset/{args.dataset}/SEALDataset_{args.dataset}')
         print("Finish reading from file")
-    elif args.dataset in ['chameleon']:
+    elif args.dataset in ['chameleon', 'crocodile', 'squirrel']:
         path = osp.join('dataset', args.dataset)
         dataset = WikipediaNetwork(path, args.dataset)
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
