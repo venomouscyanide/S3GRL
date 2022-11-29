@@ -929,6 +929,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         directed = False
 
     if args.use_valedges_as_input:
+        # TODO; this is broken atm for SIGN-esque training. Fix soon
         val_edge_index = split_edge['valid']['edge'].t()
         if not directed:
             val_edge_index = to_undirected(val_edge_index)
@@ -1004,7 +1005,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
             with open(log_file, 'a') as f:
                 print(key, file=f)
                 loggers[key].print_statistics(f=f)
-        exit()
+
+        return loggers['AUC'].results[0][0][-1]
 
     # SEAL.
     path = dataset.root + '_seal{}'.format(args.data_appendix)
