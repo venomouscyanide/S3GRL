@@ -681,6 +681,7 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100, neg
 
 def CN(A, edge_index, batch_size=100000):
     # The Common Neighbor heuristic score.
+    print("Using the CN heuristic score")
     link_loader = DataLoader(range(edge_index.size(1)), batch_size)
     scores = []
     for ind in tqdm(link_loader):
@@ -692,6 +693,7 @@ def CN(A, edge_index, batch_size=100000):
 
 def AA(A, edge_index, batch_size=100000):
     # The Adamic-Adar heuristic score.
+    print("Using the Adamic-Adar heuristic score")
     multiplier = 1 / np.log(A.sum(axis=0))
     multiplier[np.isinf(multiplier)] = 0
     A_ = A.multiply(multiplier).tocsr()
@@ -709,6 +711,7 @@ def PPR(A, edge_index):
     # The Personalized PageRank heuristic score.
     # Need install fast_pagerank by "pip install fast-pagerank"
     # Too slow for large datasets now.
+    print("Using the PPR heuristic score")
     from fast_pagerank import pagerank_power
     num_nodes = A.shape[0]
     src_index, sort_indices = torch.sort(edge_index[0])
