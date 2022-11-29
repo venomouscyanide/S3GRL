@@ -34,7 +34,7 @@ class DummyArgs:
 def run_heuristics_helper(dataset, heuristic, runs):
     list_of_auc = []
 
-    for run in range(1, runs, 1):
+    for run in range(1, runs + 1, 1):
         print(f"Running {heuristic} with seed {run}")
         seed_everything(run)
         args = DummyArgs(dataset, heuristic, run)
