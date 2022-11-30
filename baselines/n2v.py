@@ -34,7 +34,7 @@ def run_n2v(device, data, split_edge, epochs, lr, hidden_channels, neg_ratio, ba
     for run in range(args.runs):
         model = Node2Vec(data.edge_index, embedding_dim=hidden_channels, walk_length=20,
                          context_size=10, walks_per_node=10,
-                         num_negative_samples=neg_ratio, p=1, q=1, sparse=True).to(device)
+                         num_negative_samples=neg_ratio, p=1, q=1, sparse=True, num_nodes=data.num_nodes).to(device)
 
         loader = model.loader(batch_size=batch_size, shuffle=True, num_workers=num_threads)
         optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=lr)
