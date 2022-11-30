@@ -1,6 +1,7 @@
 import argparse
 
 import numpy as np
+import torch
 from torch_geometric import seed_everything
 
 from baselines.baseline_utils import get_data_helper
@@ -25,13 +26,14 @@ class DummyArgs:
 def run_MF(dataset, runs):
     # MLP with one hidden layer, 50 epochs, 32 hidden channels, 50 epochs, batch size 32, 0.01 lr
     acc_list = []
+    device = torch.device(f'cuda:{0}' if torch.cuda.is_available() else 'cpu')
 
     for run in range(1, runs + 1, 1):
         seed_everything(run)
         args = DummyArgs(dataset)
         data, split_edge = get_data_helper(args)
         acc_list += [
-            train_mf(data=data, split_edge=split_edge, device='cpu', log_steps=1, num_layers=3, hidden_channels=32,
+            train_mf(data=data, split_edge=split_edge, device=device, log_steps=1, num_layers=3, hidden_channels=32,
                      dropout=0.5, batch_size=32, lr=0.01, epochs=50,
                      eval_steps=1, runs=1, seed=run, args=args)
         ]
