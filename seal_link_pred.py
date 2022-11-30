@@ -35,15 +35,12 @@ from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
-from baselines.mf import train_mf
-from baselines.n2v import run_n2v
+
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
 from n2v_prep import node_2_vec_pretrain
-from ogbl_baselines.mf import train_mf_ogbl
-from ogbl_baselines.mlp_on_n2v import train_n2v_emb
-from ogbl_baselines.n2v import run_and_save_n2v
+
 from profiler_utils import profile_helper
 from tuned_SIGN import TunedSIGN
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
@@ -1194,13 +1191,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         if args.train_gae:
             raise NotImplementedError("No longer supported through SGRL learning script.")
         if args.train_n2v:
-            if not args.dataset.startswith('ogbl'):
-                run_n2v(device, data, split_edge, args.epochs, args.lr, args.hidden_channels, args.neg_ratio,
-                        args.batch_size, args.num_workers, args)
-            else:
-                run_and_save_n2v(args, device, data)  # saves n2v embeddings
-                train_n2v_emb(args, device, data, split_edge)  # trains MLP on above saved n2v embeddings
-            exit()
+            raise NotImplementedError("No longer supported through SGRL learning script.")
         if args.train_mf:
             raise NotImplementedError("No longer supported through SGRL learning script.")
         if args.model == 'DGCNN':
