@@ -1,7 +1,6 @@
 from pathlib import Path
 from timeit import default_timer
 
-import ray
 import torch
 import shutil
 
@@ -36,14 +35,12 @@ from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
-from baselines.gnn_link_pred import train_gnn
 from baselines.mf import train_mf
 from baselines.n2v import run_n2v
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
 from n2v_prep import node_2_vec_pretrain
-from ogbl_baselines.gnn_link_pred import train_gae_ogbl
 from ogbl_baselines.mf import train_mf_ogbl
 from ogbl_baselines.mlp_on_n2v import train_n2v_emb
 from ogbl_baselines.n2v import run_and_save_n2v
@@ -1195,11 +1192,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         if args.pairwise:
             train_dataset = train_positive_dataset
         if args.train_gae:
-            if not args.dataset.startswith('ogbl'):
-                train_gnn(device, data, split_edge, args)
-            else:
-                train_gae_ogbl(args, device, data, split_edge)
-            exit()
+            raise NotImplementedError("No longer supported through SGRL learning script.")
         if args.train_n2v:
             if not args.dataset.startswith('ogbl'):
                 run_n2v(device, data, split_edge, args.epochs, args.lr, args.hidden_channels, args.neg_ratio,
