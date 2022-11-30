@@ -1202,12 +1202,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
                 train_n2v_emb(args, device, data, split_edge)  # trains MLP on above saved n2v embeddings
             exit()
         if args.train_mf:
-            if not args.dataset.startswith('ogbl'):
-                train_mf(data, split_edge, device, args.log_steps, args.num_layers, args.hidden_channels, args.dropout,
-                         args.batch_size, args.lr, args.epochs, args.eval_steps, args.runs, args.seed, args)
-            else:
-                train_mf_ogbl(args, split_edge, data)
-            exit()
+            raise NotImplementedError("No longer supported through SGRL learning script.")
         if args.model == 'DGCNN':
             model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k,
                           train_dataset, args.dynamic_train, use_feature=args.use_feature,

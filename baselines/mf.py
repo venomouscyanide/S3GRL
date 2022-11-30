@@ -168,14 +168,16 @@ def train_mf(data, split_edge, device, log_steps, num_layers, hidden_channels, d
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
-        for key in loggers.keys():
-            print(key)
-            loggers[key].print_statistics(run)
 
     total_params = sum(p.numel() for param in list(predictor.parameters()) for p in param)
 
+    print(f"Total Parameters are: {total_params}")
+    best_test_scores = []
     for key in loggers.keys():
         print(key)
-        loggers[key].print_statistics()
-
-    print(f"Total Parameters are: {total_params}")
+        loggers[key].add_info(args.epochs, 1)
+        best_test_scores += [loggers[key].print_statistics()]
+        with open(log_file, 'a') as f:
+            print(key, file=f)
+            loggers[key].print_statistics(f=f)
+    return best_test_scores[0]
