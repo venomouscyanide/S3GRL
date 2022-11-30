@@ -129,7 +129,7 @@ def train_gnn(device, args):
         }
         data, split_edge = get_data_helper(args)
 
-        if not data.x:
+        if type(data.x) != torch.Tensor:
             # if no features, we simply set x to be identity matrix as seen in GAE paper
             data.x = torch.eye(data.num_nodes)
 

@@ -4,7 +4,8 @@ import numpy as np
 from torch_geometric import seed_everything
 
 from baselines.baseline_utils import get_data_helper
-from baselines.mf import train_mf
+from baselines.vgae import run_vgae
+import torch
 
 
 class DummyArgs:
@@ -13,6 +14,8 @@ class DummyArgs:
         self.use_valedges_as_input = False
         self.fast_split = False
         self.res_dir = ""
+        self.eval_steps = 1
+        self.log_steps = 1
 
         # important hyperparameters
         self.split_val_ratio = 0.05
@@ -20,20 +23,29 @@ class DummyArgs:
         self.neg_ratio = 1
         self.runs = 1
         self.epochs = 50
+        self.embedding_dim = 32
+        self.lr = 0.01
 
 
-def run_MF(dataset, runs):
-    # MLP with one hidden layer, 50 epochs, 32 hidden channels, 50 epochs, batch size 32, 0.01 lr
+def run_gae_helper(dataset, runs):
+    # 64 -> 32 , 0.01 lr
     acc_list = []
 
     for run in range(1, runs + 1, 1):
         seed_everything(run)
         args = DummyArgs(dataset)
         data, split_edge = get_data_helper(args)
+        test_and_val = [split_edge['test']['edge'].T, split_edge['test']['edge_neg'].T, split_edge['valid']['edge'].T,
+                        split_edge['valid']['edge_neg'].T]
+        edge_index = split_edge['train']['edge'].T
+
+        if type(data.x) != torch.Tensor:
+            # if no features, we simply set x to be identity matrix as seen in GAE paper
+            data.x = torch.eye(data.num_nodes)
+
+        x = data.x
         acc_list += [
-            train_mf(data=data, split_edge=split_edge, device='cpu', log_steps=1, num_layers=3, hidden_channels=32,
-                     dropout=0.5, batch_size=32, lr=0.01, epochs=50,
-                     eval_steps=1, runs=1, seed=run, args=args)
+            run_vgae(edge_index, x, test_and_val, args)
         ]
 
     array = np.array(acc_list)
@@ -47,4 +59,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    run_MF(args.dataset, args.runs)
+    run_gae_helper(args.dataset, args.runs)
