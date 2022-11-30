@@ -1,6 +1,7 @@
 import argparse
 
 import numpy as np
+import torch
 from torch_geometric import seed_everything
 
 from baselines.baseline_utils import get_data_helper
@@ -26,13 +27,14 @@ class DummyArgs:
 
 def run_n2v_helper(dataset, runs):
     acc_list = []
+    device = torch.device(f'cuda:{0}' if torch.cuda.is_available() else 'cpu')
 
     for run in range(1, runs + 1, 1):
         seed_everything(run)
         args = DummyArgs(dataset)
         data, split_edge = get_data_helper(args)
         acc_list += [
-            run_n2v(device='cpu', data=data, split_edge=split_edge, epochs=50, lr=0.01, hidden_channels=32, neg_ratio=1,
+            run_n2v(device=device, data=data, split_edge=split_edge, epochs=50, lr=0.01, hidden_channels=32, neg_ratio=1,
                     batch_size=32, num_threads=8, args=args, seed=run)
         ]
 

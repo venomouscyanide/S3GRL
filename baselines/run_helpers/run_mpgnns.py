@@ -1,5 +1,7 @@
 import argparse
 
+import torch
+
 from baselines.gnn_link_pred import train_gnn
 
 
@@ -27,7 +29,8 @@ class DummyArgs:
 
 def run_MPGNNs(dataset, model, runs):
     args = DummyArgs(runs, model, dataset)
-    train_gnn(device='cpu', args=args)
+    device = torch.device(f'cuda:{0}' if torch.cuda.is_available() else 'cpu')
+    train_gnn(device=device, args=args)
 
 
 if __name__ == '__main__':
