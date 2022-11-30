@@ -24,9 +24,11 @@ class DummyArgs:
         self.runs = 1
         self.epochs = 50
         self.embedding_dim = 32
+        self.lr = 0.01
 
 
 def run_gae_helper(dataset, runs):
+    # 64 -> 32 , 0.01 lr
     acc_list = []
 
     for run in range(1, runs + 1, 1):

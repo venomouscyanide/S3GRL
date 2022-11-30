@@ -53,7 +53,7 @@ def run_vgae(edge_index, x, test_and_val, args):
     model = VGAE(VariationalGCNEncoder(num_features, out_channels)).to(device)
     edge_index = edge_index.to(device)
     x = x.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     num_nodes = torch.max(edge_index)
 
     for epoch in range(1, args.epochs + 1, 1):
