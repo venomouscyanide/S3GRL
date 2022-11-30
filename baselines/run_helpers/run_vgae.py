@@ -25,9 +25,10 @@ class DummyArgs:
         self.epochs = 50
         self.embedding_dim = 32
         self.lr = 0.01
+        self.hidden_channels = 64
 
 
-def run_gae_helper(dataset, runs):
+def run_gae_helper(dataset, runs, model):
     # 64 -> 32 , 0.01 lr
     acc_list = []
 
@@ -45,7 +46,7 @@ def run_gae_helper(dataset, runs):
 
         x = data.x
         acc_list += [
-            run_vgae(edge_index, x, test_and_val, args)
+            run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=model, args=args)
         ]
 
     array = np.array(acc_list)
@@ -56,7 +57,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--runs', type=int, required=True)
+    parser.add_argument('--model', type=str, required=True, choices=['GAE', 'VGAE', 'ARGVA'])
 
     args = parser.parse_args()
 
-    run_gae_helper(args.dataset, args.runs)
+    run_gae_helper(args.dataset, args.runs, args.model)
