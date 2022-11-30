@@ -1,6 +1,4 @@
-import os
-
-import torch
+import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score
 from torch.nn import Linear, ReLU, Sequential
 from torch_geometric import seed_everything
@@ -9,9 +7,81 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv
 from torch_geometric.utils import negative_sampling
 
-from torch_geometric.transforms import OneHotDegree
 
 from utils import Logger
+
+import os
+from pathlib import Path
+
+from torch_geometric.datasets import Planetoid, WikipediaNetwork, WebKB
+import os.path as osp
+
+from torch_geometric.utils import to_undirected
+
+from data_utils import read_label, read_edges
+from utils import do_edge_split
+from torch_geometric.data import Data
+import torch
+
+
+def get_data_helper(args):
+    if args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
+        path = osp.join('dataset', args.dataset)
+        dataset = Planetoid(path, args.dataset)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
+        import networkx as nx
+        G = nx.Graph()
+        G.add_edges_from(data.edge_index.T.detach().numpy())
+    elif args.dataset in ['USAir', 'NS', 'Power', 'Celegans', 'Router', 'PB', 'Ecoli', 'Yeast']:
+        # We consume the dataset split index as well
+        if os.path.exists('data'):
+            file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
+        else:
+            # we consume user path
+            file_name = os.path.join(str(Path.home()), 'ExtendoScaLed', 'data', 'link_prediction', args.dataset.lower())
+            if not os.path.exists(file_name):
+                raise FileNotFoundError("Clone repo in your user path")
+        node_id_mapping = read_label(file_name)
+        edges = read_edges(file_name, node_id_mapping)
+
+        import networkx as nx
+        G = nx.Graph(edges)
+        edges_coo = torch.tensor(edges, dtype=torch.long).t().contiguous()
+        data = Data(edge_index=edges_coo.view(2, -1))
+        data.edge_index = to_undirected(data.edge_index)
+        data.num_nodes = torch.max(data.edge_index) + 1
+
+        split_edge = do_edge_split(data, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio, data_passed=True)
+        data.edge_index = split_edge['train']['edge'].t()
+        print("Finish reading from file")
+    elif args.dataset in ['chameleon', 'crocodile', 'squirrel']:
+        path = osp.join('dataset', args.dataset)
+        dataset = WikipediaNetwork(path, args.dataset)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
+        import networkx as nx
+        G = nx.Graph()
+        G.add_edges_from(data.edge_index.T.detach().numpy())
+    elif args.dataset in ['Cornell', 'Texas', 'Wisconsin']:
+        path = osp.join('dataset', args.dataset)
+        dataset = WebKB(path, args.dataset)
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
+        import networkx as nx
+        G = nx.Graph()
+        G.add_edges_from(data.edge_index.T.detach().numpy())
+    else:
+        raise NotImplementedError(f'dataset {args.dataset} is not yet supported.')
+
+    return data, split_edge
 
 
 class Net(torch.nn.Module):
@@ -113,30 +183,30 @@ def test(eval_edge_index, eval_neg_edge_index, model, data, dropout, device):
     return precision_score, auc_score
 
 
-def train_gnn(device, data, split_edge, args, one_hot_encode=False):
+def train_gnn(device, args):
     log_file = os.path.join(args.res_dir, 'log.txt')
 
-    loggers = {
-        'AUC': Logger(args.runs, args),
-        'AP': Logger(args.runs, args)
-    }
     criterion = torch.nn.BCEWithLogitsLoss()
 
-    if not args.use_feature:
-        if one_hot_encode:
-            one_hot = OneHotDegree(max_degree=1024)
-            data = one_hot(data)
-        else:
+    all_runs_auc = []
+    for run in range(1, args.runs + 1, 1):
+        seed_everything(run)
+        run = 0  # ensure consistency for the Logger obj
+        loggers = {
+            'AUC': Logger(1, args),
+            'AP': Logger(1, args)
+        }
+        data, split_edge = get_data_helper(args)
+
+        if not data.x:
             # if no features, we simply set x to be identity matrix as seen in GAE paper
             data.x = torch.eye(data.num_nodes)
 
-    val_data = split_edge['valid']['edge'].t()
-    val_neg = split_edge['valid']['edge_neg'].t()
-    test_data = split_edge['test']['edge'].t()
-    test_neg = split_edge['test']['edge_neg'].t()
+        val_data = split_edge['valid']['edge'].t()
+        val_neg = split_edge['valid']['edge_neg'].t()
+        test_data = split_edge['test']['edge'].t()
+        test_neg = split_edge['test']['edge_neg'].t()
 
-    for run in range(args.runs):
-        seed_everything(args.seed)
         data.to(device)
 
         model = Net(data.x.size(-1), args.hidden_channels, layer=args.model).to(device)
@@ -170,14 +240,18 @@ def train_gnn(device, data, split_edge, args, one_hot_encode=False):
                             print(key, file=f)
                             print(to_print, file=f)
 
+        best_test_scores = []
         for key in loggers.keys():
             print(key)
-            loggers[key].print_statistics(run)
+            loggers[key].add_info(args.epochs, 1)
+            best_test_scores += [loggers[key].print_statistics()]
+            with open(log_file, 'a') as f:
+                print(key, file=f)
+                loggers[key].print_statistics(f=f)
+        all_runs_auc.append(best_test_scores[0])
 
     total_params = sum(p.numel() for param in list(model.parameters()) for p in param)
-
-    for key in loggers.keys():
-        print(key)
-        loggers[key].print_statistics()
-
     print(f"Total Parameters are: {total_params}")
+
+    array = np.array(all_runs_auc)
+    print(f'Final Average Test of {args.runs} runs is: {array.mean():.2f} ± {array.std():.2f}')
