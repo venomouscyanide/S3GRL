@@ -231,7 +231,7 @@ class OptimizedSignOperations:
             sup_final_list[index].extend([sign_kwargs['sign_k'], y])
 
         for data in sup_final_list:
-            sup_data_list.append(get_sup_final_data(data))
+            sup_data_list.append(get_sup_final_data(*data))
 
         return sup_data_list
 
