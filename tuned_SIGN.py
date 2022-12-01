@@ -163,7 +163,7 @@ class OptimizedSignOperations:
             args.append((src, dst, *values_to_put))
 
         print("Starting out with mp")
-        with torch.multiprocessing.get_context('spawn').Pool(2) as pool:
+        with torch.multiprocessing.get_context('spawn').Pool(16) as pool:
             sup_final_list = []
             for data in tqdm(pool.starmap(get_subgraphs, args)):
                 sup_final_list.append(copy.deepcopy(data))
@@ -174,7 +174,7 @@ class OptimizedSignOperations:
             sup_final_list[index][3] = x[data[0]]
             sup_final_list[index].extend([sign_kwargs['sign_k'], y])
 
-        with torch.multiprocessing.get_context('spawn').Pool(2) as pool:
+        with torch.multiprocessing.get_context('spawn').Pool(16) as pool:
             for data in tqdm(pool.starmap(get_sup_final_data, sup_final_list)):
                 sup_data_list.append(copy.deepcopy(data))
 
