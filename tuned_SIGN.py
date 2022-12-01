@@ -1,4 +1,5 @@
 import copy
+import random
 
 import torch
 from scipy.sparse import dok_matrix
@@ -10,6 +11,61 @@ from tqdm import tqdm
 
 import scipy.sparse as ssp
 import numpy as np
+
+
+def neighbors(fringe, A, outgoing=True):
+    # Find all 1-hop neighbors of nodes in fringe from graph A,
+    # where A is a scipy csr adjacency matrix.
+    # If outgoing=True, find neighbors with outgoing edges;
+    # otherwise, find neighbors with incoming edges (you should
+    # provide a csc matrix in this case).
+    if outgoing:
+        res = set(A[list(fringe)].indices)
+    else:
+        res = set(A[:, list(fringe)].indices)
+
+    return res
+
+
+def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
+                   max_nodes_per_hop=None, node_features=None,
+                   y=1, directed=False, A_csc=None, rw_kwargs=None):
+    debug = False  # set True manually to debug using matplotlib and gephi
+    # Extract the k-hop enclosing subgraph around link (src, dst) from A.
+    if not rw_kwargs:
+        nodes = [src, dst]
+        dists = [0, 0]
+        visited = set([src, dst])
+        fringe = set([src, dst])
+        for dist in range(1, num_hops + 1):
+            if not directed:
+                fringe = neighbors(fringe, A)
+            else:
+                out_neighbors = neighbors(fringe, A)
+                in_neighbors = neighbors(fringe, A_csc, False)
+                fringe = out_neighbors.union(in_neighbors)
+            fringe = fringe - visited
+            visited = visited.union(fringe)
+            if sample_ratio < 1.0:
+                fringe = random.sample(fringe, int(sample_ratio * len(fringe)))
+            if max_nodes_per_hop is not None:
+                if max_nodes_per_hop < len(fringe):
+                    fringe = random.sample(fringe, max_nodes_per_hop)
+            if len(fringe) == 0:
+                break
+            nodes = nodes + list(fringe)
+            dists = dists + [dist] * len(fringe)
+
+        subgraph = A[nodes, :][:, nodes]
+
+        # Remove target link between the subgraph.
+        subgraph[0, 1] = 0
+        subgraph[1, 0] = 0
+
+        if node_features is not None:
+            node_features = node_features[nodes]
+
+        return nodes, subgraph, dists, node_features, y
 
 
 class TunedSIGN(SIGN):
@@ -180,7 +236,6 @@ class OptimizedSignOperations:
 
         return sup_data_list
 
-
     @staticmethod
     def get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
@@ -217,7 +272,6 @@ class OptimizedSignOperations:
 
 
 def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs):
-    from utils import k_hop_subgraph
     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, node_features=x, y=y,
                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
@@ -225,7 +279,6 @@ def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y,
 
 
 def get_k_sup_final_data(*args):
-    from utils import neighbors
     csr_subgraph = args[1]
     u, v, r = ssp.find(csr_subgraph)
     u, v = torch.LongTensor(u), torch.LongTensor(v)
