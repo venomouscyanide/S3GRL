@@ -135,8 +135,8 @@ def run_vgae(edge_index, x, test_and_val, model, args):
 
             results = {}
 
-            val_ap, val_auc = compute_scores(z, val_pos, val_neg)
-            test_ap, test_auc = compute_scores(z, test_pos, test_neg)
+            val_auc, val_ap = compute_scores(z, val_pos, val_neg)
+            test_auc, test_ap = compute_scores(z, test_pos, test_neg)
 
             results['AUC'] = (val_auc, test_auc)
             results['AP'] = (val_ap, test_ap)
