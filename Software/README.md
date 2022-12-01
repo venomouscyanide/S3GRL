@@ -1,0 +1,1 @@
+Adapted slightly, mostly taken from the authors of WalkPool: https://github.com/DaDaCheng/WalkPooling/tree/main/software/GIC
