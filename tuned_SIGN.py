@@ -238,7 +238,8 @@ class OptimizedSignOperations:
         K = sign_kwargs['sign_k']
         split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
-        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, None, y, directed, A_csc, rw_kwargs
+        x = x.share_memory_()
+        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs
         args = []
         for src, dst in link_index.t().tolist():
             args.append((src, dst, *values_to_put))
