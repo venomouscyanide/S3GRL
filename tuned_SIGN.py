@@ -154,76 +154,32 @@ class OptimizedSignOperations:
                            sign_kwargs, rw_kwargs):
         # optimized SuP flow
         print("SuP Optimized Flow.")
-        from utils import k_hop_subgraph
         sup_data_list = []
         print("Start with SuP data prep")
-        for src, dst in tqdm(link_index.t().tolist()):
-            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                 max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
 
-            u, v, r = ssp.find(tmp[1])
-            u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v,
-                                 sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
+        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, None, y, directed, A_csc, rw_kwargs
+        args = []
+        for src, dst in link_index.t().tolist():
+            args.append((src, dst, *values_to_put))
 
-            deg = adj_t.sum(dim=1).to(torch.float)
-            deg_inv_sqrt = deg.pow(-0.5)
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+        print("Starting out with mp")
+        with torch.multiprocessing.get_context('spawn').Pool(2) as pool:
+            sup_final_list = []
+            for data in tqdm(pool.starmap(get_subgraphs, args)):
+                sup_final_list.append(copy.deepcopy(data))
 
-            subgraph_features = tmp[3]
-            subgraph = adj_t
+        print("Done")
 
-            if subgraph.size(1) == 0 and subgraph.size(0) == 0:
-                # empty enclosing subgraph
-                continue
+        for index, data in enumerate(tqdm(sup_final_list)):
+            sup_final_list[index][3] = x[data[0]]
+            sup_final_list[index].extend([sign_kwargs['sign_k'], y])
 
-            assert subgraph_features is not None
-
-            powers_of_a = [subgraph]
-            K = sign_kwargs['sign_k']
-
-            for _ in range(K - 1):
-                powers_of_a.append(subgraph @ powers_of_a[-1])
-
-            all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
-
-            # construct A ( (K * 2) X num_nodes)
-            for operator_index in range(0, K * 2, 2):
-                all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-                    powers_of_a[operator_index // 2][[0, 1], :].to_dense()
-                )
-            # calculate AX ( (K * 2) X num_input_feat)
-            all_ax_values = all_a_values @ subgraph_features
-
-            # inject label info into AX' ( (K * 2) X (num_input_feat + 1))
-            updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
-            for operator_index in range(0, K * 2, 2):
-                label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-                label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
-
-                updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-                updated_features[operator_index + 1, :] = torch.hstack(
-                    [label_dst, all_ax_values[operator_index + 1]])
-
-            # convert AX' into PyG Data object
-            data = Data(
-                x=torch.hstack(
-                    [torch.tensor([[1], [1]]),
-                     torch.vstack([subgraph_features[0], subgraph_features[1]]),
-                     ]),
-                y=y,
-            )
-
-            for operator_index in range(0, K * 2, 2):
-                data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-                    [updated_features[operator_index], updated_features[operator_index + 1]]
-                )
-
-            sup_data_list.append(data)
+        with torch.multiprocessing.get_context('spawn').Pool(2) as pool:
+            for data in tqdm(pool.starmap(get_sup_final_data, sup_final_list)):
+                sup_data_list.append(copy.deepcopy(data))
 
         return sup_data_list
+
 
     @staticmethod
     def get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
@@ -236,7 +192,6 @@ class OptimizedSignOperations:
 
         k_heuristic = sign_kwargs['k_heuristic']
         K = sign_kwargs['sign_k']
-        split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
         values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, None, y, directed, A_csc, rw_kwargs
         args = []
@@ -255,7 +210,7 @@ class OptimizedSignOperations:
             sup_final_list[index].extend([K, k_heuristic, y])
 
         with torch.multiprocessing.get_context('spawn').Pool(16) as pool:
-            for data in tqdm(pool.starmap(get_final_data, sup_final_list)):
+            for data in tqdm(pool.starmap(get_k_sup_final_data, sup_final_list)):
                 sup_data_list.append(copy.deepcopy(data))
 
         return sup_data_list
@@ -269,7 +224,7 @@ def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y,
     return [*tmp]
 
 
-def get_final_data(*args):
+def get_k_sup_final_data(*args):
     from utils import neighbors
     csr_subgraph = args[1]
     u, v, r = ssp.find(csr_subgraph)
@@ -354,5 +309,68 @@ def get_final_data(*args):
 
     for operator_index in range(1, K + 1, 1):
         data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
+
+    return data
+
+
+def get_sup_final_data(*args):
+    u, v, r = ssp.find(args[1])
+    u, v = torch.LongTensor(u), torch.LongTensor(v)
+    adj_t = SparseTensor(row=u, col=v,
+                         sparse_sizes=(args[1].shape[0], args[1].shape[0]))
+
+    deg = adj_t.sum(dim=1).to(torch.float)
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+    subgraph_features = args[3]
+    subgraph = adj_t
+
+    if subgraph.size(1) == 0 and subgraph.size(0) == 0:
+        # empty enclosing subgraph
+        return
+
+    assert subgraph_features is not None
+
+    powers_of_a = [subgraph]
+    K = args[-2]
+
+    for _ in range(K - 1):
+        powers_of_a.append(subgraph @ powers_of_a[-1])
+
+    all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
+
+    # construct A ( (K * 2) X num_nodes)
+    for operator_index in range(0, K * 2, 2):
+        all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
+            powers_of_a[operator_index // 2][[0, 1], :].to_dense()
+        )
+    # calculate AX ( (K * 2) X num_input_feat)
+    all_ax_values = all_a_values @ subgraph_features
+
+    # inject label info into AX' ( (K * 2) X (num_input_feat + 1))
+    updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
+    for operator_index in range(0, K * 2, 2):
+        label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+        label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+
+        updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
+        updated_features[operator_index + 1, :] = torch.hstack(
+            [label_dst, all_ax_values[operator_index + 1]])
+
+    # convert AX' into PyG Data object
+    data = Data(
+        x=torch.hstack(
+            [torch.tensor([[1], [1]]),
+             torch.vstack([subgraph_features[0], subgraph_features[1]]),
+             ]),
+        y=args[-1],
+    )
+
+    for operator_index in range(0, K * 2, 2):
+        data[f'x{operator_index // 2 + 1}'] = torch.vstack(
+            [updated_features[operator_index], updated_features[operator_index + 1]]
+        )
 
     return data
