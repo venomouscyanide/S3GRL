@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
@@ -236,10 +238,20 @@ class OptimizedSignOperations:
         K = sign_kwargs['sign_k']
         split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
+        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs
+        args = []
+        for src, dst in link_index.t().tolist():
+            args.append((src, dst, *values_to_put))
+
+        print("Starting out with mp")
+        with torch.multiprocessing.get_context('spawn').Pool(8) as pool:
+            sup_final_list = []
+            for data in tqdm(pool.starmap(get_subgraphs, args)):
+                sup_final_list.append(copy.deepcopy(data))
+        print("Done")
+        exit()
         for src, dst in tqdm(link_index.t().tolist()):
-            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                 max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+            break
             csr_subgraph = tmp[1]
             u, v, r = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
@@ -277,7 +289,7 @@ class OptimizedSignOperations:
             degree_vals = deg.tolist()
             degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
             sorted_one_hop = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
-                                   :k_heuristic]
+                             :k_heuristic]
 
             if len(sorted_one_hop) < k_heuristic:
                 sorted_one_hop.extend([-1] * (k_heuristic - len(sorted_one_hop)))
@@ -323,3 +335,11 @@ class OptimizedSignOperations:
             sup_data_list.append(data)
 
         return sup_data_list
+
+
+def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs):
+    from utils import k_hop_subgraph
+    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                         max_nodes_per_hop, node_features=x, y=y,
+                         directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+    return tmp
