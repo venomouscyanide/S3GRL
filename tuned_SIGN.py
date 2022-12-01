@@ -238,102 +238,25 @@ class OptimizedSignOperations:
         K = sign_kwargs['sign_k']
         split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
-        x = x.share_memory_()
-        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs
+        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, None, y, directed, A_csc, rw_kwargs
         args = []
         for src, dst in link_index.t().tolist():
             args.append((src, dst, *values_to_put))
 
         print("Starting out with mp")
-        with torch.multiprocessing.get_context('spawn').Pool(8) as pool:
+        with torch.multiprocessing.get_context('spawn').Pool(2) as pool:
             sup_final_list = []
             for data in tqdm(pool.starmap(get_subgraphs, args)):
                 sup_final_list.append(copy.deepcopy(data))
+
         print("Done")
-        exit()
-        for src, dst in tqdm(link_index.t().tolist()):
-            break
-            csr_subgraph = tmp[1]
-            u, v, r = ssp.find(csr_subgraph)
-            u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v,
-                                 sparse_sizes=(csr_subgraph.shape[0], csr_subgraph.shape[0]))
+        for index, data in enumerate(tqdm(sup_final_list)):
+            sup_final_list[index][3] = x[data[0]]
+            sup_final_list[index].extend([K, k_heuristic, y])
 
-            deg = adj_t.sum(dim=1).to(torch.float)
-            deg_inv_sqrt = deg.pow(-0.5)
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
-            subgraph_features = tmp[3]
-            subgraph = adj_t
-
-            assert subgraph_features is not None
-
-            powers_of_a = [subgraph]
-
-            for _ in range(K - 1):
-                powers_of_a.append(subgraph @ powers_of_a[-1])
-
-            # source, target is always 0, 1
-            strat = sign_kwargs['k_node_set_strategy']
-            if strat == 'union':
-                one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
-            elif strat == 'intersection':
-                one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
-            else:
-                raise NotImplementedError(f"check strat {strat}")
-            if 0 in one_hop_nodes:
-                one_hop_nodes.remove(0)
-            if 1 in one_hop_nodes:
-                one_hop_nodes.remove(1)
-
-            degree_vals = deg.tolist()
-            degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
-            sorted_one_hop = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
-                             :k_heuristic]
-
-            if len(sorted_one_hop) < k_heuristic:
-                sorted_one_hop.extend([-1] * (k_heuristic - len(sorted_one_hop)))
-            k_heuristic_indices = [0, 1] + sorted_one_hop
-
-            all_a_values = torch.empty(size=[len(k_heuristic_indices) * K, subgraph.size(0)])
-            # construct A ( K * (2 + k_heuristic) X num_nodes)
-            for sign_k_val in range(0, K, 1):
-                for each_op_row in range(len(k_heuristic_indices)):
-                    node_id_idx = int(k_heuristic_indices[each_op_row])
-                    if node_id_idx == -1:
-                        val_of_row = torch.zeros(size=(1, powers_of_a[sign_k_val].size(-1)))
-                    else:
-                        val_of_row = powers_of_a[sign_k_val][node_id_idx, :].to_dense()
-                    all_a_values[(sign_k_val * len(k_heuristic_indices)) + each_op_row, :] = val_of_row
-
-            # calculate AX ( K * (2 + k_heuristic) X num_input_feat)
-            all_ax_values = all_a_values @ subgraph_features
-
-            # inject label info into AX' ( K * (2 + k_heuristic) X (num_input_feat + 1))
-            updated_features = torch.empty(size=[len(k_heuristic_indices) * K, all_ax_values[0].size()[-1] + 1])
-            operator_index = 0
-            while operator_index < len(k_heuristic_indices) * K:
-                label = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-                updated_features[operator_index, :] = torch.hstack([label, all_ax_values[operator_index]])
-
-                operator_index += 1
-
-            # convert AX' into PyG Data object
-            x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(k_heuristic)])
-            updated_k_heuristic_indices = [val for val in k_heuristic_indices if val != -1]
-            x_b = subgraph_features[updated_k_heuristic_indices]
-            if len(updated_k_heuristic_indices) < k_heuristic + 2:
-                x_b = torch.vstack([x_b, torch.zeros(size=(k_heuristic - len(one_hop_nodes), x_b.size(-1)))])
-            data = Data(
-                x=torch.hstack([x_a, x_b]),
-                y=y,
-            )
-
-            for operator_index in range(1, K + 1, 1):
-                data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
-
-            sup_data_list.append(data)
+        with torch.multiprocessing.get_context('spawn').Pool(2) as pool:
+            for data in tqdm(pool.starmap(get_final_data, sup_final_list)):
+                sup_data_list.append(copy.deepcopy(data))
 
         return sup_data_list
 
@@ -343,4 +266,93 @@ def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y,
     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, node_features=x, y=y,
                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
-    return tmp
+    return [*tmp]
+
+
+def get_final_data(*args):
+    from utils import neighbors
+    csr_subgraph = args[1]
+    u, v, r = ssp.find(csr_subgraph)
+    u, v = torch.LongTensor(u), torch.LongTensor(v)
+    adj_t = SparseTensor(row=u, col=v,
+                         sparse_sizes=(csr_subgraph.shape[0], csr_subgraph.shape[0]))
+
+    deg = adj_t.sum(dim=1).to(torch.float)
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+    subgraph_features = args[3]
+    subgraph = adj_t
+
+    assert subgraph_features is not None
+
+    powers_of_a = [subgraph]
+
+    K = args[-3]
+    k_heuristic = args[-2]
+    y = torch.tensor(args[-1])
+    split_indices = np.array_split(range((k_heuristic + 2) * K), K)
+    for _ in range(K - 1):
+        powers_of_a.append(subgraph @ powers_of_a[-1])
+
+    # source, target is always 0, 1
+    strat = "union"
+    if strat == 'union':
+        one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
+    elif strat == 'intersection':
+        one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
+    else:
+        raise NotImplementedError(f"check strat {strat}")
+    if 0 in one_hop_nodes:
+        one_hop_nodes.remove(0)
+    if 1 in one_hop_nodes:
+        one_hop_nodes.remove(1)
+
+    degree_vals = deg.tolist()
+    degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
+    sorted_one_hop = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
+                     :k_heuristic]
+
+    if len(sorted_one_hop) < k_heuristic:
+        sorted_one_hop.extend([-1] * (k_heuristic - len(sorted_one_hop)))
+    k_heuristic_indices = [0, 1] + sorted_one_hop
+
+    all_a_values = torch.empty(size=[len(k_heuristic_indices) * K, subgraph.size(0)])
+    # construct A ( K * (2 + k_heuristic) X num_nodes)
+    for sign_k_val in range(0, K, 1):
+        for each_op_row in range(len(k_heuristic_indices)):
+            node_id_idx = int(k_heuristic_indices[each_op_row])
+            if node_id_idx == -1:
+                val_of_row = torch.zeros(size=(1, powers_of_a[sign_k_val].size(-1)))
+            else:
+                val_of_row = powers_of_a[sign_k_val][node_id_idx, :].to_dense()
+            all_a_values[(sign_k_val * len(k_heuristic_indices)) + each_op_row, :] = val_of_row
+
+    # calculate AX ( K * (2 + k_heuristic) X num_input_feat)
+    all_ax_values = all_a_values @ subgraph_features
+
+    # inject label info into AX' ( K * (2 + k_heuristic) X (num_input_feat + 1))
+    updated_features = torch.empty(size=[len(k_heuristic_indices) * K, all_ax_values[0].size()[-1] + 1])
+    operator_index = 0
+    while operator_index < len(k_heuristic_indices) * K:
+        label = all_a_values[operator_index][0] + all_a_values[operator_index][1]
+        updated_features[operator_index, :] = torch.hstack([label, all_ax_values[operator_index]])
+
+        operator_index += 1
+
+    # convert AX' into PyG Data object
+    x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(k_heuristic)])
+    updated_k_heuristic_indices = [val for val in k_heuristic_indices if val != -1]
+    x_b = subgraph_features[updated_k_heuristic_indices]
+    if len(updated_k_heuristic_indices) < k_heuristic + 2:
+        x_b = torch.vstack([x_b, torch.zeros(size=(k_heuristic - len(one_hop_nodes), x_b.size(-1)))])
+    data = Data(
+        x=torch.hstack([x_a, x_b]),
+        y=y,
+    )
+
+    for operator_index in range(1, K + 1, 1):
+        data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
+
+    return data
