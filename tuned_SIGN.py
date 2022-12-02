@@ -222,7 +222,7 @@ class OptimizedSignOperations:
         with torch.multiprocessing.get_context('spawn').Pool(16) as pool:
             sup_final_list = []
             for data in tqdm(pool.starmap(get_subgraphs, args)):
-                sup_final_list.append(copy.deepcopy(data))
+                sup_final_list.append(data)
 
         print("Done")
 
