@@ -2,6 +2,7 @@ import copy
 import random
 
 import torch
+from numpy import int64
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
 from torch_geometric.transforms import SIGN
@@ -230,9 +231,9 @@ class OptimizedSignOperations:
             sup_final_list[index][3] = x[data[0]]
             sup_final_list[index].extend([sign_kwargs['sign_k'], y])
 
-        with torch.multiprocessing.get_context('spawn').Pool(16) as pool:
-            for data in tqdm(pool.starmap(get_sup_final_data, sup_final_list)):
-                sup_data_list.append(data)
+        # with torch.multiprocessing.get_context('spawn').Pool(16) as pool:
+        for data in tqdm(sup_final_list):
+            sup_data_list.append(get_sup_final_data(*data))
 
         return sup_data_list
 
@@ -392,26 +393,30 @@ def get_sup_final_data(*args):
     for _ in range(K - 1):
         powers_of_a.append(subgraph @ powers_of_a[-1])
 
-    all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
+    all_a_values = []
 
     # construct A ( (K * 2) X num_nodes)
-    for operator_index in range(0, K * 2, 2):
-        all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-            powers_of_a[operator_index // 2][[0, 1], :].to_dense()
+    for operator_index in range(0, K, 1):
+        all_a_values.append(
+            torch.tensor(powers_of_a[operator_index][0].to_dense())
         )
+        all_a_values.append(
+            torch.tensor(powers_of_a[operator_index][1].to_dense())
+        )
+    all_a_values = torch.stack((all_a_values)).resize(K*2, deg.size(0))
     # calculate AX ( (K * 2) X num_input_feat)
     all_ax_values = all_a_values @ subgraph_features
 
     # inject label info into AX' ( (K * 2) X (num_input_feat + 1))
-    updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
-    for operator_index in range(0, K * 2, 2):
+    updated_features = []
+    for operator_index in range(0, K, 1):
         label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
         label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
 
-        updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-        updated_features[operator_index + 1, :] = torch.hstack(
-            [label_dst, all_ax_values[operator_index + 1]])
+        updated_features.append(torch.hstack([label_src, all_ax_values[operator_index]]))
+        updated_features.append(torch.hstack([label_dst, all_ax_values[operator_index + 1]]))
 
+    updated_features = torch.stack((updated_features))
     # convert AX' into PyG Data object
     data = Data(
         x=torch.hstack(
