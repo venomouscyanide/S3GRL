@@ -2,7 +2,7 @@ import math
 import numpy as np
 import torch
 from torch.nn import (ModuleList, Linear, Conv1d, MaxPool1d, Embedding, ReLU,
-                      Sequential, BatchNorm1d as BN)
+                      Sequential, BatchNorm1d as BN, BatchNorm1d)
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_sort_pool, global_add_pool, global_mean_pool, MLP, \
     global_max_pool
@@ -308,6 +308,7 @@ class SIGNNet(torch.nn.Module):
         self.node_embedding = node_embedding
 
         self.lins = torch.nn.ModuleList()
+        self.bns = torch.nn.ModuleList()
 
         self.dropout = dropout
         self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
@@ -322,13 +323,15 @@ class SIGNNet(torch.nn.Module):
 
         if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
+            self.bns.append(BatchNorm1d(hidden_channels))
             self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
+                self.bns.append(BatchNorm1d(hidden_channels))
         if not self.k_heuristic:
             self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
-                           batch_norm=False)
+                           batch_norm=True)
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
@@ -337,7 +340,7 @@ class SIGNNet(torch.nn.Module):
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=False)
+                           batch_norm=True)
 
     def _centre_pool_helper(self, batch, h):
         # center pooling
@@ -359,7 +362,6 @@ class SIGNNet(torch.nn.Module):
 
             if self.k_pool_strategy == 'mean':
                 h_k_mean = global_mean_pool(h[mask], trimmed_batch)
-
                 h = torch.concat([h_a, h_k_mean], dim=-1)
             elif self.k_pool_strategy == 'concat':
                 h_k = h[mask].reshape(shape=(
@@ -371,8 +373,10 @@ class SIGNNet(torch.nn.Module):
 
     def forward(self, xs, batch):
         hs = []
-        for x, lin in zip(xs, self.lins):
-            h = lin(x).relu()
+        for index, (x, lin) in enumerate(zip(xs, self.lins)):
+            h = lin(x)
+            h = self.bns[index](h)
+            h = h.relu()
             h = F.dropout(h, p=self.dropout, training=self.training)
             if self.pool_operatorwise:
                 h = self._centre_pool_helper(batch, h)
