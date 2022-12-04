@@ -44,7 +44,7 @@ def profile_helper(all_stats, model, train_dataset, stats_suffix):
     print(f"Parameters: {parameters}")
     stats['Number of Model Parameters'] = f'{parameters}'
     print(f"Train Dataset Size: {train_dataset_size}")
-    stats['Train Dataset Size (in MegaByes)'] = f'{byte_to_megabyte(model_size):.2f}'
+    stats['Train Dataset Size (in MegaBytes)'] = f'{byte_to_megabyte(train_dataset_size):.2f}'
 
     print("------------------------------------------")
 
