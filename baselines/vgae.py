@@ -167,4 +167,4 @@ def run_vgae(edge_index, x, test_and_val, model, args):
         with open(log_file, 'a') as f:
             print(key, file=f)
             loggers[key].print_statistics(f=f)
-    return best_test_scores[0]
+    return best_test_scores[0], z

@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 
 
-def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, hypertuning=False):
+def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, epochs, hypertuning=False):
     if hypertuning:
         emb_folder = f'{Path.home()}/Emb'
     else:
@@ -16,6 +16,7 @@ def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, h
         os.makedirs(emb_folder)
 
     if os.path.exists(f"{emb_folder}/{dataset}_{emb_dim}_seed{seed}.pt"):
+        print("Using cached n2v embeddings. Skipping n2v pretraining.")
         return torch.load(f"{emb_folder}/{dataset}_{emb_dim}_seed{seed}.pt", map_location=torch.device('cpu')).detach()
 
     n2v = Node2Vec(edge_index, num_nodes=num_nodes, embedding_dim=emb_dim, walk_length=20,
@@ -26,7 +27,7 @@ def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, h
     n2v.train()
 
     print(f'Prepping n2v embeddings with hidden_dim: {emb_dim}')
-    for i in tqdm(range(201), ncols=70):
+    for i in tqdm(range(epochs), ncols=70):
         total_loss = 0
         for pos_rw, neg_rw in loader:
             optimizer.zero_grad()

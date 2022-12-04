@@ -35,7 +35,6 @@ from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
-
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
@@ -901,6 +900,9 @@ def run_sgrl_learning(args, device, hypertuning=False):
             exit()
 
     init_features = args.init_features
+    if init_features:
+        print(f"Init features using: {init_features}")
+
     if init_features == "degree":
         one_hot = OneHotDegree(max_degree=1024)
         data = one_hot(data)
@@ -908,7 +910,30 @@ def run_sgrl_learning(args, device, hypertuning=False):
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
         data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device,
-                                     hypertuning)
+                                     args.epochs, hypertuning)
+
+    init_representation = args.init_representation
+    if init_representation:
+        print(f"Init representation using: {init_representation} model")
+    if init_representation in ['GAE', 'VGAE', 'ARGVA']:
+        from baselines.vgae import run_vgae
+        original_hidden_dims = args.hidden_channels
+        args.embedding_dim = args.hidden_channels
+        args.hidden_channels = args.hidden_channels
+        args.epochs = 500
+        # 64 -> 32 (output)
+        test_and_val = [split_edge['test']['edge'].T, split_edge['test']['edge_neg'].T, split_edge['valid']['edge'].T,
+                        split_edge['valid']['edge_neg'].T]
+        edge_index = split_edge['train']['edge'].T
+        x = data.x
+        _, data.x = run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=init_representation,
+                             args=args)
+        args.hidden_channels = original_hidden_dims
+        args.epochs = 50
+    elif init_representation == 'GIC':
+        raise NotImplementedError(f"init_representation: {init_representation} not supported.")
+    else:
+        raise NotImplementedError(f"init_representation: {init_representation} not supported.")
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1471,6 +1496,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_node_set_strategy', type=str, default="", required=False,
                         choices=['union', 'intersection'])
     parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
+    parser.add_argument('--init_representation', type=str, choices=['GIC', 'ARGVA', 'GAE', 'VGAE'])
 
     args = parser.parse_args()
 
