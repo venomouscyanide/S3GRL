@@ -899,6 +899,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             print(f'Is undirected: {data.is_undirected()}')
             exit()
 
+    time_for_prep_start = default_timer()
     init_features = args.init_features
     if init_features:
         print(f"Init features using: {init_features}")
@@ -933,7 +934,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
             sys.path.append('%s/Software/GIC/' % args.par_dir)
             from GICEmbs import CalGIC
             args.data_name = args.dataset
-            _, data.x = CalGIC(edge_index=edge_index, features=x, dataset=args.dataset, test_and_val=test_and_val, args=args)
+            _, data.x = CalGIC(edge_index=edge_index, features=x, dataset=args.dataset, test_and_val=test_and_val,
+                               args=args)
             args.hidden_channels = original_hidden_dims
         else:
             raise NotImplementedError(f"init_representation: {init_representation} not supported.")
@@ -1046,7 +1048,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
     if args.calc_ratio:
         rw_kwargs.update({'calc_ratio': True})
 
-    time_for_prep_start = default_timer()
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Train data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
