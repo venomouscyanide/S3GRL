@@ -1222,7 +1222,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         if args.train_node_embedding:
             torch.nn.init.xavier_uniform_(emb.weight)
             parameters += list(emb.parameters())
-        optimizer = torch.optim.Adam(params=parameters, lr=args.lr)
+        optimizer = torch.optim.Adam(params=parameters, lr=args.lr, weight_decay=1e-4)
         total_params = sum(p.numel() for param in parameters for p in param)
         print(f'Total number of parameters is {total_params}')
         if args.model == 'DGCNN':
