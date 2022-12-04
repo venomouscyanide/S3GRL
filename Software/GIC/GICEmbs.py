@@ -206,4 +206,4 @@ def CalGIC(edge_index, features, dataset, test_and_val, args):
             print(key, file=f)
             loggers[key].print_statistics(f=f)
     os.remove(dataname)
-    return best_test_scores[0]
+    return best_test_scores[0], embs

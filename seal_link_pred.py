@@ -35,7 +35,6 @@ from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
 
-
 from custom_losses import auc_loss, hinge_auc_loss
 from data_utils import read_label, read_edges
 from models import SAGE, DGCNN, GCN, GIN, SIGNNet
@@ -900,7 +899,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
             print(f'Is undirected: {data.is_undirected()}')
             exit()
 
+    time_for_prep_start = default_timer()
     init_features = args.init_features
+    if init_features:
+        print(f"Init features using: {init_features}")
+
     if init_features == "degree":
         one_hot = OneHotDegree(max_degree=1024)
         data = one_hot(data)
@@ -908,7 +911,34 @@ def run_sgrl_learning(args, device, hypertuning=False):
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
         data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device,
-                                     hypertuning)
+                                     args.epochs, hypertuning)
+
+    init_representation = args.init_representation
+    if init_representation:
+        print(f"Init representation using: {init_representation} model")
+        from baselines.vgae import run_vgae
+        original_hidden_dims = args.hidden_channels
+        args.embedding_dim = args.hidden_channels
+        args.hidden_channels = args.hidden_channels // 2
+        # 64 -> 32 (output)
+        test_and_val = [split_edge['test']['edge'].T, split_edge['test']['edge_neg'].T, split_edge['valid']['edge'].T,
+                        split_edge['valid']['edge_neg'].T]
+        edge_index = split_edge['train']['edge'].T
+        x = data.x
+        if init_representation in ['GAE', 'VGAE', 'ARGVA']:
+            _, data.x = run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=init_representation,
+                                 args=args)
+            args.hidden_channels = original_hidden_dims
+        elif init_representation == 'GIC':
+            args.par_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ''))
+            sys.path.append('%s/Software/GIC/' % args.par_dir)
+            from GICEmbs import CalGIC
+            args.data_name = args.dataset
+            _, data.x = CalGIC(edge_index=edge_index, features=x, dataset=args.dataset, test_and_val=test_and_val,
+                               args=args)
+            args.hidden_channels = original_hidden_dims
+        else:
+            raise NotImplementedError(f"init_representation: {init_representation} not supported.")
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1018,7 +1048,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
     if args.calc_ratio:
         rw_kwargs.update({'calc_ratio': True})
 
-    time_for_prep_start = default_timer()
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         print("Setting up Train data")
         dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
@@ -1471,6 +1500,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_node_set_strategy', type=str, default="", required=False,
                         choices=['union', 'intersection'])
     parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
+    parser.add_argument('--init_representation', type=str, choices=['GIC', 'ARGVA', 'GAE', 'VGAE'])
 
     args = parser.parse_args()
 

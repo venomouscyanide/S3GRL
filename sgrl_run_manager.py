@@ -19,7 +19,8 @@ class SGRLArgumentParser:
                  neg_ratio,
                  profile, split_val_ratio, split_test_ratio, train_mlp, dropout, train_gae, base_gae, dataset_stats,
                  seed, dataset_split_num, train_n2v, train_mf, sign_k, sign_type, pool_operatorwise, optimize_sign,
-                 init_features, n2v_dim=256, k_heuristic=0, k_node_set_strategy="", k_pool_strategy=""):
+                 init_features, n2v_dim=256, k_heuristic=0, k_node_set_strategy="", k_pool_strategy="",
+                 init_representation=""):
         # Data Settings
         self.dataset = dataset
         self.fast_split = fast_split
@@ -99,6 +100,7 @@ class SGRLArgumentParser:
         self.k_heuristic = k_heuristic
         self.k_node_set_strategy = k_node_set_strategy
         self.k_pool_strategy = k_pool_strategy
+        self.init_representation = init_representation
 
 
 def sgrl_master_controller(config, results_json):

@@ -45,9 +45,8 @@ def run_gae_helper(dataset, runs, model):
             data.x = torch.eye(data.num_nodes)
 
         x = data.x
-        acc_list += [
-            run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=model, args=args)
-        ]
+        auc, _ = run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=model, args=args)
+        acc_list += [auc]
 
     array = np.array(acc_list)
     print(f'Final Average Test of {runs} runs is: {array.mean():.2f} ± {array.std():.2f}')
