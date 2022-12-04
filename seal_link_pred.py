@@ -915,25 +915,28 @@ def run_sgrl_learning(args, device, hypertuning=False):
     init_representation = args.init_representation
     if init_representation:
         print(f"Init representation using: {init_representation} model")
-    if init_representation in ['GAE', 'VGAE', 'ARGVA']:
         from baselines.vgae import run_vgae
         original_hidden_dims = args.hidden_channels
         args.embedding_dim = args.hidden_channels
-        args.hidden_channels = args.hidden_channels
-        args.epochs = 500
+        args.hidden_channels = args.hidden_channels // 2
         # 64 -> 32 (output)
         test_and_val = [split_edge['test']['edge'].T, split_edge['test']['edge_neg'].T, split_edge['valid']['edge'].T,
                         split_edge['valid']['edge_neg'].T]
         edge_index = split_edge['train']['edge'].T
         x = data.x
-        _, data.x = run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=init_representation,
-                             args=args)
-        args.hidden_channels = original_hidden_dims
-        args.epochs = 50
-    elif init_representation == 'GIC':
-        raise NotImplementedError(f"init_representation: {init_representation} not supported.")
-    else:
-        raise NotImplementedError(f"init_representation: {init_representation} not supported.")
+        if init_representation in ['GAE', 'VGAE', 'ARGVA']:
+            _, data.x = run_vgae(edge_index=edge_index, x=x, test_and_val=test_and_val, model=init_representation,
+                                 args=args)
+            args.hidden_channels = original_hidden_dims
+        elif init_representation == 'GIC':
+            args.par_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ''))
+            sys.path.append('%s/Software/GIC/' % args.par_dir)
+            from GICEmbs import CalGIC
+            args.data_name = args.dataset
+            _, data.x = CalGIC(edge_index=edge_index, features=x, dataset=args.dataset, test_and_val=test_and_val, args=args)
+            args.hidden_channels = original_hidden_dims
+        else:
+            raise NotImplementedError(f"init_representation: {init_representation} not supported.")
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'

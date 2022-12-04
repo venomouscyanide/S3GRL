@@ -49,10 +49,8 @@ def run_gic(dataset, runs):
         args.par_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
         sys.path.append('%s/Software/GIC/' % args.par_dir)
         from GICEmbs import CalGIC
-
-        acc_list += [
-            CalGIC(edge_index, x, args.data_name, test_and_val, args)
-        ]
+        auc, _ = CalGIC(edge_index, x, args.data_name, test_and_val, args)
+        acc_list += [auc]
 
     array = np.array(acc_list)
     print(f'Final Average Test of {runs} runs is: {array.mean():.2f} ± {array.std():.2f}')
