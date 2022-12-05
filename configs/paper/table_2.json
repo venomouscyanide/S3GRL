@@ -1,6 +1,6 @@
 {
   "datasets": {
-     "USAir_SuP": {
+    "USAir_SuP": {
       "ds_params": {
         "runs": 10,
         "seeds": [
@@ -2042,7 +2042,7 @@
         "init_representation": ""
       }
     },
-    
+
     "USAir_SEAL": {
       "ds_params": {
         "runs": 10,
