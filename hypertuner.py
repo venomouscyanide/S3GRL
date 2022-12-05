@@ -7,7 +7,7 @@ import argparse
 
 from tqdm import tqdm
 
-from seal_link_pred import run_sgrl_learning
+from sgrl_link_pred import run_sgrl_learning
 from sgrl_run_manager import SGRLArgumentParser
 
 warnings.filterwarnings(action="ignore")
