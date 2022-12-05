@@ -40,10 +40,6 @@ def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, e
 
     output = (n2v.forward()).cpu().clone().detach()
 
-    del n2v
-    del loader
-    torch.cuda.empty_cache()
-
     print('Finish prepping n2v embeddings')
     torch.save(output, f"{emb_folder}/{dataset}_{emb_dim}_seed{seed}.pt")
     return output
