@@ -31,7 +31,7 @@ class GCN(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge
-        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -96,7 +96,7 @@ class SAGE(torch.nn.Module):
 
         self.dropout = dropout
         self.dropedge = dropedge
-        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+        self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -185,7 +185,7 @@ class DGCNN(torch.nn.Module):
 
         dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
         self.dropedge = dropedge
-        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=True)
+        self.mlp = MLP([dense_dim, 128, 1], dropout=0.5, batch_norm=False)
 
     def forward(self, num_nodes, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
         edge_index, _ = dropout_adj(edge_index, p=self.dropedge,
@@ -262,9 +262,9 @@ class GIN(torch.nn.Module):
 
         self.dropout = dropout
         if self.jk:
-            self.mlp = MLP([num_layers * hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=True)
+            self.mlp = MLP([num_layers * hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=False)
         else:
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=True)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=0.5, batch_norm=False)
 
         self.dropedge = dropedge
 
@@ -324,7 +324,7 @@ class SIGNNet(torch.nn.Module):
         if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
             self.bns.append(BatchNorm1d(hidden_channels))
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=False)
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
