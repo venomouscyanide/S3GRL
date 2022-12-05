@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 from torch_geometric import seed_everything
 
-from seal_link_pred import run_sgrl_learning
+from sgrl_link_pred import run_sgrl_learning
 
 
 class DummyArgs:

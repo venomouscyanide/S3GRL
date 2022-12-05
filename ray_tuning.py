@@ -10,7 +10,7 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from torch_geometric import seed_everything
 
-from seal_link_pred import run_sgrl_learning_with_ray
+from sgrl_link_pred import run_sgrl_learning_with_ray
 from sgrl_run_manager import SGRLArgumentParser
 from tuning_utils import TimeStopper
 

@@ -770,7 +770,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         os.makedirs(args.res_dir)
     if not args.keep_old:
         # Backup python files.
-        copy('seal_link_pred.py', args.res_dir)
+        copy('sgrl_link_pred.py', args.res_dir)
         copy('utils.py', args.res_dir)
     log_file = os.path.join(args.res_dir, 'log.txt')
     # Save command line input.
