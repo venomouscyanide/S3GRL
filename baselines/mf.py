@@ -102,13 +102,20 @@ def test(predictor, x, split_edge, device, batch_size):
     pos_test_preds = []
     for perm in DataLoader(range(pos_test_edge.size(0)), batch_size):
         edge = pos_test_edge[perm].t()
-        pos_test_preds += [predictor(x[edge[0]], x[edge[1]]).squeeze().cpu()]
+        perm_preds = predictor(x[edge[0]], x[edge[1]]).squeeze().cpu()
+        if not perm_preds.shape:
+            perm_preds = perm_preds.reshape(1)
+        pos_test_preds += [perm_preds]
+
     pos_test_pred = torch.cat(pos_test_preds, dim=0).to(device)
 
     neg_test_preds = []
     for perm in DataLoader(range(neg_test_edge.size(0)), batch_size):
         edge = neg_test_edge[perm].t()
-        neg_test_preds += [predictor(x[edge[0]], x[edge[1]]).squeeze().cpu()]
+        perm_preds = predictor(x[edge[0]], x[edge[1]]).squeeze().cpu()
+        if not perm_preds.shape:
+            perm_preds = perm_preds.reshape(1)
+        neg_test_preds += [perm_preds]
     neg_test_pred = torch.cat(neg_test_preds, dim=0).to(device)
 
     test_labels = torch.cat([
