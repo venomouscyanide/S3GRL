@@ -170,6 +170,7 @@ def CalGIC(edge_index, features, dataset, test_and_val, args):
             embeds, _, _, S = model.embed(features, sp_adj if sparse else adj, sparse, None, beta)
             embs = embeds[0, :]
             embs = embs / embs.norm(dim=1)[:, None]
+            embs = embs.nan_to_num(nan=.0)
             embs = embs.cpu().clone().detach()
 
             results = {}
