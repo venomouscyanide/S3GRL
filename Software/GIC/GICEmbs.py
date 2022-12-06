@@ -115,7 +115,7 @@ def CalGIC(edge_index, features, dataset, test_and_val, args):
     test_pos = torch.transpose(test_pos, 0, 1).cpu().detach().numpy()
     test_neg = torch.transpose(test_neg, 0, 1).cpu().detach().numpy()
     features = torch.reshape(features, (1, features.size(0), features.size(1)))
-    sp_adj = to_scipy_sparse_matrix(edge_index)
+    sp_adj = to_scipy_sparse_matrix(edge_index, num_nodes=nb_nodes)
     # data = Data(edge_index=edge_index)
     # g = to_networkx(data)
     # sp_adj = nx.adjacency_matrix(g)
