@@ -61,7 +61,7 @@ def plot_ds(y_label, data_index, dataset_name, all_plot_data):
     plt.xlabel('No. Nodes in pth Operator', labelpad=0)
     plt.legend(loc="best", ncol=2, borderpad=0.2, labelspacing=0.1, borderaxespad=0.1)
     plt.show()
-    f.savefig(f"hypertuner_{y_label.lower()}.pdf", bbox_inches='tight')
+    f.savefig(f"{dataset}_hypertuner_{y_label.lower()}.pdf", bbox_inches='tight')
 
 
 if __name__ == '__main__':
