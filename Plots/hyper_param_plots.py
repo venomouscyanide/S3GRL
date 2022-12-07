@@ -34,8 +34,8 @@ def plot_ds(y_label, data_index, dataset_name, all_plot_data):
     # slice_length = 5
     # cmap = [plt.cm.get_cmap("Reds"), plt.cm.get_cmap("Greens")]
     # slicedCM = [cmap[0](np.linspace(0.4, 0.75, slice_length)), cmap[1](np.linspace(0.5, 0.8, slice_length))]
-    line_style = ['solid', 'dotted', 'dashed', 'dashdot', 'dashdot']
-    marker_style = ['D', 's', 'o', '^', '.']
+    line_style = ['solid', 'dotted', 'dashed', 'dashdot']
+    marker_style = ['D', 's', 'o', '^']
 
     f = plt.figure()
     x = [1, 5, 10, 15, 20]
