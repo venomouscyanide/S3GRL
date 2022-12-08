@@ -1,4 +1,7 @@
+from collections import defaultdict
+
 import torch
+from matplotlib import pyplot as plt
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
 from torch_geometric.transforms import SIGN
@@ -236,6 +239,8 @@ class OptimizedSignOperations:
         K = sign_kwargs['sign_k']
         split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
+        distribution = defaultdict(int)
+
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
@@ -277,7 +282,8 @@ class OptimizedSignOperations:
             degree_vals = deg.tolist()
             degree_dict = {node_id: int(degree_vals[node_id]) for node_id in range(len(degree_vals))}
             sorted_one_hop = sorted(one_hop_nodes, key=lambda x: degree_dict[x], reverse=True)[
-                                   :k_heuristic]
+                             :k_heuristic]
+            distribution[len(list(filter(lambda x: x != -1, sorted_one_hop + [0, 1])))] += 1
 
             if len(sorted_one_hop) < k_heuristic:
                 sorted_one_hop.extend([-1] * (k_heuristic - len(sorted_one_hop)))
@@ -321,5 +327,10 @@ class OptimizedSignOperations:
                 data[f'x{operator_index}'] = updated_features[split_indices[operator_index - 1]]
 
             sup_data_list.append(data)
-
+        distribution = {k: v for k, v in sorted(distribution.items(), key=lambda x: x[0])}
+        x = list(range(2, 11))
+        y_data = list(distribution.values())
+        plt.bar(x, y_data, align='center')
+        plt.gca().set(title=f'Distribution for {len(link_index.t().tolist())} subgraphs for y={y}', ylabel='Freq')
+        plt.show()
         return sup_data_list
