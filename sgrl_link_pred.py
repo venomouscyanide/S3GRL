@@ -1196,7 +1196,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
     print(f"Total Prep time: {total_prep_time} sec")
 
     follow_batch = None
-    if args.model == "SIGN" and args.k_heuristic:
+    if args.model == "SIGN":
         follow_batch = [f'x{index}' for index in range(1, args.sign_k + 1)]
 
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
