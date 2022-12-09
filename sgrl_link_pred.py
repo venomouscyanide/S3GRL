@@ -1508,7 +1508,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_heuristic', type=int, default=0)
     parser.add_argument('--k_node_set_strategy', type=str, default="", required=False,
                         choices=['union', 'intersection'])
-    parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
+    parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat', 'sum'])
     parser.add_argument('--init_representation', type=str, choices=['GIC', 'ARGVA', 'GAE', 'VGAE'])
 
     args = parser.parse_args()

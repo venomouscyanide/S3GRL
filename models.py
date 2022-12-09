@@ -335,6 +335,8 @@ class SIGNNet(torch.nn.Module):
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
+            elif self.k_pool_strategy == "sum":
+                channels = 2
             elif self.k_pool_strategy == "concat":
                 channels = 1 + self.k_heuristic
             else:
@@ -362,6 +364,9 @@ class SIGNNet(torch.nn.Module):
 
             if self.k_pool_strategy == 'mean':
                 h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
+                h = torch.concat([h_a, h_k_mean], dim=-1)
+            elif self.k_pool_strategy == 'sum':
+                h_k_mean = global_add_pool(h[mask], trimmed_batch, size=uq.shape[0])
                 h = torch.concat([h_a, h_k_mean], dim=-1)
             elif self.k_pool_strategy == 'concat':
                 h_k = h[mask].reshape(shape=(
