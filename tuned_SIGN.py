@@ -318,6 +318,7 @@ class OptimizedSignOperations:
                 y=y,
             )
 
+            index = 0
             for index, (start, end) in enumerate(zip(slice_helper, slice_helper[1:]), start=1):
                 x_operator = final_a_values[start:end]
                 data[f'x{index}'] = x_operator
