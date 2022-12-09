@@ -232,9 +232,7 @@ class OptimizedSignOperations:
         sup_data_list = []
         print("Start with SuP data prep")
 
-        k_heuristic = sign_kwargs['k_heuristic']
         K = sign_kwargs['sign_k']
-        # split_indices = np.array_split(range((k_heuristic + 2) * K), K)
 
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
@@ -278,9 +276,8 @@ class OptimizedSignOperations:
                     raise NotImplementedError(f"check strat {strat}")
                 strat_hop_nodes[sign_k] = one_hop_nodes
 
-            # all_a_values = torch.empty(size=[len(k_heuristic_indices) * K, subgraph.size(0)])
             all_a_values = []
-            # construct A ( K * (2 + k_heuristic) X num_nodes)
+            # construct all a rows
             starting_indices = []
             slice_helper = []
             len_so_far = 0
@@ -299,11 +296,10 @@ class OptimizedSignOperations:
                 len_so_far += len(selected_rows)
 
             all_a_values = torch.stack((all_a_values))
-            # calculate AX ( K * (2 + k_heuristic) X num_input_feat)
+            # calculate AX
             all_ax_values = all_a_values @ subgraph_features
 
-            # inject label info into AX' ( K * (2 + k_heuristic) X (num_input_feat + 1))
-            # updated_features = torch.empty(size=[len(k_heuristic_indices) * K, all_ax_values[0].size()[-1] + 1])
+            # inject label info
             row = 0
             final_a_values = torch.hstack([torch.zeros(size=(all_ax_values.size()[0], 1)), all_ax_values])
             source_target_indices = set(starting_indices)
@@ -314,9 +310,6 @@ class OptimizedSignOperations:
 
                 row += 1
 
-            # convert AX' into PyG Data object
-            # x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(subgraph_features.size(0) - 2)])
-            # x_b = subgraph_features
             x_a = torch.tensor([[1]] + [[1]])
             x_b = subgraph_features[[0, 1]]
 
@@ -330,14 +323,6 @@ class OptimizedSignOperations:
                 data[f'x{index}'] = x_operator
             data[f'x{index + 1}'] = final_a_values[slice_helper[-1]:]
 
-            # for operator in range(1, K + 1, 1):
-            #     x_operator = data[f'x{operator}']
-            #     if subgraph_features.size(0) - x_operator.size(0) > 0:
-            #         x_operator = torch.vstack([x_operator, torch.zeros(
-            #             size=(subgraph_features.size(0) - x_operator.size(0), x_operator.size(1)))])
-            #     data[f'x{operator}'] = x_operator
-
-            # data.edge_index = torch.vstack([torch.tensor(u), torch.tensor(v)])
             sup_data_list.append(data)
 
         return sup_data_list
