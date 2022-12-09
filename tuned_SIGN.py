@@ -310,8 +310,15 @@ class OptimizedSignOperations:
 
                 row += 1
 
-            x_a = torch.tensor([[1]] + [[1]])
-            x_b = subgraph_features[[0, 1]]
+
+            if strat == 'union':
+                x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(subgraph_features.size(0) - 2)])
+                x_b = subgraph_features
+            elif strat == 'intersection':
+                x_a = torch.tensor([[1]] + [[1]])
+                x_b = subgraph_features[[0, 1]]
+            else:
+                raise NotImplementedError(f"check strat {strat}")
 
             data = Data(
                 x=torch.hstack([x_a, x_b]),
