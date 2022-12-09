@@ -310,7 +310,6 @@ class OptimizedSignOperations:
 
                 row += 1
 
-
             if strat == 'union':
                 x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(subgraph_features.size(0) - 2)])
                 x_b = subgraph_features
