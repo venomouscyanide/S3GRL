@@ -1200,7 +1200,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
                                           shuffle=True, num_workers=args.num_workers)
         else:
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                      shuffle=False, num_workers=args.num_workers, follow_batch=['x1', 'x2', 'x3'])
+                                      shuffle=True, num_workers=args.num_workers, follow_batch=['x1', 'x2', 'x3'])
 
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
                                 num_workers=args.num_workers, follow_batch=['x1', 'x2', 'x3'])
