@@ -359,7 +359,7 @@ class SIGNNet(torch.nn.Module):
             mask[center_indices] = False
             mask[center_indices + 1] = False
             trimmed_batch = batch[op_index][mask]
-            return h_a
+
             if self.k_pool_strategy == 'mean':
                 h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
                 h = torch.concat([h_a, h_k_mean], dim=-1)
@@ -385,6 +385,7 @@ class SIGNNet(torch.nn.Module):
         h = torch.cat(hs, dim=-1)
 
         if not self.pool_operatorwise:
+            raise RuntimeError("Not supported if not used at an operator level.")
             h = self._centre_pool_helper(batch, h, -1)
 
         h = self.mlp(h)
