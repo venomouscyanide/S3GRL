@@ -454,6 +454,7 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
     pbar = tqdm(train_loader, ncols=70)
     for data in pbar:
         data = data.to(device)
+        operator_batch_data = [data.batch, data.x1_batch, data.x2_batch, data.x3_batch]
         optimizer.zero_grad()
         if args.model == 'SIGN':
             sign_k = args.sign_k
@@ -464,7 +465,7 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            logits = model(xs, operator_batch_data)
         else:
             x = data.x if args.use_feature else None
             edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -548,6 +549,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     y_pred, y_true = [], []
     for data in tqdm(val_loader, ncols=70):
         data = data.to(device)
+        operator_batch_data = [data.batch, data.x1_batch, data.x2_batch, data.x3_batch]
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
@@ -561,7 +563,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            logits = model(xs, operator_batch_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -573,6 +575,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     y_pred, y_true = [], []
     for data in tqdm(test_loader, ncols=70):
         data = data.to(device)
+        operator_batch_data = [data.batch, data.x1_batch, data.x2_batch, data.x3_batch]
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
         node_id = data.node_id if emb else None
@@ -586,7 +589,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            logits = model(xs, operator_batch_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -1197,12 +1200,12 @@ def run_sgrl_learning(args, device, hypertuning=False):
                                           shuffle=True, num_workers=args.num_workers)
         else:
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                      shuffle=True, num_workers=args.num_workers)
+                                      shuffle=False, num_workers=args.num_workers, follow_batch=['x1', 'x2', 'x3'])
 
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
-                                num_workers=args.num_workers)
+                                num_workers=args.num_workers, follow_batch=['x1', 'x2', 'x3'])
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size,
-                                 num_workers=args.num_workers)
+                                 num_workers=args.num_workers, follow_batch=['x1', 'x2', 'x3'])
 
     if args.train_node_embedding:
         # TODO; heads-up: this arg is not supported in SIGN

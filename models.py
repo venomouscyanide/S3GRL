@@ -342,9 +342,9 @@ class SIGNNet(torch.nn.Module):
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
 
-    def _centre_pool_helper(self, batch, h):
+    def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
-        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
+        uq, center_indices = np.unique(batch[op_index].cpu().numpy(), return_index=True)
         if not self.k_heuristic:
             # batch_size X hidden_dim
             h_src = h[center_indices]
@@ -355,13 +355,13 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h_a = h_src * h_dst
 
-            mask = torch.ones(size=(batch.size()), dtype=torch.bool)
+            mask = torch.ones(size=(batch[op_index].size()), dtype=torch.bool)
             mask[center_indices] = False
             mask[center_indices + 1] = False
-            trimmed_batch = batch[mask]
-
+            trimmed_batch = batch[op_index][mask]
+            return h_a
             if self.k_pool_strategy == 'mean':
-                h_k_mean = global_mean_pool(h[mask], trimmed_batch)
+                h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
                 h = torch.concat([h_a, h_k_mean], dim=-1)
             elif self.k_pool_strategy == 'concat':
                 h_k = h[mask].reshape(shape=(
@@ -379,13 +379,13 @@ class SIGNNet(torch.nn.Module):
             h = h.relu()
             h = F.dropout(h, p=self.dropout, training=self.training)
             if self.pool_operatorwise:
-                h = self._centre_pool_helper(batch, h)
+                h = self._centre_pool_helper(batch, h, index)
             hs.append(h)
 
         h = torch.cat(hs, dim=-1)
 
         if not self.pool_operatorwise:
-            h = self._centre_pool_helper(batch, h)
+            h = self._centre_pool_helper(batch, h, -1)
 
         h = self.mlp(h)
         return h
