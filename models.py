@@ -347,8 +347,7 @@ class SIGNNet(torch.nn.Module):
             self.operator_diffusion_mlp = MLP(
                 [hidden_channels * (num_layers + 1) * channels, hidden_channels, hidden_channels // 2],
                 dropout=dropout, batch_norm=True)
-            self.link_pred_mlp = MLP([hidden_channels // 2, hidden_channels // 4, 1], dropout=dropout,
-                                     batch_norm=True)
+            self.link_pred_mlp = MLP([hidden_channels // 2, hidden_channels // 2, 1], dropout=dropout, batch_norm=True)
 
     def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
@@ -376,7 +375,7 @@ class SIGNNet(torch.nn.Module):
                 h = torch.concat([h_a, h_k_sum], dim=-1)
             elif self.k_pool_strategy == 'concat':
                 h_k = h[mask].reshape(shape=(
-                center_indices.shape[0], self.hidden_channels * self.k_heuristic)
+                    center_indices.shape[0], self.hidden_channels * self.k_heuristic)
                 )
                 h = torch.concat([h_a, h_k], dim=-1)
 
