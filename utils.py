@@ -473,7 +473,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                 return sup_data_list
 
             print("Prepping PoS data")
-            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
+            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y, sign_kwargs)
 
             combined_data = []
             for sup_data, pos_data in zip(sup_data_list, pos_data_list):
@@ -486,7 +486,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             return combined_data
         elif powers_of_A and sign_kwargs['optimize_sign']:
             # optimized PoS flow
-            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
+            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y, sign_kwargs)
             return pos_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign'] and not sign_kwargs['k_heuristic']:
             # optimized SuP flow

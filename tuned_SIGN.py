@@ -5,7 +5,7 @@ from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, from_scipy, spspmm
 import torch.nn.functional as F
 from tqdm import tqdm
-
+from torch_scatter import scatter_max
 import scipy.sparse as ssp
 import numpy as np
 
@@ -60,7 +60,7 @@ class TunedSIGN(SIGN):
 
 class OptimizedSignOperations:
     @staticmethod
-    def get_PoS_prepped_ds(powers_of_A, link_index, A, x, y):
+    def get_PoS_prepped_ds(powers_of_A, link_index, A, x, y, sign_kwargs):
         print("PoS Optimized Flow.")
         # optimized PoS flow, everything is created on the CPU, then in train() sent to GPU on a batch basis
 
@@ -72,22 +72,44 @@ class OptimizedSignOperations:
         g_h_global_list = []
 
         list_of_training_edges = link_index.t().tolist()
-        num_training_egs = len(list_of_training_edges)
+
+        K = sign_kwargs['sign_k']
+        pos_num_A = 10  # sign_kwargs['pos_num_graphs']
+
+        list_of_powers_A = []
+        list_of_training_edges_split = np.array_split(list_of_training_edges, pos_num_A)
+        array_link_map = {}
+        A = normalized_powers_of_A[-1].to_scipy().tolil()
+
+        for index, list_of_edges in enumerate(list_of_training_edges_split):
+            A_copy = A.copy()
+
+            for edge in list_of_edges:
+                A_copy[edge[0], edge[1]] = 0
+                A_copy[edge[1], edge[0]] = 0
+
+            list_of_powers_inner = [A_copy]
+            for sign_k in range(2, K + 1):
+                list_of_powers_inner.append((A_copy @ list_of_powers_inner[-1]).tolil())
+            list_of_powers_A.extend(list_of_powers_inner)
+
 
         print("Setting up A Global List")
-        for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
+        split_helper = []
+        [split_helper.extend([idx] * K) for idx in range(pos_num_A)]
+
+        for index, power_of_a in enumerate(list_of_powers_A, start=0):
             print(f"Constructing A[{index}]")
+            num_training_egs = len(list_of_training_edges_split[split_helper[index]])
             a_global_list.append(
                 dok_matrix((num_training_egs * 2, A.shape[0]), dtype=np.float32)
             )
-            power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
             list_of_lilmtrx = []
-            for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
-                src, dst = list_of_training_edges[int(link_number / 2)]
+            power_of_a_scipy_lil = power_of_a
+            for link in tqdm(list_of_training_edges_split[split_helper[index]], ncols=70):
+                src, dst = link[0], link[1]
                 interim_src = power_of_a_scipy_lil.getrow(src)
-                interim_src[0, dst] = 0
                 interim_dst = power_of_a_scipy_lil.getrow(dst)
-                interim_dst[0, src] = 0
                 list_of_lilmtrx.append(interim_src)
                 list_of_lilmtrx.append(interim_dst)
 
@@ -105,31 +127,55 @@ class OptimizedSignOperations:
         print("Setting up G Global List")
         original_x = x.detach()
         x = x.to_sparse()
-        for operator_id in tqdm(range(len(normalized_powers_of_A)), ncols=70):
+        for operator_id in tqdm(range(len(a_global_list)), ncols=70):
             mult_index, mult_value = spspmm(a_global_list[operator_id].coalesce().indices(),
                                             a_global_list[operator_id].coalesce().values(), x.indices(),
-                                            x.values(), a_global_list[0].size()[0], a_global_list[0].size()[1],
+                                            x.values(), a_global_list[operator_id].size()[0],
+                                            a_global_list[operator_id].size()[1],
                                             x.size()[1])
-            g_global_list.append(torch.sparse_coo_tensor(mult_index, mult_value, size=[a_global_list[0].size()[0],
-                                                                                       x.size()[-1]]).to_dense())
+            g_global_list.append(
+                torch.sparse_coo_tensor(mult_index, mult_value, size=[a_global_list[operator_id].size()[0],
+                                                                      x.size()[-1]]).to_dense())
 
         print("Setting up G H Global List")
         for index, src_dst_x in enumerate(g_global_list, start=0):
-            g_h_global_list.append(torch.empty(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
+            num_training_egs = len(list_of_training_edges_split[split_helper[index]])
+            g_h_global_list.append(
+                torch.empty(size=[num_training_egs * 2, g_global_list[split_helper[index]].shape[-1] + 1]))
             print(f"Setting up G H Global [{index}]")
-            for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
-                src, dst = list_of_training_edges[int(link_number / 2)]
-                h_src = normalized_powers_of_A[index][src, src].to_dense()
-                h_dst = normalized_powers_of_A[index][dst, dst].to_dense()
-                g_h_global_list[index][link_number] = torch.hstack(
-                    [h_src[0], g_global_list[index][link_number]])
-                g_h_global_list[index][link_number + 1] = torch.hstack(
-                    [h_dst[0], g_global_list[index][link_number + 1]])
+            for inner_index, link in tqdm(enumerate(list_of_training_edges_split[split_helper[index]]), ncols=70):
+                src, dst = link[0], link[1]
+                h_src = torch.tensor(list_of_powers_A[index][src, src])
+                h_dst = torch.tensor(list_of_powers_A[index][dst, dst])
+                g_h_global_list[index][inner_index] = torch.hstack(
+                    [h_src, g_global_list[index][inner_index]])
+                g_h_global_list[index][inner_index + 1] = torch.hstack(
+                    [h_dst, g_global_list[index][inner_index + 1]])
 
         print("Finishing Prep with creation of data")
         x = original_x
-        for link_number in tqdm(range(0, num_training_egs * 2, 2), ncols=70):
-            src, dst = list_of_training_edges[int(link_number / 2)]
+
+        tensor_slice_helper = []
+        start = 0
+        for tensor_slice in range(K):
+            inner_start = start
+            inner_slicer = []
+            while inner_start < len(list_of_training_edges) * K * 2:
+                inner_slicer.append(inner_start)
+                inner_start += 1
+                inner_slicer.append(inner_start)
+                inner_start += ((K - 1) * 2) + 1
+            tensor_slice_helper.append(inner_slicer)
+            start += 2
+
+        g_h_stacked = []
+        all_stacked = torch.cat((g_h_global_list))
+
+        for operator in range(K):
+            g_h_stacked.append(all_stacked[tensor_slice_helper[operator]])
+
+        for link_number, link in tqdm(enumerate(list_of_training_edges), ncols=70):
+            src, dst = link[0], link[1]
             data = Data(
                 x=torch.hstack(
                     [torch.tensor([[1], [1]]),
@@ -138,9 +184,9 @@ class OptimizedSignOperations:
                 y=y,
             )
 
-            for global_index, all_i_operators in enumerate(g_h_global_list):
-                src_features = g_h_global_list[global_index][link_number]
-                dst_features = g_h_global_list[global_index][link_number + 1]
+            for global_index, all_i_operators in enumerate(range(len(g_h_stacked))):
+                src_features = g_h_stacked[global_index][link_number]
+                dst_features = g_h_stacked[global_index][link_number + 1]
                 subgraph_features = torch.vstack([src_features, dst_features])
 
                 data[f'x{global_index + 1}'] = subgraph_features
