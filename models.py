@@ -130,7 +130,7 @@ class SAGE(torch.nn.Module):
             x = self.mlp(x)
         else:  # max pooling
             x = global_max_pool(x, batch)
-            x = self.mlp(x)
+            x = self.link_pred_mlp(x)
 
         return x
 
@@ -324,14 +324,17 @@ class SIGNNet(torch.nn.Module):
         if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
             self.bns.append(BatchNorm1d(hidden_channels))
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+            self.link_pred_mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
                 self.bns.append(BatchNorm1d(hidden_channels))
         if not self.k_heuristic:
-            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
-                           batch_norm=True)
+            self.operator_diffusion_mlp = MLP(
+                [hidden_channels * (num_layers + 1), hidden_channels, hidden_channels // 2],
+                dropout=dropout, batch_norm=True)
+            self.link_pred_mlp = MLP([hidden_channels // 2, hidden_channels // 4, 1], dropout=dropout,
+                                     batch_norm=True)
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
@@ -341,8 +344,11 @@ class SIGNNet(torch.nn.Module):
                 channels = 1 + self.k_heuristic
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
-            self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=True)
+            self.operator_diffusion_mlp = MLP(
+                [hidden_channels * (num_layers + 1) * channels, hidden_channels, hidden_channels // 2],
+                dropout=dropout, batch_norm=True)
+            self.link_pred_mlp = MLP([hidden_channels // 2, hidden_channels // 4, 1], dropout=dropout,
+                                     batch_norm=True)
 
     def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
@@ -393,7 +399,9 @@ class SIGNNet(torch.nn.Module):
             raise RuntimeError("Not supported if not used at an operator level.")
             h = self._centre_pool_helper(batch, h, -1)
 
-        h = self.mlp(h)
+        h = self.operator_diffusion_mlp(h)
+        h = self.link_pred_mlp(h)
+
         return h
 
     def reset_parameters(self):
