@@ -176,8 +176,8 @@ class SEALDataset(InMemoryDataset):
 
                 print("Begin taking powers of A")
                 powers_of_A = [adj_t]
-                for sign_k in tqdm(range(2, self.args.sign_k + 1), ncols=70):
-                    powers_of_A += [adj_t @ powers_of_A[-1]]
+                # for sign_k in tqdm(range(2, self.args.sign_k + 1), ncols=70):
+                #     powers_of_A += [adj_t @ powers_of_A[-1]]
 
                 if not sign_kwargs['optimize_sign']:
                     for index in range(len(powers_of_A)):
