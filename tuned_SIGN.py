@@ -74,11 +74,11 @@ class OptimizedSignOperations:
         list_of_training_edges = link_index.t().tolist()
 
         K = sign_kwargs['sign_k']
-        pos_num_A = 10  # sign_kwargs['pos_num_graphs']
+        pos_num_A = 1000  # sign_kwargs['pos_num_graphs']
 
         list_of_powers_A = []
         list_of_training_edges_split = np.array_split(list_of_training_edges, pos_num_A)
-        array_link_map = {}
+
         A = normalized_powers_of_A[-1].to_scipy().tolil()
 
         for index, list_of_edges in enumerate(list_of_training_edges_split):
@@ -145,8 +145,8 @@ class OptimizedSignOperations:
             print(f"Setting up G H Global [{index}]")
             for inner_index, link in tqdm(enumerate(list_of_training_edges_split[split_helper[index]]), ncols=70):
                 src, dst = link[0], link[1]
-                h_src = torch.tensor(list_of_powers_A[index][src, src])
-                h_dst = torch.tensor(list_of_powers_A[index][dst, dst])
+                h_src = torch.tensor(list_of_powers_A[index][src, src] + list_of_powers_A[index][src, dst])
+                h_dst = torch.tensor(list_of_powers_A[index][dst, dst] + list_of_powers_A[index][dst, src])
                 g_h_global_list[index][inner_index] = torch.hstack(
                     [h_src, g_global_list[index][inner_index]])
                 g_h_global_list[index][inner_index + 1] = torch.hstack(
@@ -155,42 +155,33 @@ class OptimizedSignOperations:
         print("Finishing Prep with creation of data")
         x = original_x
 
-        tensor_slice_helper = []
-        start = 0
-        for tensor_slice in range(K):
-            inner_start = start
-            inner_slicer = []
-            while inner_start < len(list_of_training_edges) * K * 2:
-                inner_slicer.append(inner_start)
-                inner_start += 1
-                inner_slicer.append(inner_start)
-                inner_start += ((K - 1) * 2) + 1
-            tensor_slice_helper.append(inner_slicer)
-            start += 2
+        split_gh = np.array_split(g_h_global_list, pos_num_A)
 
-        g_h_stacked = []
-        all_stacked = torch.cat((g_h_global_list))
+        for link_list, gh_data in tqdm(zip(list_of_training_edges_split, split_gh), ncols=70):
+            src_counter = 0
+            dst_counter = 1
 
-        for operator in range(K):
-            g_h_stacked.append(all_stacked[tensor_slice_helper[operator]])
+            for link in link_list:
+                src, dst = link[0], link[1]
+                data = Data(
+                    x=torch.hstack(
+                        [torch.tensor([[1], [1]]),
+                         torch.vstack([x[src], x[dst]]),
+                         ]),
+                    y=y,
+                )
 
-        for link_number, link in tqdm(enumerate(list_of_training_edges), ncols=70):
-            src, dst = link[0], link[1]
-            data = Data(
-                x=torch.hstack(
-                    [torch.tensor([[1], [1]]),
-                     torch.vstack([x[src], x[dst]]),
-                     ]),
-                y=y,
-            )
+                for global_index, all_i_operators in enumerate(gh_data):
+                    src_features = all_i_operators[src_counter]
+                    dst_features = all_i_operators[dst_counter]
+                    subgraph_features = torch.vstack([src_features, dst_features])
 
-            for global_index, all_i_operators in enumerate(range(len(g_h_stacked))):
-                src_features = g_h_stacked[global_index][link_number]
-                dst_features = g_h_stacked[global_index][link_number + 1]
-                subgraph_features = torch.vstack([src_features, dst_features])
+                    data[f'x{global_index + 1}'] = subgraph_features
+                    data.edge_index = (src, dst)
+                src_counter += 2
+                dst_counter += 2
 
-                data[f'x{global_index + 1}'] = subgraph_features
-            pos_data_list.append(data)
+                pos_data_list.append(data)
         return pos_data_list
 
     @staticmethod
