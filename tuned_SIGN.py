@@ -253,7 +253,7 @@ class OptimizedSignOperations:
             strat = sign_kwargs['k_node_set_strategy']
             strat_hop_nodes = {}
             for sign_k in range(K):
-                subgraph = un_norm_powers[sign_k]
+                subgraph = csr_subgraph
                 if strat == 'union':
                     one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
                 elif strat == 'intersection':
