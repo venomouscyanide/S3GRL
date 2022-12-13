@@ -251,28 +251,27 @@ class OptimizedSignOperations:
 
             # source, target is always 0, 1
             strat = sign_kwargs['k_node_set_strategy']
-            strat_hop_nodes = {}
-            for sign_k in range(K):
-                subgraph = csr_subgraph
-                if strat == 'union':
-                    one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
-                elif strat == 'intersection':
-                    one_hop_nodes = neighbors({0}, subgraph).intersection(neighbors({1}, subgraph))
-                else:
-                    raise NotImplementedError(f"check strat {strat}")
-                strat_hop_nodes[sign_k] = one_hop_nodes
+            subgraph = csr_subgraph
+            if strat == 'union':
+                one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
+            elif strat == 'intersection':
+                one_hop_nodes = neighbors({0}, subgraph).intersection(neighbors({1}, subgraph))
+            else:
+                raise NotImplementedError(f"check strat {strat}")
+            strat_hop_nodes = one_hop_nodes
 
             all_a_values = []
             # construct all a rows
             starting_indices = []
             slice_helper = []
             len_so_far = 0
-            for sign_k_val in range(0, K, 1):
-                selected_rows = strat_hop_nodes[sign_k_val]
-                selected_rows.discard(0)
-                selected_rows.discard(1)
-                selected_rows = [0, 1] + list(selected_rows)
 
+            selected_rows = strat_hop_nodes
+            selected_rows.discard(0)
+            selected_rows.discard(1)
+            selected_rows = [0, 1] + list(selected_rows)
+
+            for sign_k_val in range(0, K, 1):
                 rows_of_op = powers_of_a[sign_k_val][list(selected_rows)].to_dense()
                 all_a_values.extend(rows_of_op)
 
