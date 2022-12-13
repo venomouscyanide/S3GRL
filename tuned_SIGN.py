@@ -3,7 +3,6 @@ from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, from_scipy, spspmm
-import torch.nn.functional as F
 from tqdm import tqdm
 
 import scipy.sparse as ssp
@@ -214,7 +213,7 @@ class OptimizedSignOperations:
                             sign_kwargs, rw_kwargs):
         # optimized k-heuristic SuP flow
         print("K Heuristic SuP Optimized Flow.")
-        from utils import k_hop_subgraph, neighbors
+        from utils import k_hop_subgraph
         sup_data_list = []
         print("Start with SuP data prep")
 
@@ -250,12 +249,20 @@ class OptimizedSignOperations:
                 powers_of_a.append(subgraph @ powers_of_a[-1])
 
             # source, target is always 0, 1
+            src_subgraph = k_hop_subgraph(0, 0, num_hops, csr_subgraph, ratio_per_hop,
+                                          max_nodes_per_hop, node_features=x, y=y,
+                                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+            dst_subgraph = k_hop_subgraph(1, 1, num_hops, csr_subgraph, ratio_per_hop,
+                                          max_nodes_per_hop, node_features=x, y=y,
+                                          directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+            src_indices = set(src_subgraph[0])
+            dst_indices = set(dst_subgraph[0])
+
             strat = sign_kwargs['k_node_set_strategy']
-            subgraph = csr_subgraph
             if strat == 'union':
-                one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
+                one_hop_nodes = src_indices.union(dst_indices)
             elif strat == 'intersection':
-                one_hop_nodes = neighbors({0}, subgraph).intersection(neighbors({1}, subgraph))
+                one_hop_nodes = src_indices.intersection(dst_indices)
             else:
                 raise NotImplementedError(f"check strat {strat}")
             strat_hop_nodes = one_hop_nodes
