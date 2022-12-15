@@ -206,7 +206,7 @@ def ksup_k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         subgraph_nodes = set(nodes_covered[src]).union(set(nodes_covered[dst]))
         subgraph_nodes.discard(src)
         subgraph_nodes.discard(dst)
-        subgraph_nodes = [src, dst] + sorted(list(subgraph_nodes))
+        subgraph_nodes = [src, dst] + list(subgraph_nodes)
 
         subgraph = A[subgraph_nodes, :][:, subgraph_nodes]
 
