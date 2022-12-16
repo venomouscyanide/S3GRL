@@ -11,14 +11,13 @@ plt.rcParams['ps.fonttype'] = 42
 
 
 def plot_helper(result_json):
-    with open(result_json, 'rb') as results_json:
+    with open('3_vs_4_vs_4(1).json', 'rb') as results_json:
         results_dict = json.load(results_json)
 
     # multi-line graph plots for hyperparameter tuning results
     all_plot_data = defaultdict(list)
     for identifier, values in results_dict.items():
-        key = "_".join(identifier.split('_SuP')[0].split('_')[1:][::-1])
-        key = f"{identifier.split('_')[0]}_{key.split('_')[0]}"
+        key = f"{identifier.split('_')[0]}_{identifier.split('_')[-2]}_{identifier.split('_')[-1]}"
         dataset_prep_time = float(values['results']['Average Dataset Prep Time'].split('±')[0])
         acc = float(values['results']['Average Test AUC'].split('±')[0])
         all_plot_data[key] += [(acc, dataset_prep_time)]
@@ -34,12 +33,13 @@ def plot_ds(y_label, data_index, dataset_name, all_plot_data):
     # slice_length = 5
     # cmap = [plt.cm.get_cmap("Reds"), plt.cm.get_cmap("Greens")]
     # slicedCM = [cmap[0](np.linspace(0.4, 0.75, slice_length)), cmap[1](np.linspace(0.5, 0.8, slice_length))]
-    line_style = ['solid', 'dotted', 'dashed', 'dashdot']
-    marker_style = ['D', 's', 'o', '^']
+    line_style = ['solid', 'dashed', 'dashed', 'dashdot', '-.', ':']
+    marker_style = ['D', 's', 'o', '^', 'X', 'h']
 
     f = plt.figure()
-    x = [1, 5, 10, 15, 20]
-    p = [2, 3, 4, 5]
+    x = (list(range(1, 6, 1)))
+    # p = [2, 3, 4, 5]
+    labels = ['(3) Mean', '(3) Sum', '(4) Mean', '(4) Sum', '(4.1) Mean', '(4.1) Sum']
     default_x_ticks = range(len(x))
     plt.rcParams.update({'font.size': 16.5})
     plt.xticks(default_x_ticks, x)
@@ -53,12 +53,12 @@ def plot_ds(y_label, data_index, dataset_name, all_plot_data):
 
         y_plots = list(map(lambda x: x[data_index], results))
 
-        plt.plot(default_x_ticks, y_plots, label=f"p={p[index]}",
+        plt.plot(default_x_ticks, y_plots, label=f"{labels[index]}",
                  linestyle=line_style[index],
                  marker=marker_style[index], linewidth=2, markersize=10)
 
     plt.ylabel(y_label, labelpad=0)
-    plt.xlabel('No. Nodes in pth Operator', labelpad=0)
+    plt.xlabel('Num. operators', labelpad=0)
     plt.legend(loc="best", ncol=2, borderpad=0.2, labelspacing=0.1, borderaxespad=0.1)
     plt.show()
     f.savefig(f"{dataset}_hypertuner_{y_label.lower()}.pdf", bbox_inches='tight')
@@ -66,7 +66,7 @@ def plot_ds(y_label, data_index, dataset_name, all_plot_data):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--results_json', type=str, required=True)
+    parser.add_argument('--results_json', type=str, required=False)
 
     args = parser.parse_args()
 
