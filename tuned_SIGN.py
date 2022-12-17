@@ -255,7 +255,7 @@ class OptimizedSignOperations:
             if strat == 'union':
                 one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
             elif strat == 'intersection':
-                one_hop_nodes = neighbors({0}, subgraph).intersection(neighbors({1}, subgraph))
+                one_hop_nodes = set()
             else:
                 raise NotImplementedError(f"check strat {strat}")
             strat_hop_nodes = one_hop_nodes
