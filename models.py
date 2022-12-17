@@ -353,24 +353,28 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h = (h_src * h_dst)
         else:
-            h_src = h[center_indices]
-            h_dst = h[center_indices + 1]
-            h_a = h_src * h_dst
+            mask_centers = torch.zeros(size=(batch[op_index].size()), dtype=torch.bool)
+            mask_centers[center_indices] = True
+            mask_centers[center_indices + 1] = True
+            trimmed_batch_centers = batch[op_index][mask_centers]
 
-            mask = torch.ones(size=(batch[op_index].size()), dtype=torch.bool)
-            mask[center_indices] = False
-            mask[center_indices + 1] = False
-            trimmed_batch = batch[op_index][mask]
+            h_a = global_mean_pool(h[mask_centers], trimmed_batch_centers, size=uq.shape[0])
+
+            mask_others = torch.ones(size=(batch[op_index].size()), dtype=torch.bool)
+            mask_others[center_indices] = False
+            mask_others[center_indices + 1] = False
+            trimmed_batch_others = batch[op_index][mask_others]
 
             if self.k_pool_strategy == 'mean':
-                h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
+                h_k_mean = global_mean_pool(h[mask_others], trimmed_batch_others, size=uq.shape[0])
                 h = torch.concat([h_a, h_k_mean], dim=-1)
             elif self.k_pool_strategy == 'sum':
-                h_k_sum = global_add_pool(h[mask], trimmed_batch, size=uq.shape[0])
+                h_k_sum = global_add_pool(h[mask_others], trimmed_batch_others, size=uq.shape[0])
                 h = torch.concat([h_a, h_k_sum], dim=-1)
             elif self.k_pool_strategy == 'concat':
-                h_k = h[mask].reshape(shape=(
-                center_indices.shape[0], self.hidden_channels * self.k_heuristic)
+                raise NotImplementedError("Concat is not coded corrected.")
+                h_k = h[mask_others].reshape(shape=(
+                    center_indices.shape[0], self.hidden_channels * self.k_heuristic)
                 )
                 h = torch.concat([h_a, h_k], dim=-1)
 
