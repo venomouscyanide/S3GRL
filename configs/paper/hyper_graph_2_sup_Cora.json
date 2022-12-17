@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Cora_1P_mean_SuP": {
+    "Cora_1P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -80,7 +80,7 @@
         "init_representation": ""
       }
     },
-    "Cora_2P_mean_SuP": {
+    "Cora_2P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -160,7 +160,7 @@
         "init_representation": ""
       }
     },
-    "Cora_3P_mean_SuP": {
+    "Cora_3P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -240,7 +240,7 @@
         "init_representation": ""
       }
     },
-    "Cora_4P_mean_SuP": {
+    "Cora_4P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -320,7 +320,7 @@
         "init_representation": ""
       }
     },
-    "Cora_5P_mean_SuP": {
+    "Cora_5P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [

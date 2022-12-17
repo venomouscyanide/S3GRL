@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "CiteSeer_K_1P_mean_SuP": {
+    "CiteSeer_1P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -80,7 +80,7 @@
         "init_representation": ""
       }
     },
-    "CiteSeer_K_2P_mean_SuP": {
+    "CiteSeer_2P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -160,7 +160,7 @@
         "init_representation": ""
       }
     },
-    "CiteSeer_K_3P_mean_SuP": {
+    "CiteSeer_3P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -240,7 +240,7 @@
         "init_representation": ""
       }
     },
-    "CiteSeer_K_4P_mean_SuP": {
+    "CiteSeer_4P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -320,7 +320,7 @@
         "init_representation": ""
       }
     },
-    "CiteSeer_K_5P_mean_SuP": {
+    "CiteSeer_5P_mean_2_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
