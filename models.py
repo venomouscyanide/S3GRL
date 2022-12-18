@@ -344,6 +344,12 @@ class SIGNNet(torch.nn.Module):
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
 
+        for lin_layer in self.lins:
+            self._weights_init(lin_layer)
+
+    def _weights_init(self, lin_layer):
+        torch.nn.init.xavier_uniform_(lin_layer.weight.data)
+
     def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
         uq, center_indices = np.unique(batch[op_index].cpu().numpy(), return_index=True)
@@ -370,7 +376,7 @@ class SIGNNet(torch.nn.Module):
                 h = torch.concat([h_a, h_k_sum], dim=-1)
             elif self.k_pool_strategy == 'concat':
                 h_k = h[mask].reshape(shape=(
-                center_indices.shape[0], self.hidden_channels * self.k_heuristic)
+                    center_indices.shape[0], self.hidden_channels * self.k_heuristic)
                 )
                 h = torch.concat([h_a, h_k], dim=-1)
 
@@ -380,8 +386,8 @@ class SIGNNet(torch.nn.Module):
         hs = []
         for index, (x, lin) in enumerate(zip(xs, self.lins)):
             h = lin(x)
+            h = F.elu(h)
             h = self.bns[index](h)
-            h = h.relu()
             h = F.dropout(h, p=self.dropout, training=self.training)
             if self.pool_operatorwise:
                 h = self._centre_pool_helper(batch, h, index)
@@ -399,3 +405,4 @@ class SIGNNet(torch.nn.Module):
     def reset_parameters(self):
         for lin in self.lins:
             lin.reset_parameters()
+            self._weights_init(lin)
