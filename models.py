@@ -335,6 +335,8 @@ class SIGNNet(torch.nn.Module):
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
+            elif self.k_pool_strategy == "sum":
+                channels = 2
             elif self.k_pool_strategy == "concat":
                 channels = 1 + self.k_heuristic
             else:
@@ -342,9 +344,15 @@ class SIGNNet(torch.nn.Module):
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
 
-    def _centre_pool_helper(self, batch, h):
+        for lin_layer in self.lins:
+            self._weights_init(lin_layer)
+
+    def _weights_init(self, lin_layer):
+        torch.nn.init.xavier_uniform_(lin_layer.weight.data)
+
+    def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
-        _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
+        uq, center_indices = np.unique(batch[op_index].cpu().numpy(), return_index=True)
         if not self.k_heuristic:
             # batch_size X hidden_dim
             h_src = h[center_indices]
@@ -355,17 +363,20 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h_a = h_src * h_dst
 
-            mask = torch.ones(size=(batch.size()), dtype=torch.bool)
+            mask = torch.ones(size=(batch[op_index].size()), dtype=torch.bool)
             mask[center_indices] = False
             mask[center_indices + 1] = False
-            trimmed_batch = batch[mask]
+            trimmed_batch = batch[op_index][mask]
 
             if self.k_pool_strategy == 'mean':
-                h_k_mean = global_mean_pool(h[mask], trimmed_batch)
+                h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
                 h = torch.concat([h_a, h_k_mean], dim=-1)
+            elif self.k_pool_strategy == 'sum':
+                h_k_sum = global_add_pool(h[mask], trimmed_batch, size=uq.shape[0])
+                h = torch.concat([h_a, h_k_sum], dim=-1)
             elif self.k_pool_strategy == 'concat':
                 h_k = h[mask].reshape(shape=(
-                center_indices.shape[0], self.hidden_channels * self.k_heuristic)
+                    center_indices.shape[0], self.hidden_channels * self.k_heuristic)
                 )
                 h = torch.concat([h_a, h_k], dim=-1)
 
@@ -375,17 +386,18 @@ class SIGNNet(torch.nn.Module):
         hs = []
         for index, (x, lin) in enumerate(zip(xs, self.lins)):
             h = lin(x)
+            h = F.elu(h)
             h = self.bns[index](h)
-            h = h.relu()
             h = F.dropout(h, p=self.dropout, training=self.training)
             if self.pool_operatorwise:
-                h = self._centre_pool_helper(batch, h)
+                h = self._centre_pool_helper(batch, h, index)
             hs.append(h)
 
         h = torch.cat(hs, dim=-1)
 
         if not self.pool_operatorwise:
-            h = self._centre_pool_helper(batch, h)
+            raise RuntimeError("Not supported if not used at an operator level.")
+            h = self._centre_pool_helper(batch, h, -1)
 
         h = self.mlp(h)
         return h
@@ -393,3 +405,4 @@ class SIGNNet(torch.nn.Module):
     def reset_parameters(self):
         for lin in self.lins:
             lin.reset_parameters()
+            self._weights_init(lin)

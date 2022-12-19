@@ -435,7 +435,8 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            logits = model(xs, operator_batch_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
@@ -464,7 +465,8 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            logits = model(xs, operator_batch_data)
         else:
             x = data.x if args.use_feature else None
             edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -502,7 +504,8 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            pos_logits = model(xs, data.batch)
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            pos_logits = model(xs, operator_batch_data)
         else:
             pos_logits = model(pos_num_nodes, pos_data.z, pos_data.edge_index, data.batch, pos_x, pos_edge_weight,
                                pos_node_id)
@@ -518,7 +521,8 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
                 xs += [data[f'x{i}'].to(device) for i in range(1, args.sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            neg_logits = model(xs, data.batch)
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            neg_logits = model(xs, operator_batch_data)
         else:
             neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
                                neg_node_id)
@@ -561,7 +565,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            logits = model(xs, operator_batch_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -586,7 +591,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
                 xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
-            logits = model(xs, data.batch)
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            logits = model(xs, operator_batch_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -1189,6 +1195,10 @@ def run_sgrl_learning(args, device, hypertuning=False):
     total_prep_time = time_for_prep_end - time_for_prep_start
     print(f"Total Prep time: {total_prep_time} sec")
 
+    follow_batch = None
+    if args.model == "SIGN":
+        follow_batch = [f'x{index}' for index in range(1, args.sign_k + 1)]
+
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
             train_pos_loader = DataLoader(train_positive_dataset, batch_size=args.batch_size,
@@ -1197,12 +1207,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
                                           shuffle=True, num_workers=args.num_workers)
         else:
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                      shuffle=True, num_workers=args.num_workers)
-
+                                      shuffle=True, num_workers=args.num_workers, follow_batch=follow_batch)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
-                                num_workers=args.num_workers)
+                                num_workers=args.num_workers, follow_batch=follow_batch)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size,
-                                 num_workers=args.num_workers)
+                                 num_workers=args.num_workers, follow_batch=follow_batch)
 
     if args.train_node_embedding:
         # TODO; heads-up: this arg is not supported in SIGN
@@ -1499,7 +1508,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_heuristic', type=int, default=0)
     parser.add_argument('--k_node_set_strategy', type=str, default="", required=False,
                         choices=['union', 'intersection'])
-    parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat'])
+    parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat', 'sum'])
     parser.add_argument('--init_representation', type=str, choices=['GIC', 'ARGVA', 'GAE', 'VGAE'])
 
     args = parser.parse_args()
