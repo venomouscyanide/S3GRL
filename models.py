@@ -330,7 +330,10 @@ class SIGNNet(torch.nn.Module):
                 self.lins.append(Linear(initial_channels, hidden_channels))
                 self.bns.append(BatchNorm1d(hidden_channels))
         if not self.k_heuristic:
-            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
+            self.operator_diffusion = MLP(
+                [hidden_channels * (num_layers + 1), hidden_channels, hidden_channels], dropout=dropout,
+                batch_norm=True)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
         else:
             if self.k_pool_strategy == "mean":
@@ -341,14 +344,11 @@ class SIGNNet(torch.nn.Module):
                 channels = 1 + self.k_heuristic
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
-            self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
+            self.operator_diffusion = MLP(
+                [hidden_channels * (num_layers + 1), hidden_channels, hidden_channels], dropout=dropout,
+                batch_norm=True)
+            self.mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
-
-        for lin_layer in self.lins:
-            self._weights_init(lin_layer)
-
-    def _weights_init(self, lin_layer):
-        torch.nn.init.xavier_uniform_(lin_layer.weight.data)
 
     def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
@@ -394,9 +394,9 @@ class SIGNNet(torch.nn.Module):
             hs.append(h)
 
         h = torch.cat(hs, dim=-1)
+        h = self.operator_diffusion(h)
 
         if not self.pool_operatorwise:
-            raise RuntimeError("Not supported if not used at an operator level.")
             h = self._centre_pool_helper(batch, h, -1)
 
         h = self.mlp(h)
@@ -405,4 +405,3 @@ class SIGNNet(torch.nn.Module):
     def reset_parameters(self):
         for lin in self.lins:
             lin.reset_parameters()
-            self._weights_init(lin)
