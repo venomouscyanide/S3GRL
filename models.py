@@ -331,10 +331,10 @@ class SIGNNet(torch.nn.Module):
                 self.bns.append(BatchNorm1d(hidden_channels))
         if not self.k_heuristic:
             self.operator_diffusion = MLP(
-                [hidden_channels * (num_layers + 1), hidden_channels, hidden_channels], dropout=dropout,
-                batch_norm=True)
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=True)
+                [hidden_channels * (num_layers + 1), hidden_channels], dropout=dropout,
+                batch_norm=True, act_first=True, act='relu')
+            self.link_pred_mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
+                           batch_norm=True, act_first=True, act='relu')
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
@@ -345,10 +345,10 @@ class SIGNNet(torch.nn.Module):
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
             self.operator_diffusion = MLP(
-                [hidden_channels * (num_layers + 1), hidden_channels, hidden_channels], dropout=dropout,
-                batch_norm=True)
-            self.mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=True)
+                [hidden_channels * (num_layers + 1), hidden_channels], dropout=dropout,
+                batch_norm=True, act='relu', act_first=True)
+            self.link_pred_mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
+                           batch_norm=True, act='relu', act_first=True)
         for lin_layer in self.lins:
             self._weights_init(lin_layer)
 
@@ -404,7 +404,7 @@ class SIGNNet(torch.nn.Module):
         if not self.pool_operatorwise:
             h = self._centre_pool_helper(batch, h, -1)
 
-        h = self.mlp(h)
+        h = self.link_pred_mlp(h)
         return h
 
     def reset_parameters(self):
