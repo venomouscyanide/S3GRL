@@ -349,6 +349,11 @@ class SIGNNet(torch.nn.Module):
                 batch_norm=True)
             self.mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
+        for lin_layer in self.lins:
+            self._weights_init(lin_layer)
+
+    def _weights_init(self, lin_layer):
+        torch.nn.init.xavier_uniform_(lin_layer.weight.data)
 
     def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
@@ -405,3 +410,4 @@ class SIGNNet(torch.nn.Module):
     def reset_parameters(self):
         for lin in self.lins:
             lin.reset_parameters()
+            self._weights_init(lin)
