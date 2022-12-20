@@ -299,6 +299,9 @@ class GIN(torch.nn.Module):
 
 
 class SIGNNet(torch.nn.Module):
+    # TODO; change the arguments to be consistent with the paper
+    # TODO; explain all variables, tell all explicit assumptions
+    # TODO; breakdown into smaller routines, e.g., KSuP parent class -> SuP child
     def __init__(self, hidden_channels, num_layers, train_dataset, use_feature=False, node_embedding=None, dropout=0.5,
                  pool_operatorwise=False, k_heuristic=0, k_pool_strategy=""):
         # TODO: dropedge is not really consumed. remove the arg?
@@ -330,6 +333,7 @@ class SIGNNet(torch.nn.Module):
                 self.lins.append(Linear(initial_channels, hidden_channels))
                 self.bns.append(BatchNorm1d(hidden_channels))
         if not self.k_heuristic:
+            # the flow for not KSuP (K=0)
             self.operator_diffusion = MLP(
                 [hidden_channels * (num_layers + 1), hidden_channels], dropout=dropout,
                 batch_norm=True, act_first=True, act='relu')
@@ -345,9 +349,9 @@ class SIGNNet(torch.nn.Module):
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
             self.operator_diffusion = MLP(
-                [hidden_channels * (num_layers + 1), hidden_channels], dropout=dropout,
+                [hidden_channels * (num_layers + 1) * channels, hidden_channels], dropout=dropout,
                 batch_norm=True, act='relu', act_first=True)
-            self.link_pred_mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
+            self.link_pred_mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True, act='relu', act_first=True)
         for lin_layer in self.lins:
             self._weights_init(lin_layer)
@@ -388,7 +392,12 @@ class SIGNNet(torch.nn.Module):
         return h
 
     def forward(self, xs, batch):
+        # total_params = sum(p.numel() for param in list(self.parameters()) for p in param if p.requires_grad)
+        # print(f"total is :{total_params}")
+        # count_parameters(self)
         hs = []
+        # representative (synonyms) nodes; src-dst is part of representative nodes.
+        # In KSuP we expand representative nodes set
         for index, (x, lin) in enumerate(zip(xs, self.lins)):
             h = lin(x)
             h = F.elu(h)
