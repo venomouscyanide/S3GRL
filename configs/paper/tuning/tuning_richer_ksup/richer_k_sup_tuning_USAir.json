@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Cora_K_1P_2SuP": {
+    "USAir_K_1P_2SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -10,7 +10,7 @@
           4,
           5
         ],
-        "dataset": "Cora"
+        "dataset": "USAir"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -20,14 +20,14 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 3,
+        "num_hops": 2,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
         "use_feature": true,
         "use_edge_weight": false,
         "lr": 0.0001,
-        "epochs": 100,
+        "epochs": 50,
         "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
@@ -51,7 +51,7 @@
         "use_heuristic": null,
         "m": 0,
         "M": 0,
-        "cuda_device": 0,
+        "cuda_device": 2,
         "dropedge": 0.0,
         "calc_ratio": false,
         "pairwise": false,
@@ -72,7 +72,7 @@
         "sign_type": "SuP",
         "pool_operatorwise": false,
         "optimize_sign": true,
-        "init_features": "",
+        "init_features": "eye",
         "n2v_dim": 0,
         "k_heuristic": 0,
         "k_node_set_strategy": "",
@@ -80,7 +80,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_2P_2SuP": {
+    "USAir_K_2P_2SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -90,7 +90,7 @@
           4,
           5
         ],
-        "dataset": "Cora"
+        "dataset": "USAir"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -100,14 +100,14 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 3,
+        "num_hops": 2,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
         "use_feature": true,
         "use_edge_weight": false,
         "lr": 0.0001,
-        "epochs": 100,
+        "epochs": 50,
         "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
@@ -131,7 +131,7 @@
         "use_heuristic": null,
         "m": 0,
         "M": 0,
-        "cuda_device": 0,
+        "cuda_device": 2,
         "dropedge": 0.0,
         "calc_ratio": false,
         "pairwise": false,
@@ -152,7 +152,7 @@
         "sign_type": "SuP",
         "pool_operatorwise": false,
         "optimize_sign": true,
-        "init_features": "",
+        "init_features": "eye",
         "n2v_dim": 0,
         "k_heuristic": 0,
         "k_node_set_strategy": "",
@@ -160,7 +160,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_3P_2SuP": {
+    "USAir_K_3P_2SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -170,7 +170,7 @@
           4,
           5
         ],
-        "dataset": "Cora"
+        "dataset": "USAir"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -180,14 +180,14 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 3,
+        "num_hops": 2,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
         "use_feature": true,
         "use_edge_weight": false,
         "lr": 0.0001,
-        "epochs": 100,
+        "epochs": 50,
         "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
@@ -211,7 +211,7 @@
         "use_heuristic": null,
         "m": 0,
         "M": 0,
-        "cuda_device": 0,
+        "cuda_device": 2,
         "dropedge": 0.0,
         "calc_ratio": false,
         "pairwise": false,
@@ -232,7 +232,7 @@
         "sign_type": "SuP",
         "pool_operatorwise": false,
         "optimize_sign": true,
-        "init_features": "",
+        "init_features": "eye",
         "n2v_dim": 0,
         "k_heuristic": 0,
         "k_node_set_strategy": "",
@@ -240,7 +240,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_4P_2SuP": {
+    "USAir_K_4P_2SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -250,7 +250,7 @@
           4,
           5
         ],
-        "dataset": "Cora"
+        "dataset": "USAir"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -260,14 +260,14 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 3,
+        "num_hops": 2,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
         "use_feature": true,
         "use_edge_weight": false,
         "lr": 0.0001,
-        "epochs": 100,
+        "epochs": 50,
         "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
@@ -291,7 +291,7 @@
         "use_heuristic": null,
         "m": 0,
         "M": 0,
-        "cuda_device": 0,
+        "cuda_device": 2,
         "dropedge": 0.0,
         "calc_ratio": false,
         "pairwise": false,
@@ -312,7 +312,7 @@
         "sign_type": "SuP",
         "pool_operatorwise": false,
         "optimize_sign": true,
-        "init_features": "",
+        "init_features": "eye",
         "n2v_dim": 0,
         "k_heuristic": 0,
         "k_node_set_strategy": "",
@@ -320,7 +320,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_5P_2SuP": {
+    "USAir_K_5P_2SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -330,7 +330,7 @@
           4,
           5
         ],
-        "dataset": "Cora"
+        "dataset": "USAir"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -340,14 +340,14 @@
         "num_layers": -1,
         "hidden_channels": 256,
         "batch_size": 32,
-        "num_hops": 3,
+        "num_hops": 2,
         "ratio_per_hop": 1.0,
         "max_nodes_per_hop": null,
         "node_label": "zo",
         "use_feature": true,
         "use_edge_weight": false,
         "lr": 0.0001,
-        "epochs": 100,
+        "epochs": 50,
         "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
@@ -371,7 +371,7 @@
         "use_heuristic": null,
         "m": 0,
         "M": 0,
-        "cuda_device": 0,
+        "cuda_device": 2,
         "dropedge": 0.0,
         "calc_ratio": false,
         "pairwise": false,
@@ -392,7 +392,7 @@
         "sign_type": "SuP",
         "pool_operatorwise": false,
         "optimize_sign": true,
-        "init_features": "",
+        "init_features": "eye",
         "n2v_dim": 0,
         "k_heuristic": 0,
         "k_node_set_strategy": "",
