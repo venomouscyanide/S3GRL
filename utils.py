@@ -21,6 +21,7 @@ from torch_geometric.utils import to_scipy_sparse_matrix
 from torch_geometric.utils import k_hop_subgraph as org_k_hop_subgraph
 
 from tuned_SIGN import TunedSIGN, OptimizedSignOperations
+from prettytable import PrettyTable
 
 import graphistry  # only really required for debug. code using graphity is commented by default.
 
@@ -809,3 +810,18 @@ def human_format(num):
         magnitude += 1
         num /= 1000.0
     return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 'T'][magnitude])
+
+
+# https://stackoverflow.com/a/62508086
+def count_parameters(model):
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        params = parameter.numel()
+        table.add_row([name, params])
+        total_params += params
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
+    return total_params
