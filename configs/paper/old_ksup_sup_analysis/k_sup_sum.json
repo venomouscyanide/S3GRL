@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "USAir_K_SuP_1Psum": {
+    "USAir_K_SuP_1P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -80,7 +80,7 @@
         "init_representation": ""
       }
     },
-    "USAir_K_SuP_2Psum": {
+    "USAir_K_SuP_2P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -160,7 +160,7 @@
         "init_representation": ""
       }
     },
-    "USAir_K_SuP_3Psum": {
+    "USAir_K_SuP_3P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -240,7 +240,7 @@
         "init_representation": ""
       }
     },
-    "USAir_K_SuP_4Psum": {
+    "USAir_K_SuP_4P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -320,7 +320,7 @@
         "init_representation": ""
       }
     },
-    "USAir_K_SuP_5Psum": {
+    "USAir_K_SuP_5P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -401,7 +401,7 @@
       }
     },
 
-    "NS_K_SuP_1Psum": {
+    "NS_K_SuP_1P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -481,7 +481,7 @@
         "init_representation": ""
       }
     },
-    "NS_K_SuP_2Psum": {
+    "NS_K_SuP_2P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -561,7 +561,7 @@
         "init_representation": ""
       }
     },
-    "NS_K_SuP_3Psum": {
+    "NS_K_SuP_3P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -641,7 +641,7 @@
         "init_representation": ""
       }
     },
-    "NS_K_SuP_4Psum": {
+    "NS_K_SuP_4P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -721,7 +721,7 @@
         "init_representation": ""
       }
     },
-    "NS_K_SuP_5Psum": {
+    "NS_K_SuP_5P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -802,7 +802,7 @@
       }
     },
 
-    "Wisconsin_K_SuP_1Psum": {
+    "Wisconsin_K_SuP_1P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -882,7 +882,7 @@
         "init_representation": ""
       }
     },
-    "Wisconsin_K_SuP_2Psum": {
+    "Wisconsin_K_SuP_2P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -962,7 +962,7 @@
         "init_representation": ""
       }
     },
-    "Wisconsin_K_SuP_3Psum": {
+    "Wisconsin_K_SuP_3P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1042,7 +1042,7 @@
         "init_representation": ""
       }
     },
-    "Wisconsin_K_SuP_4Psum": {
+    "Wisconsin_K_SuP_4P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1122,7 +1122,7 @@
         "init_representation": ""
       }
     },
-    "Wisconsin_K_SuP_5Psum": {
+    "Wisconsin_K_SuP_5P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1203,7 +1203,7 @@
       }
     },
 
-    "Cora_K_SuP_1Psum": {
+    "Cora_K_SuP_1P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1283,7 +1283,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_SuP_2Psum": {
+    "Cora_K_SuP_2P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1363,7 +1363,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_SuP_3Psum": {
+    "Cora_K_SuP_3P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1443,7 +1443,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_SuP_4Psum": {
+    "Cora_K_SuP_4P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -1523,7 +1523,7 @@
         "init_representation": ""
       }
     },
-    "Cora_K_SuP_5Psum": {
+    "Cora_K_SuP_5P_sum": {
       "ds_params": {
         "runs": 5,
         "seeds": [
