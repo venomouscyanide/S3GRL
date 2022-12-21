@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Cora_2_4P_SuP": {
+    "Cora_2_5P_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -51,7 +51,7 @@
         "use_heuristic": null,
         "m": 0,
         "M": 0,
-        "cuda_device": 2,
+        "cuda_device": 3,
         "dropedge": 0.0,
         "calc_ratio": false,
         "pairwise": false,
@@ -68,7 +68,7 @@
         "dataset_stats": false,
         "train_n2v": false,
         "train_mf": false,
-        "sign_k": 4,
+        "sign_k": 5,
         "sign_type": "SuP",
         "pool_operatorwise": true,
         "optimize_sign": true,
