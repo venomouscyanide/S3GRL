@@ -344,8 +344,8 @@ class SIGNNet(torch.nn.Module):
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
                            batch_norm=True)
 
-        for lin_layer in self.lins:
-            self._weights_init(lin_layer)
+        # for lin_layer in self.lins:
+        #     self._weights_init(lin_layer)
 
     def _weights_init(self, lin_layer):
         torch.nn.init.xavier_uniform_(lin_layer.weight.data)
@@ -386,8 +386,8 @@ class SIGNNet(torch.nn.Module):
         hs = []
         for index, (x, lin) in enumerate(zip(xs, self.lins)):
             h = lin(x)
-            h = F.elu(h)
             h = self.bns[index](h)
+            h = F.relu(h)
             h = F.dropout(h, p=self.dropout, training=self.training)
             if self.pool_operatorwise:
                 h = self._centre_pool_helper(batch, h, index)
@@ -405,4 +405,4 @@ class SIGNNet(torch.nn.Module):
     def reset_parameters(self):
         for lin in self.lins:
             lin.reset_parameters()
-            self._weights_init(lin)
+            # self._weights_init(lin)
