@@ -3,7 +3,6 @@ from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, from_scipy, spspmm
-import torch.nn.functional as F
 from tqdm import tqdm
 
 import scipy.sparse as ssp
@@ -214,17 +213,23 @@ class OptimizedSignOperations:
                             sign_kwargs, rw_kwargs):
         # optimized k-heuristic SuP flow
         print("K Heuristic SuP Optimized Flow.")
-        from utils import k_hop_subgraph, neighbors
+        from utils import ksup_k_hop_subgraph
         sup_data_list = []
         print("Start with SuP data prep")
 
         K = sign_kwargs['sign_k']
 
         for src, dst in tqdm(link_index.t().tolist()):
-            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                 max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
-            csr_subgraph = tmp[1]
+            subgraph_nodes, subgraph, nodes_covered, node_features, y, node_mapping = ksup_k_hop_subgraph(src, dst,
+                                                                                                          num_hops, A,
+                                                                                                          ratio_per_hop,
+                                                                                                          max_nodes_per_hop,
+                                                                                                          node_features=x,
+                                                                                                          y=y,
+                                                                                                          directed=directed,
+                                                                                                          A_csc=A_csc,
+                                                                                                          rw_kwargs=rw_kwargs)
+            csr_subgraph = subgraph
             u, v, r = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
             adj_t = SparseTensor(row=u, col=v,
@@ -239,7 +244,7 @@ class OptimizedSignOperations:
             for _ in range(K - 1):
                 un_norm_powers.append(csr_subgraph @ un_norm_powers[-1])
 
-            subgraph_features = tmp[3]
+            subgraph_features = node_features
             subgraph = adj_t
 
             assert subgraph_features is not None
@@ -251,14 +256,14 @@ class OptimizedSignOperations:
 
             # source, target is always 0, 1
             strat = sign_kwargs['k_node_set_strategy']
-            subgraph = csr_subgraph
+
             if strat == 'union':
-                one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
+                strat_nodes = set(nodes_covered[src]).union(set(nodes_covered[dst]))
             elif strat == 'intersection':
-                one_hop_nodes = neighbors({0}, subgraph).intersection(neighbors({1}, subgraph))
+                strat_nodes = set(nodes_covered[src]).intersection(set(nodes_covered[dst]))
             else:
                 raise NotImplementedError(f"check strat {strat}")
-            strat_hop_nodes = one_hop_nodes
+            strat_hop_nodes = strat_nodes
 
             all_a_values = []
             # construct all a rows
@@ -267,9 +272,11 @@ class OptimizedSignOperations:
             len_so_far = 0
 
             selected_rows = strat_hop_nodes
-            selected_rows.discard(0)
-            selected_rows.discard(1)
-            selected_rows = [0, 1] + list(selected_rows)
+            selected_rows.discard(src)
+            selected_rows.discard(dst)
+            selected_rows = [src, dst] + list(selected_rows)
+
+            selected_rows = [node_mapping[node_id] for node_id in selected_rows]
 
             for sign_k_val in range(0, K, 1):
                 rows_of_op = powers_of_a[sign_k_val][list(selected_rows)].to_dense()

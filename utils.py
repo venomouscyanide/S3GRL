@@ -176,6 +176,54 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         return data_revised
 
 
+def ksup_k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
+                        max_nodes_per_hop=None, node_features=None,
+                        y=1, directed=False, A_csc=None, rw_kwargs=None):
+    # Note: return args are different from k_hop_subgraph
+    debug = False  # set True manually to debug using matplotlib and gephi
+    # Extract the k-hop enclosing subgraph around link (src, dst) from A.
+    if not rw_kwargs:
+        # parent_map[src/dst][0] -> visited
+        # parent_map[src/dst][1] -> fringe
+        nodes_covered = {src: [], dst: []}
+        parent_map = {src: [set([src]), set([src])], dst: [set([dst]), set([dst])]}
+        for parent, fringe_visited in parent_map.items():
+            for dist in range(1, num_hops + 1):
+                fringe = set(A[list(fringe_visited[1])].indices)
+
+                fringe = fringe - parent_map[parent][0]  # fringe - visited
+                parent_map[parent][0] = parent_map[parent][0].union(fringe)
+                if sample_ratio < 1.0:
+                    fringe = random.sample(fringe, int(sample_ratio * len(fringe)))
+                if max_nodes_per_hop is not None:
+                    if max_nodes_per_hop < len(fringe):
+                        fringe = random.sample(fringe, max_nodes_per_hop)
+                if len(fringe) == 0:
+                    break
+                parent_map[parent][1] = fringe
+                nodes_covered[parent] += list(fringe)
+
+        subgraph_nodes = set(nodes_covered[src]).union(set(nodes_covered[dst]))
+        subgraph_nodes.discard(src)
+        subgraph_nodes.discard(dst)
+        subgraph_nodes = [src, dst] + list(subgraph_nodes)
+
+        subgraph = A[subgraph_nodes, :][:, subgraph_nodes]
+
+        # Remove target link between the subgraph.
+        subgraph[0, 1] = 0
+        subgraph[1, 0] = 0
+
+        node_mapping = {subgraph_nodes[index]: index for index in range(subgraph.shape[0])}
+
+        if node_features is not None:
+            node_features = node_features[subgraph_nodes]
+
+        return subgraph_nodes, subgraph, nodes_covered, node_features, y, node_mapping
+    else:
+        raise NotImplementedError('ScaLed is not supported for (4.1)')
+
+
 def py_g_drnl_node_labeling(edge_index, src, dst, num_nodes=None):
     # adapted from: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/seal_link_pred.py
     # Double-radius node labeling (DRNL).
