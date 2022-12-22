@@ -324,14 +324,15 @@ class SIGNNet(torch.nn.Module):
         if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
             self.bns.append(BatchNorm1d(hidden_channels))
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True,
+                           act_first=True, act='relu')
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
                 self.bns.append(BatchNorm1d(hidden_channels))
         if not self.k_heuristic:
             self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
-                           batch_norm=True)
+                           batch_norm=True, act_first=True, act='relu')
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
@@ -342,7 +343,7 @@ class SIGNNet(torch.nn.Module):
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
             self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=True)
+                           batch_norm=True, act_first=True, act='relu')
 
         for lin_layer in self.lins:
             self._weights_init(lin_layer)
