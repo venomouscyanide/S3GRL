@@ -327,7 +327,8 @@ class SIGNNet(torch.nn.Module):
         if num_layers == -1:
             self.lins.append(Linear(initial_channels, hidden_channels))
             self.bns.append(BatchNorm1d(hidden_channels))
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True)
+            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True,
+                           act_first=True, act='relu')
         else:
             for _ in range(num_layers + 1):
                 self.lins.append(Linear(initial_channels, hidden_channels))
