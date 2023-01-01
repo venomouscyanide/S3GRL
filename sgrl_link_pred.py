@@ -1402,6 +1402,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
         if os.path.exists(path):
             shutil.rmtree(path)
 
+    if True:
+        # Delete results each time.
+        if os.path.exists(args.res_dir):
+            shutil.rmtree(args.res_dir)
+            
     print("fin.")
     # TODO; change logic for HITS@K
     return total_prep_time, best_test_scores[0]
