@@ -16,7 +16,7 @@ from ray import tune
 from torch_geometric import seed_everything
 from torch_geometric.loader import DataLoader
 from torch_geometric.profile import profileit, timeit
-from torch_geometric.transforms import OneHotDegree
+from torch_geometric.transforms import OneHotDegree, NormalizeFeatures
 from tqdm import tqdm
 import pdb
 
@@ -789,20 +789,23 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
     # ScaLed Dataset prep + Training Flow
     if args.dataset.startswith('ogbl'):
-        dataset = PygLinkPropPredDataset(name=args.dataset)
+        dataset = PygLinkPropPredDataset(name=args.dataset, transform=NormalizeFeatures())
         split_edge = dataset.get_edge_split()
         data = dataset[0]
 
-        if args.dataset.startswith('ogbl-vessel'):
-            # normalize node features
-            data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
-            data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
-            data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
+    elif args.dataset.startswith('ogbl-vessel'):
+        dataset = PygLinkPropPredDataset(name=args.dataset)
+        split_edge = dataset.get_edge_split()
+        data = dataset[0]
+        # normalize node features
+        data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
+        data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
+        data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
 
     elif args.dataset.startswith('attributed'):
         dataset_name = args.dataset.split('-')[-1]
         path = osp.join('dataset', dataset_name)
-        dataset = AttributedGraphDataset(path, dataset_name)
+        dataset = AttributedGraphDataset(path, dataset_name, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -810,7 +813,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
     elif args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
         path = osp.join('dataset', args.dataset)
-        dataset = Planetoid(path, args.dataset)
+        dataset = Planetoid(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -857,7 +860,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         print("Finish reading from file")
     elif args.dataset in ['chameleon', 'crocodile', 'squirrel']:
         path = osp.join('dataset', args.dataset)
-        dataset = WikipediaNetwork(path, args.dataset)
+        dataset = WikipediaNetwork(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -867,7 +870,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         G.add_edges_from(data.edge_index.T.detach().numpy())
     elif args.dataset in ['Cornell', 'Texas', 'Wisconsin']:
         path = osp.join('dataset', args.dataset)
-        dataset = WebKB(path, args.dataset)
+        dataset = WebKB(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
