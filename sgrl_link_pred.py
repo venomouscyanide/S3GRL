@@ -949,6 +949,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
         else:
             raise NotImplementedError(f"init_representation: {init_representation} not supported.")
 
+    if init_representation or init_features:
+        norm = NormalizeFeatures()
+        transformed_data = norm(data)
+        data.x = transformed_data.x
+
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
         directed = True
