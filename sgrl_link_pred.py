@@ -575,8 +575,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     pos_val_pred = val_pred[val_true == 1]
     neg_val_pred = val_pred[val_true == 0]
 
-    neg_test_pred, pos_test_pred, test_pred, test_true, time_for_inference = _get_test_auc(args, device, emb, model,
-                                                                                           test_loader)
+    out, time_for_inference = _get_test_auc(args, device, emb, model, test_loader)
+    neg_test_pred, pos_test_pred, test_pred, test_true = out
 
     if args.eval_metric == 'hits':
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)

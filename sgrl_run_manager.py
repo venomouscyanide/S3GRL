@@ -141,7 +141,8 @@ def sgrl_master_controller(config, results_json):
 
             start = default_timer()
             if args.profile:
-                total_prep_time, best_test_score, total_run_time = run_sgrl_with_run_profiling(args, device)
+                out, total_run_time = run_sgrl_with_run_profiling(args, device)
+                total_prep_time, best_test_score = out
             else:
                 total_prep_time, best_test_score = run_sgrl_learning(args, device)
                 end = default_timer()
