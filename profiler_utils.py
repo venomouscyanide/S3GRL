@@ -22,8 +22,6 @@ def profile_helper(all_stats, model, train_dataset, stats_suffix, all_inference_
         'Average Train Time(in seconds)'
     ] = f'{summarized_stats.time_mean:.2f} ± {summarized_stats.time_std:.2f}'
 
-    print("Inference times")
-    print(all_inference_times)
     all_inference_times = np.array(all_inference_times)
     stats[
         'Average Inference Time(in seconds)'
