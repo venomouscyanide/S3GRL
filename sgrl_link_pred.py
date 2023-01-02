@@ -575,8 +575,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     pos_val_pred = val_pred[val_true == 1]
     neg_val_pred = val_pred[val_true == 0]
 
-    neg_test_pred, pos_test_pred, test_pred, test_true, time_for_inference = _get_test_auc(args, device, emb, model,
-                                                                                           test_loader)
+    out, time_for_inference = _get_test_auc(args, device, emb, model, test_loader)
+    neg_test_pred, pos_test_pred, test_pred, test_true = out
 
     if args.eval_metric == 'hits':
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
@@ -590,8 +590,8 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     return results, time_for_inference
 
 
+@timeit()
 def _get_test_auc(args, device, emb, model, test_loader):
-    time_start = default_timer()
     y_pred, y_true = [], []
     for data in tqdm(test_loader, ncols=70):
         data = data.to(device)
@@ -614,12 +614,10 @@ def _get_test_auc(args, device, emb, model, test_loader):
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
         y_true.append(data.y.view(-1).cpu().to(torch.float))
-    time_end = default_timer()
-    time_for_inference = time_end - time_start
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
     pos_test_pred = test_pred[test_true == 1]
     neg_test_pred = test_pred[test_true == 0]
-    return neg_test_pred, pos_test_pred, test_pred, test_true, time_for_inference
+    return neg_test_pred, pos_test_pred, test_pred, test_true
 
 
 @torch.no_grad()
@@ -1423,6 +1421,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
     return total_prep_time, best_test_scores[0]
 
 
+@timeit()
 def run_sgrl_with_run_profiling(args, device):
     total_prep_time, best_test_scores = run_sgrl_learning(args, device)
     return total_prep_time, best_test_scores
