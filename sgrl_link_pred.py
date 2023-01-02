@@ -575,6 +575,23 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     pos_val_pred = val_pred[val_true == 1]
     neg_val_pred = val_pred[val_true == 0]
 
+    out, time_for_inference = _get_test_auc(args, device, emb, model, test_loader)
+    neg_test_pred, pos_test_pred, test_pred, test_true = out
+
+    if args.eval_metric == 'hits':
+        results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'mrr':
+        results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'rocauc':
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'auc':
+        results = evaluate_auc(val_pred, val_true, test_pred, test_true)
+
+    return results, time_for_inference
+
+
+@timeit()
+def _get_test_auc(args, device, emb, model, test_loader):
     y_pred, y_true = [], []
     for data in tqdm(test_loader, ncols=70):
         data = data.to(device)
@@ -600,17 +617,7 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
     pos_test_pred = test_pred[test_true == 1]
     neg_test_pred = test_pred[test_true == 0]
-
-    if args.eval_metric == 'hits':
-        results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
-    elif args.eval_metric == 'mrr':
-        results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
-    elif args.eval_metric == 'rocauc':
-        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
-    elif args.eval_metric == 'auc':
-        results = evaluate_auc(val_pred, val_true, test_pred, test_true)
-
-    return results
+    return neg_test_pred, pos_test_pred, test_pred, test_true
 
 
 @torch.no_grad()
@@ -787,7 +794,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
     with open(log_file, 'a') as f:
         f.write('\n' + cmd_input)
 
-    # ScaLed Dataset prep + Training Flow
+    # SGRL Dataset prep + Training Flow
     if args.dataset.startswith('ogbl'):
         dataset = PygLinkPropPredDataset(name=args.dataset, transform=NormalizeFeatures())
         split_edge = dataset.get_edge_split()
@@ -1292,7 +1299,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             args.epochs -= args.continue_from
 
         if args.only_test:
-            results = test(evaluator, model, val_loader, device, emb, test_loader, args)
+            results, time_for_inference = test(evaluator, model, val_loader, device, emb, test_loader, args)
             for key, result in results.items():
                 loggers[key].add_result(run, result)
             for key, result in results.items():
@@ -1335,6 +1342,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
         # Training starts
         all_stats = []
+        all_inference_times = []
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
@@ -1349,7 +1357,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
                                           args)
 
             if epoch % args.eval_steps == 0:
-                results = test(evaluator, model, val_loader, device, emb, test_loader, args)
+                results, time_for_inference = test(evaluator, model, val_loader, device, emb, test_loader, args)
+                all_inference_times.append(time_for_inference)
                 if hypertuning:
                     tune.report(val_loss=loss, val_accuracy=results['AUC'][0])
                 for key, result in results.items():
@@ -1377,7 +1386,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
         if args.profile:
             stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}'
-            profile_helper(all_stats, model, train_dataset, stats_suffix)
+            profile_helper(all_stats, model, train_dataset, stats_suffix, all_inference_times, total_prep_time)
 
         for key in loggers.keys():
             print(key)
@@ -1406,7 +1415,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         # Delete results each time.
         if os.path.exists(args.res_dir):
             shutil.rmtree(args.res_dir)
-            
+
     print("fin.")
     # TODO; change logic for HITS@K
     return total_prep_time, best_test_scores[0]
@@ -1414,10 +1423,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
 @timeit()
 def run_sgrl_with_run_profiling(args, device):
-    start = default_timer()
-    run_sgrl_learning(args, device)
-    end = default_timer()
-    print(f"Time taken for run: {end - start:.2f} seconds")
+    total_prep_time, best_test_scores = run_sgrl_learning(args, device)
+    return total_prep_time, best_test_scores
 
 
 if __name__ == '__main__':
