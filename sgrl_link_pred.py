@@ -1385,7 +1385,10 @@ def run_sgrl_learning(args, device, hypertuning=False):
                             print(to_print, file=f)
 
         if args.profile:
-            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}'
+            extra_identifier = ''
+            if args.model == "SIGN":
+                extra_identifier = args.sign_type
+            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}_id_{extra_identifier}'
             profile_helper(all_stats, model, train_dataset, stats_suffix, all_inference_times, total_prep_time)
 
         for key in loggers.keys():
