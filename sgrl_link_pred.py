@@ -575,7 +575,12 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     pos_val_pred = val_pred[val_true == 1]
     neg_val_pred = val_pred[val_true == 0]
 
-    out, time_for_inference = _get_test_auc(args, device, emb, model, test_loader)
+    time_for_inference = 0
+    if args.profile:
+        out, time_for_inference = _get_test_auc_with_prof(args, device, emb, model, test_loader)
+    else:
+        out = _get_test_auc(args, device, emb, model, test_loader)
+
     neg_test_pred, pos_test_pred, test_pred, test_true = out
 
     if args.eval_metric == 'hits':
@@ -591,6 +596,37 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
 
 
 @timeit()
+@torch.no_grad()
+def _get_test_auc_with_prof(args, device, emb, model, test_loader):
+    y_pred, y_true = [], []
+    for data in tqdm(test_loader, ncols=70):
+        data = data.to(device)
+        x = data.x if args.use_feature else None
+        edge_weight = data.edge_weight if args.use_edge_weight else None
+        node_id = data.node_id if emb else None
+        num_nodes = data.num_nodes
+        if args.model == 'SIGN':
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
+            else:
+                xs = [data[f'x{args.sign_k}'].to(device)]
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            logits = model(xs, operator_batch_data)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        y_pred.append(logits.view(-1).cpu())
+        y_true.append(data.y.view(-1).cpu().to(torch.float))
+    test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
+    pos_test_pred = test_pred[test_true == 1]
+    neg_test_pred = test_pred[test_true == 0]
+    return neg_test_pred, pos_test_pred, test_pred, test_true
+
+
+@torch.no_grad()
 def _get_test_auc(args, device, emb, model, test_loader):
     y_pred, y_true = [], []
     for data in tqdm(test_loader, ncols=70):
