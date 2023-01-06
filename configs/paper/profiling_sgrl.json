@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Celegans_SEAL": {
+    "Yeast_SEAL": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -10,7 +10,7 @@
           4,
           5
         ],
-        "dataset": "Celegans"
+        "dataset": "Yeast"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -80,7 +80,7 @@
         "init_representation": ""
       }
     },
-    "Celegans_GCN_DE": {
+    "Yeast_GCN_DE": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -90,7 +90,7 @@
           4,
           5
         ],
-        "dataset": "Celegans"
+        "dataset": "Yeast"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -160,7 +160,7 @@
         "init_representation": ""
       }
     },
-    "Celegans_SuP": {
+    "Yeast_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -170,7 +170,7 @@
           4,
           5
         ],
-        "dataset": "Celegans"
+        "dataset": "Yeast"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -240,7 +240,7 @@
         "init_representation": ""
       }
     },
-    "Celegans_K_SuP": {
+    "Yeast_K_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -250,7 +250,7 @@
           4,
           5
         ],
-        "dataset": "Celegans"
+        "dataset": "Yeast"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -320,7 +320,7 @@
         "init_representation": ""
       }
     },
-    "Celegans_PoS": {
+    "Yeast_PoS": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -330,7 +330,7 @@
           4,
           5
         ],
-        "dataset": "Celegans"
+        "dataset": "Yeast"
       },
       "hyperparams_per_run": {
         "fast_split": false,
