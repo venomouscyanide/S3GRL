@@ -401,7 +401,7 @@
       }
     },
     
-    "Yeast_SEAL": {
+    "NS_SEAL": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -411,7 +411,7 @@
           4,
           5
         ],
-        "dataset": "Yeast"
+        "dataset": "NS"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -481,7 +481,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_GCN_DE": {
+    "NS_GCN_DE": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -491,7 +491,7 @@
           4,
           5
         ],
-        "dataset": "Yeast"
+        "dataset": "NS"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -561,7 +561,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_SuP": {
+    "NS_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -571,7 +571,7 @@
           4,
           5
         ],
-        "dataset": "Yeast"
+        "dataset": "NS"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -641,7 +641,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_K_SuP": {
+    "NS_K_SuP": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -651,7 +651,7 @@
           4,
           5
         ],
-        "dataset": "Yeast"
+        "dataset": "NS"
       },
       "hyperparams_per_run": {
         "fast_split": false,
@@ -721,7 +721,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_PoS": {
+    "NS_PoS": {
       "ds_params": {
         "runs": 5,
         "seeds": [
@@ -731,7 +731,7 @@
           4,
           5
         ],
-        "dataset": "Yeast"
+        "dataset": "NS"
       },
       "hyperparams_per_run": {
         "fast_split": false,
