@@ -1,12 +1,13 @@
 import json
 import os
 
+import numpy as np
 from torch_geometric.profile import get_stats_summary, get_model_size, count_parameters, get_data_size, \
     get_cpu_memory_from_gc, get_gpu_memory_from_gc
 from torch_geometric.profile.utils import byte_to_megabyte
 
 
-def profile_helper(all_stats, model, train_dataset, stats_suffix):
+def profile_helper(all_stats, model, train_dataset, stats_suffix, all_inference_times, total_prep_time):
     summarized_stats = get_stats_summary(all_stats)
     model_size = get_model_size(model)
     parameters = count_parameters(model)
@@ -18,8 +19,15 @@ def profile_helper(all_stats, model, train_dataset, stats_suffix):
 
     print(f"Summarized stats: {summarized_stats}")
     stats[
-        'Average Time(in seconds)'
+        'Average Train Time(in seconds)'
     ] = f'{summarized_stats.time_mean:.2f} ± {summarized_stats.time_std:.2f}'
+
+    all_inference_times = np.array(all_inference_times)
+    stats[
+        'Average Inference Time(in seconds)'
+    ] = f'{all_inference_times.mean():.2f} ± {all_inference_times.std():.2f}'
+
+    stats['Dataset Prep Time(in seconds)'] = total_prep_time
 
     # Details about there params are here: https://pytorch.org/docs/stable/generated/torch.cuda.memory_stats.html
     # we use all: combined statistics across all memory pools and peak: maximum value of this metric

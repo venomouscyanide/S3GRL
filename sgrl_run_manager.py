@@ -6,7 +6,7 @@ import torch
 import numpy as np
 from torch_geometric import seed_everything
 
-from sgrl_link_pred import run_sgrl_learning
+from sgrl_link_pred import run_sgrl_learning, run_sgrl_with_run_profiling
 
 
 class SGRLArgumentParser:
@@ -105,7 +105,7 @@ class SGRLArgumentParser:
 
 def sgrl_master_controller(config, results_json):
     """
-    Wrapper to run sgrl methods to capture the results in a cleaner fashion
+    Wrapper to run SGRL methods to capture the results in a cleaner fashion
     """
 
     exp_results = {}
@@ -140,9 +140,13 @@ def sgrl_master_controller(config, results_json):
             seed_everything(args.seed)
 
             start = default_timer()
-            total_prep_time, best_test_score = run_sgrl_learning(args, device)
-            end = default_timer()
-            total_run_time = end - start
+            if args.profile:
+                out, total_run_time = run_sgrl_with_run_profiling(args, device)
+                total_prep_time, best_test_score = out
+            else:
+                total_prep_time, best_test_score = run_sgrl_learning(args, device)
+                end = default_timer()
+                total_run_time = end - start
 
             prep_times.append(total_prep_time)
             total_run_times.append(total_run_time)

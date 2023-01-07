@@ -16,7 +16,7 @@ from ray import tune
 from torch_geometric import seed_everything
 from torch_geometric.loader import DataLoader
 from torch_geometric.profile import profileit, timeit
-from torch_geometric.transforms import OneHotDegree
+from torch_geometric.transforms import OneHotDegree, NormalizeFeatures
 from tqdm import tqdm
 import pdb
 
@@ -575,6 +575,29 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     pos_val_pred = val_pred[val_true == 1]
     neg_val_pred = val_pred[val_true == 0]
 
+    time_for_inference = 0
+    if args.profile:
+        out, time_for_inference = _get_test_auc_with_prof(args, device, emb, model, test_loader)
+    else:
+        out = _get_test_auc(args, device, emb, model, test_loader)
+
+    neg_test_pred, pos_test_pred, test_pred, test_true = out
+
+    if args.eval_metric == 'hits':
+        results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'mrr':
+        results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'rocauc':
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
+    elif args.eval_metric == 'auc':
+        results = evaluate_auc(val_pred, val_true, test_pred, test_true)
+
+    return results, time_for_inference
+
+
+@timeit()
+@torch.no_grad()
+def _get_test_auc_with_prof(args, device, emb, model, test_loader):
     y_pred, y_true = [], []
     for data in tqdm(test_loader, ncols=70):
         data = data.to(device)
@@ -600,17 +623,37 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
     pos_test_pred = test_pred[test_true == 1]
     neg_test_pred = test_pred[test_true == 0]
+    return neg_test_pred, pos_test_pred, test_pred, test_true
 
-    if args.eval_metric == 'hits':
-        results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
-    elif args.eval_metric == 'mrr':
-        results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
-    elif args.eval_metric == 'rocauc':
-        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred, evaluator)
-    elif args.eval_metric == 'auc':
-        results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
-    return results
+@torch.no_grad()
+def _get_test_auc(args, device, emb, model, test_loader):
+    y_pred, y_true = [], []
+    for data in tqdm(test_loader, ncols=70):
+        data = data.to(device)
+        x = data.x if args.use_feature else None
+        edge_weight = data.edge_weight if args.use_edge_weight else None
+        node_id = data.node_id if emb else None
+        num_nodes = data.num_nodes
+        if args.model == 'SIGN':
+            sign_k = args.sign_k
+            if args.sign_type == 'hybrid':
+                sign_k = args.sign_k * 2 - 1
+            if sign_k != -1:
+                xs = [data.x.to(device)]
+                xs += [data[f'x{i}'].to(device) for i in range(1, sign_k + 1)]
+            else:
+                xs = [data[f'x{args.sign_k}'].to(device)]
+            operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
+            logits = model(xs, operator_batch_data)
+        else:
+            logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
+        y_pred.append(logits.view(-1).cpu())
+        y_true.append(data.y.view(-1).cpu().to(torch.float))
+    test_pred, test_true = torch.cat(y_pred), torch.cat(y_true)
+    pos_test_pred = test_pred[test_true == 1]
+    neg_test_pred = test_pred[test_true == 0]
+    return neg_test_pred, pos_test_pred, test_pred, test_true
 
 
 @torch.no_grad()
@@ -787,22 +830,25 @@ def run_sgrl_learning(args, device, hypertuning=False):
     with open(log_file, 'a') as f:
         f.write('\n' + cmd_input)
 
-    # ScaLed Dataset prep + Training Flow
+    # SGRL Dataset prep + Training Flow
     if args.dataset.startswith('ogbl'):
-        dataset = PygLinkPropPredDataset(name=args.dataset)
+        dataset = PygLinkPropPredDataset(name=args.dataset, transform=NormalizeFeatures())
         split_edge = dataset.get_edge_split()
         data = dataset[0]
 
-        if args.dataset.startswith('ogbl-vessel'):
-            # normalize node features
-            data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
-            data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
-            data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
+    elif args.dataset.startswith('ogbl-vessel'):
+        dataset = PygLinkPropPredDataset(name=args.dataset)
+        split_edge = dataset.get_edge_split()
+        data = dataset[0]
+        # normalize node features
+        data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
+        data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
+        data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
 
     elif args.dataset.startswith('attributed'):
         dataset_name = args.dataset.split('-')[-1]
         path = osp.join('dataset', dataset_name)
-        dataset = AttributedGraphDataset(path, dataset_name)
+        dataset = AttributedGraphDataset(path, dataset_name, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -810,7 +856,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
     elif args.dataset in ['Cora', 'Pubmed', 'CiteSeer']:
         path = osp.join('dataset', args.dataset)
-        dataset = Planetoid(path, args.dataset)
+        dataset = Planetoid(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -857,7 +903,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         print("Finish reading from file")
     elif args.dataset in ['chameleon', 'crocodile', 'squirrel']:
         path = osp.join('dataset', args.dataset)
-        dataset = WikipediaNetwork(path, args.dataset)
+        dataset = WikipediaNetwork(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -867,7 +913,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         G.add_edges_from(data.edge_index.T.detach().numpy())
     elif args.dataset in ['Cornell', 'Texas', 'Wisconsin']:
         path = osp.join('dataset', args.dataset)
-        dataset = WebKB(path, args.dataset)
+        dataset = WebKB(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
@@ -945,6 +991,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
             args.hidden_channels = original_hidden_dims
         else:
             raise NotImplementedError(f"init_representation: {init_representation} not supported.")
+
+    if init_representation or init_features:
+        norm = NormalizeFeatures()
+        transformed_data = norm(data)
+        data.x = transformed_data.x
 
     if args.dataset.startswith('ogbl-citation'):
         args.eval_metric = 'mrr'
@@ -1284,7 +1335,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             args.epochs -= args.continue_from
 
         if args.only_test:
-            results = test(evaluator, model, val_loader, device, emb, test_loader, args)
+            results, time_for_inference = test(evaluator, model, val_loader, device, emb, test_loader, args)
             for key, result in results.items():
                 loggers[key].add_result(run, result)
             for key, result in results.items():
@@ -1327,6 +1378,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
         # Training starts
         all_stats = []
+        all_inference_times = []
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
@@ -1341,7 +1393,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
                                           args)
 
             if epoch % args.eval_steps == 0:
-                results = test(evaluator, model, val_loader, device, emb, test_loader, args)
+                results, time_for_inference = test(evaluator, model, val_loader, device, emb, test_loader, args)
+                all_inference_times.append(time_for_inference)
                 if hypertuning:
                     tune.report(val_loss=loss, val_accuracy=results['AUC'][0])
                 for key, result in results.items():
@@ -1368,8 +1421,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
                             print(to_print, file=f)
 
         if args.profile:
-            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}'
-            profile_helper(all_stats, model, train_dataset, stats_suffix)
+            extra_identifier = ''
+            if args.model == "SIGN":
+                extra_identifier = f"{args.k_heuristic}{args.sign_type}"
+            stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}_id_{extra_identifier}'
+            profile_helper(all_stats, model, train_dataset, stats_suffix, all_inference_times, total_prep_time)
 
         for key in loggers.keys():
             print(key)
@@ -1394,6 +1450,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
         if os.path.exists(path):
             shutil.rmtree(path)
 
+    if True:
+        # Delete results each time.
+        if os.path.exists(args.res_dir):
+            shutil.rmtree(args.res_dir)
+
     print("fin.")
     # TODO; change logic for HITS@K
     return total_prep_time, best_test_scores[0]
@@ -1401,10 +1462,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
 @timeit()
 def run_sgrl_with_run_profiling(args, device):
-    start = default_timer()
-    run_sgrl_learning(args, device)
-    end = default_timer()
-    print(f"Time taken for run: {end - start:.2f} seconds")
+    total_prep_time, best_test_scores = run_sgrl_learning(args, device)
+    return total_prep_time, best_test_scores
 
 
 if __name__ == '__main__':
