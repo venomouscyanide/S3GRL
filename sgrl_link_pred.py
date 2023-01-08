@@ -436,7 +436,9 @@ def profile_train(model, train_loader, optimizer, device, emb, train_dataset, ar
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         loss = BCEWithLogitsLoss()(logits.view(-1), data.y.to(torch.float))
@@ -466,7 +468,9 @@ def train_bce(model, train_loader, optimizer, device, emb, train_dataset, args):
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             x = data.x if args.use_feature else None
             edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -505,7 +509,9 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            pos_logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            pos_logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             pos_logits = model(pos_num_nodes, pos_data.z, pos_data.edge_index, data.batch, pos_x, pos_edge_weight,
                                pos_node_id)
@@ -522,7 +528,9 @@ def train_pairwise(model, train_positive_loader, train_negative_loader, optimize
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            neg_logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            neg_logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             neg_logits = model(neg_num_nodes, neg_data.z, neg_data.edge_index, neg_data.batch, neg_x, neg_edge_weight,
                                neg_node_id)
@@ -566,7 +574,9 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -615,7 +625,9 @@ def _get_test_auc_with_prof(args, device, emb, model, test_loader):
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -645,7 +657,9 @@ def _get_test_auc(args, device, emb, model, test_loader):
             else:
                 xs = [data[f'x{args.sign_k}'].to(device)]
             operator_batch_data = [data.batch] + [data[f"x{index}_batch"] for index in range(1, args.sign_k + 1)]
-            logits = model(xs, operator_batch_data)
+            agg_batch = [getattr(data, f"hop_{hop}_batch") for hop in range(1, args.num_hops + 1)]
+            agg_data = [getattr(data, f"hop_{hop}") for hop in range(1, args.num_hops + 1)]
+            logits = model(xs, operator_batch_data, agg_batch, agg_data)
         else:
             logits = model(num_nodes, data.z, data.edge_index, data.batch, x, edge_weight, node_id)
         y_pred.append(logits.view(-1).cpu())
@@ -1249,6 +1263,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
     follow_batch = None
     if args.model == "SIGN":
         follow_batch = [f'x{index}' for index in range(1, args.sign_k + 1)]
+        follow_batch += [f'hop_{hop}' for hop in range(1, args.num_hops + 1)]
 
     if not any([args.train_gae, args.train_mf, args.train_n2v]):
         if args.pairwise:
@@ -1305,7 +1320,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
             model = SIGNNet(args.hidden_channels, sign_k, train_dataset,
                             args.use_feature, node_embedding=emb, pool_operatorwise=args.pool_operatorwise,
                             dropout=args.dropout, k_heuristic=args.k_heuristic,
-                            k_pool_strategy=args.k_pool_strategy).to(device)
+                            k_pool_strategy=args.k_pool_strategy, num_hops=args.num_hops,
+                            batch_size=args.batch_size).to(device)
 
         parameters = list(model.parameters())
         if args.train_node_embedding:

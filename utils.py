@@ -182,9 +182,13 @@ def ksup_k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
     # Note: return args are different from k_hop_subgraph
     debug = False  # set True manually to debug using matplotlib and gephi
     # Extract the k-hop enclosing subgraph around link (src, dst) from A.
+    hop_map = {}
+
     if not rw_kwargs:
         # parent_map[src/dst][0] -> visited
         # parent_map[src/dst][1] -> fringe
+        hop_map[src] = {}
+        hop_map[dst] = {}
         nodes_covered = {src: [], dst: []}
         parent_map = {src: [set([src]), set([src])], dst: [set([dst]), set([dst])]}
         for parent, fringe_visited in parent_map.items():
@@ -192,14 +196,15 @@ def ksup_k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
                 fringe = set(A[list(fringe_visited[1])].indices)
 
                 fringe = fringe - parent_map[parent][0]  # fringe - visited
+                hop_map[parent][dist] = fringe
                 parent_map[parent][0] = parent_map[parent][0].union(fringe)
                 if sample_ratio < 1.0:
                     fringe = random.sample(fringe, int(sample_ratio * len(fringe)))
                 if max_nodes_per_hop is not None:
                     if max_nodes_per_hop < len(fringe):
                         fringe = random.sample(fringe, max_nodes_per_hop)
-                if len(fringe) == 0:
-                    break
+                # if len(fringe) == 0:
+                #     break
                 parent_map[parent][1] = fringe
                 nodes_covered[parent] += list(fringe)
 
@@ -219,7 +224,7 @@ def ksup_k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
         if node_features is not None:
             node_features = node_features[subgraph_nodes]
 
-        return subgraph_nodes, subgraph, nodes_covered, node_features, y, node_mapping
+        return subgraph_nodes, subgraph, nodes_covered, node_features, y, node_mapping, hop_map
     else:
         raise NotImplementedError('ScaLed is not supported for (4.1)')
 

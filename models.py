@@ -300,7 +300,7 @@ class GIN(torch.nn.Module):
 
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, train_dataset, use_feature=False, node_embedding=None, dropout=0.5,
-                 pool_operatorwise=False, k_heuristic=0, k_pool_strategy=""):
+                 pool_operatorwise=False, k_heuristic=0, k_pool_strategy="", num_hops=0, batch_size=0):
         # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
@@ -316,6 +316,8 @@ class SIGNNet(torch.nn.Module):
         self.k_pool_strategy = k_pool_strategy  # k-heuristic pool strat
         self.hidden_channels = hidden_channels
         initial_channels = hidden_channels
+        self.num_hops = num_hops
+        self.batch_size = batch_size
 
         initial_channels += train_dataset.num_features - hidden_channels
         if self.node_embedding is not None:
@@ -342,7 +344,8 @@ class SIGNNet(torch.nn.Module):
                 channels = 1 + self.k_heuristic
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
-            self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
+            self.mlp = MLP([hidden_channels * (num_layers + 1) * (self.num_hops + 1), hidden_channels, 1],
+                           dropout=dropout,
                            batch_norm=True, act_first=True, act='relu')
 
         for lin_layer in self.lins:
@@ -351,7 +354,7 @@ class SIGNNet(torch.nn.Module):
     def _weights_init(self, lin_layer):
         torch.nn.init.xavier_uniform_(lin_layer.weight.data)
 
-    def _centre_pool_helper(self, batch, h, op_index):
+    def _centre_pool_helper(self, batch, h, op_index, hop_trimmed_batches):
         # center pooling
         uq, center_indices = np.unique(batch[op_index].cpu().numpy(), return_index=True)
         if not self.k_heuristic:
@@ -364,26 +367,27 @@ class SIGNNet(torch.nn.Module):
             h_dst = h[center_indices + 1]
             h_a = h_src * h_dst
 
-            mask = torch.ones(size=(batch[op_index].size()), dtype=torch.bool)
-            mask[center_indices] = False
-            mask[center_indices + 1] = False
-            trimmed_batch = batch[op_index][mask]
+            if op_index == 0:
+                return torch.cat([h_a, torch.zeros(size=(h_a.size()[0], self.hidden_channels * self.num_hops))], -1)
+            h_channel_wise = []
 
-            if self.k_pool_strategy == 'mean':
-                h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
-                h = torch.concat([h_a, h_k_mean], dim=-1)
-            elif self.k_pool_strategy == 'sum':
-                h_k_sum = global_add_pool(h[mask], trimmed_batch, size=uq.shape[0])
-                h = torch.concat([h_a, h_k_sum], dim=-1)
-            elif self.k_pool_strategy == 'concat':
-                h_k = h[mask].reshape(shape=(
-                    center_indices.shape[0], self.hidden_channels * self.k_heuristic)
-                )
-                h = torch.concat([h_a, h_k], dim=-1)
+            for hop in range(self.num_hops):
+                trimmed_batch, mask = hop_trimmed_batches[hop]
 
+                if self.k_pool_strategy == 'mean':
+                    h_k_mean = global_mean_pool(h[mask], trimmed_batch, size=uq.shape[0])
+                    h_channel_wise.append(h_k_mean)
+                elif self.k_pool_strategy == 'sum':
+                    h_k_sum = global_add_pool(h[mask], trimmed_batch, size=uq.shape[0])
+                    h_channel_wise.append(h_k_sum)
+                else:
+                    raise NotImplementedError
+            h_channel_wise = [h_a] + h_channel_wise
+            h = torch.concat(h_channel_wise, -1)
         return h
 
-    def forward(self, xs, batch):
+    def forward(self, xs, batch, agg_batch, agg_data):
+        hop_trimmed_batches = self._get_mask_lookup(agg_batch, agg_data, batch)
         hs = []
         for index, (x, lin) in enumerate(zip(xs, self.lins)):
             h = lin(x)
@@ -391,7 +395,7 @@ class SIGNNet(torch.nn.Module):
             h = self.bns[index](h)
             h = F.dropout(h, p=self.dropout, training=self.training)
             if self.pool_operatorwise:
-                h = self._centre_pool_helper(batch, h, index)
+                h = self._centre_pool_helper(batch, h, index, hop_trimmed_batches)
             hs.append(h)
 
         h = torch.cat(hs, dim=-1)
@@ -407,3 +411,29 @@ class SIGNNet(torch.nn.Module):
         for lin in self.lins:
             lin.reset_parameters()
             self._weights_init(lin)
+
+    def _get_mask_lookup(self, agg_batch, agg_data, batch):
+        op_index = 1  # all operators have the same nodes
+        uq, center_indices = np.unique(batch[1].cpu().numpy(), return_index=True)
+
+        copy_of_batch = batch[op_index].clone().detach()
+        copy_of_batch[center_indices] = -1
+        copy_of_batch[center_indices + 1] = -1
+
+        hop_trimmed_batches = {}
+        for hop in range(self.num_hops):
+            hop_agg_centre_indices = np.unique(agg_batch[hop].cpu().numpy(), return_index=True)[0]
+
+            mask = torch.zeros(size=(batch[op_index].size()), dtype=torch.bool)
+
+            count = torch.bincount(agg_batch[hop])[torch.bincount(agg_batch[hop]).nonzero(as_tuple=True)]
+            zipped = zip(hop_agg_centre_indices, count)
+            for elem in zipped:
+                element = int(elem[0])
+                count = int(elem[1])
+                indices_matching = (copy_of_batch == element).nonzero(as_tuple=True)[0]
+                copy_of_batch[indices_matching[0]:indices_matching[0] + count] = -1
+                mask[indices_matching[0]:indices_matching[0] + count] = True
+
+            hop_trimmed_batches[hop] = (batch[op_index][mask], mask)
+        return hop_trimmed_batches

@@ -220,15 +220,17 @@ class OptimizedSignOperations:
         K = sign_kwargs['sign_k']
 
         for src, dst in tqdm(link_index.t().tolist()):
-            subgraph_nodes, subgraph, nodes_covered, node_features, y, node_mapping = ksup_k_hop_subgraph(src, dst,
-                                                                                                          num_hops, A,
-                                                                                                          ratio_per_hop,
-                                                                                                          max_nodes_per_hop,
-                                                                                                          node_features=x,
-                                                                                                          y=y,
-                                                                                                          directed=directed,
-                                                                                                          A_csc=A_csc,
-                                                                                                          rw_kwargs=rw_kwargs)
+            subgraph_nodes, subgraph, nodes_covered, node_features, y, node_mapping, hop_map = ksup_k_hop_subgraph(src,
+                                                                                                                   dst,
+                                                                                                                   num_hops,
+                                                                                                                   A,
+                                                                                                                   ratio_per_hop,
+                                                                                                                   max_nodes_per_hop,
+                                                                                                                   node_features=x,
+                                                                                                                   y=y,
+                                                                                                                   directed=directed,
+                                                                                                                   A_csc=A_csc,
+                                                                                                                   rw_kwargs=rw_kwargs)
             csr_subgraph = subgraph
             u, v, r = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
@@ -257,21 +259,27 @@ class OptimizedSignOperations:
             # source, target is always 0, 1
             strat = sign_kwargs['k_node_set_strategy']
 
-            if strat == 'union':
-                strat_nodes = set(nodes_covered[src]).union(set(nodes_covered[dst]))
-            elif strat == 'intersection':
-                strat_nodes = set(nodes_covered[src]).intersection(set(nodes_covered[dst]))
-            else:
-                raise NotImplementedError(f"check strat {strat}")
-            strat_hop_nodes = strat_nodes
+            selected_rows = []
+            to_save_in_data = []
+            for index, (src_h_hop_nodes, dst_h_hop_nodes) in \
+                    enumerate(zip(hop_map[src].values(), hop_map[dst].values())):
+                if strat == 'union':
+                    strat_nodes = src_h_hop_nodes.union(dst_h_hop_nodes)
+                elif strat == 'intersection':
+                    strat_nodes = src_h_hop_nodes.intersection(dst_h_hop_nodes)
+                else:
+                    raise NotImplementedError(f"check strat {strat}")
+                selected_rows += strat_nodes
+                strat_nodes_relabeled = [node_mapping[node] for node in strat_nodes]
+                to_save_in_data.append(torch.tensor(strat_nodes_relabeled))
 
+            selected_rows = set(selected_rows)
             all_a_values = []
             # construct all a rows
             starting_indices = []
             slice_helper = []
             len_so_far = 0
 
-            selected_rows = strat_hop_nodes
             selected_rows.discard(src)
             selected_rows.discard(dst)
             selected_rows = [src, dst] + list(selected_rows)
@@ -321,6 +329,9 @@ class OptimizedSignOperations:
                 x_operator = final_a_values[start:end]
                 data[f'x{index}'] = x_operator
             data[f'x{index + 1}'] = final_a_values[slice_helper[-1]:]
+
+            for index, data_to_save in enumerate(to_save_in_data, start=1):
+                data[f'hop_{index}'] = data_to_save
 
             sup_data_list.append(data)
 
