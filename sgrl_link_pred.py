@@ -1423,7 +1423,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         if args.profile:
             extra_identifier = ''
             if args.model == "SIGN":
-                extra_identifier = f"{args.k_heuristic}{args.sign_type}"
+                extra_identifier = f"{args.k_heuristic}{args.sign_type}{args.hidden_channels}"
             stats_suffix = f'{args.model}_{args.dataset}{args.data_appendix}_seed_{args.seed}_id_{extra_identifier}'
             profile_helper(all_stats, model, train_dataset, stats_suffix, all_inference_times, total_prep_time)
 
