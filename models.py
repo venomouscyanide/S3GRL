@@ -300,7 +300,7 @@ class GIN(torch.nn.Module):
 
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, train_dataset, use_feature=False, node_embedding=None, dropout=0.5,
-                 pool_operatorwise=False, k_heuristic=0, k_pool_strategy="", num_hops=0, batch_size=0):
+                 pool_operatorwise=False, k_heuristic=0, k_pool_strategy="", num_hops=0, batch_size=0, device="cpu"):
         # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
@@ -318,6 +318,7 @@ class SIGNNet(torch.nn.Module):
         initial_channels = hidden_channels
         self.num_hops = num_hops
         self.batch_size = batch_size
+        self.device = device
 
         initial_channels += train_dataset.num_features - hidden_channels
         if self.node_embedding is not None:
@@ -368,7 +369,8 @@ class SIGNNet(torch.nn.Module):
             h_a = h_src * h_dst
 
             if op_index == 0:
-                return torch.cat([h_a, torch.zeros(size=(h_a.size()[0], self.hidden_channels * self.num_hops))], -1)
+                return torch.cat([h_a, torch.zeros(size=(h_a.size()[0], self.hidden_channels * self.num_hops),
+                                                   device=self.device)], -1)
             h_channel_wise = []
 
             for hop in range(self.num_hops):
