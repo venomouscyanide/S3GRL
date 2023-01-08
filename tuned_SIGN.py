@@ -273,17 +273,13 @@ class OptimizedSignOperations:
                 strat_nodes_relabeled = [node_mapping[node] for node in strat_nodes]
                 to_save_in_data.append(torch.tensor(strat_nodes_relabeled))
 
-            selected_rows = set(selected_rows)
             all_a_values = []
             # construct all a rows
             starting_indices = []
             slice_helper = []
             len_so_far = 0
 
-            selected_rows.discard(src)
-            selected_rows.discard(dst)
             selected_rows = [src, dst] + list(selected_rows)
-
             selected_rows = [node_mapping[node_id] for node_id in selected_rows]
 
             for sign_k_val in range(0, K, 1):
