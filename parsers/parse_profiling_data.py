@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 from collections import defaultdict
 
@@ -72,7 +73,29 @@ def parse_data(folder_path):
             combined_profiling_results[model_ds][
                 key] = f"{float(value.split('±')[0]):.2f} ± {float(value.split('±')[1]):.2f}"
 
-    with open(join("combined_profiling_results.json"), "w") as json_out:
+    csv_file = "collated_csv.csv"
+    csv_contents = {}
+    headers = ['Avg. Train Times', 'Avg. Inference Times', 'Avg. Dataset Prep Time', 'Avg. Max. Allocated CUDA',
+               'Avg. Reserved. Allocated CUDA', 'Avg. Active. Allocated CUDA', 'Avg. Min. SMI. Free CUDA',
+               'Avg. Max. SMI. Used CUDA', 'Avg. Model Size', 'Avg. Num Params']
+
+    for key, value in combined_profiling_results.items():
+        ordered_values = dict()
+        key = key.split('.json')[0]
+        for header in headers:
+            ordered_values.update({header: value[header]})
+        csv_contents[key] = ordered_values
+
+    with open(csv_file, "w") as csv_output:
+        fieldnames = ['id'] + headers
+        writer = csv.DictWriter(csv_output, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for key, row in csv_contents.items():
+            row['id'] = key
+            writer.writerow(row)
+
+    with open("combined_profiling_results.json", "w") as json_out:
         json.dump(combined_profiling_results, json_out)
 
 
