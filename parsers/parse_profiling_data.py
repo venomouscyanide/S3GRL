@@ -13,15 +13,15 @@ def parse_data(folder_path):
     json_files = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
     combined_profiling_results = {}
 
-    map = defaultdict(list)
+    mapp = defaultdict(list)
     for file in json_files:
         if file.split('_')[1] == 'LinkPred()':  # WP
             unique_id = f"{file.split('_')[1]}_{file.split('_')[2]}"
         else:
             unique_id = f"{file.split('_')[1]}_{file.split('_')[2]}_{file.split('_')[-1]}"
         with open(join(folder_path, file), "r") as json_file:
-            map[unique_id].append(json.load(json_file))
-    sorted_map = {k: v for k, v in sorted(map.items(), key=lambda x: x[0])}  # for readability
+            mapp[unique_id].append(json.load(json_file))
+    sorted_map = {k: v for k, v in sorted(mapp.items(), key=lambda x: x[0])}  # for readability
 
     for model_ds, profiled_info in sorted_map.items():
         avg_train_times = []
@@ -57,8 +57,8 @@ def parse_data(folder_path):
             num_params.append(float(each_seed_data['Number of Model Parameters']))
 
         combined_profiling_results[model_ds] = {
-            "Avg. Train Times": f"{np.array(avg_train_times[0]).mean()} ± {np.array(avg_train_times[1]).mean()}",
-            "Avg. Inference Times": f"{np.array(avg_inf_times[0]).mean()} ± {np.array(avg_inf_times[1]).mean()}",
+            "Avg. Train Times": f"{np.array(list(map(lambda x: x[0], avg_train_times))).mean()} ± {np.array(list(map(lambda x: x[1], avg_train_times))).mean()}",
+            "Avg. Inference Times": f"{np.array(list(map(lambda x: x[0], avg_inf_times))).mean()} ± {np.array(list(map(lambda x: x[1], avg_inf_times))).mean()}",
             "Avg. Dataset Prep Time": f"{np.array(ds_prep_times).mean()} ± {np.array(ds_prep_times).std()}",
             "Avg. Max. Allocated CUDA": f"{np.array(max_allocated_cuda).mean()} ± {np.array(max_allocated_cuda).std()}",
             "Avg. Reserved. Allocated CUDA": f"{np.array(max_reserved_cuda).mean()} ± {np.array(max_reserved_cuda).std()}",
@@ -69,7 +69,8 @@ def parse_data(folder_path):
             "Avg. Num Params": f"{np.array(num_params).mean()} ± {np.array(num_params).std()}",
         }
         for key, value in combined_profiling_results[model_ds].items():
-            combined_profiling_results[model_ds][key] = f"{float(value.split('±')[0]):.2f} ± {float(value.split('±')[1]):.2f}"
+            combined_profiling_results[model_ds][
+                key] = f"{float(value.split('±')[0]):.2f} ± {float(value.split('±')[1]):.2f}"
 
     with open(join("combined_profiling_results.json"), "w") as json_out:
         json.dump(combined_profiling_results, json_out)
