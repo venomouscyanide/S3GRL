@@ -575,11 +575,13 @@ def test(evaluator, model, val_loader, device, emb, test_loader, args):
     pos_val_pred = val_pred[val_true == 1]
     neg_val_pred = val_pred[val_true == 0]
 
-    time_for_inference = 0
     if args.profile:
         out, time_for_inference = _get_test_auc_with_prof(args, device, emb, model, test_loader)
     else:
+        time_for_inference_start = default_timer()
         out = _get_test_auc(args, device, emb, model, test_loader)
+        time_for_inference_end = default_timer()
+        time_for_inference = time_for_inference_end - time_for_inference_start
 
     neg_test_pred, pos_test_pred, test_pred, test_true = out
 
@@ -962,8 +964,11 @@ def run_sgrl_learning(args, device, hypertuning=False):
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
+        extra_identifier = ''
+        if args.model == "SIGN":
+            extra_identifier = f"{args.k_heuristic}{args.sign_type}{args.hidden_channels}"
         data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device,
-                                     args.epochs, hypertuning)
+                                     args.epochs, hypertuning, extra_identifier)
 
     init_representation = args.init_representation
     if init_representation:
@@ -1379,6 +1384,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
         # Training starts
         all_stats = []
         all_inference_times = []
+        all_train_times = []
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
@@ -1386,7 +1392,10 @@ def run_sgrl_learning(args, device, hypertuning=False):
                 all_stats.append(stats)
             else:
                 if not args.pairwise:
+                    time_start_for_train_epoch = default_timer()
                     loss = train_bce(model, train_loader, optimizer, device, emb, train_dataset, args)
+                    time_end_for_train_epoch = default_timer()
+                    all_train_times.append(time_end_for_train_epoch - time_start_for_train_epoch)
                 else:
                     loss = train_pairwise(model, train_pos_loader, train_neg_loader, optimizer, device, emb,
                                           train_dataset,
@@ -1457,13 +1466,14 @@ def run_sgrl_learning(args, device, hypertuning=False):
 
     print("fin.")
     # TODO; change logic for HITS@K
-    return total_prep_time, best_test_scores[0]
+    return total_prep_time, best_test_scores[0], all_train_times, all_inference_times, total_params
 
 
 @timeit()
 def run_sgrl_with_run_profiling(args, device):
-    total_prep_time, best_test_scores = run_sgrl_learning(args, device)
-    return total_prep_time, best_test_scores
+    total_prep_time, best_test_scores, all_train_times, all_inference_times, total_params = run_sgrl_learning(args,
+                                                                                                              device)
+    return total_prep_time, best_test_scores, all_train_times, all_inference_times, total_params
 
 
 if __name__ == '__main__':
@@ -1596,7 +1606,7 @@ if __name__ == '__main__':
         run_sgrl_with_run_profiling(args, device)
     else:
         start = default_timer()
-        total_prep_time, _ = run_sgrl_learning(args, device)
+        total_prep_time, _, _, _, _ = run_sgrl_learning(args, device)
         end = default_timer()
         print(f"Time taken for dataset prep: {total_prep_time:.2f} seconds")
         print(f"Time taken for run: {end - start:.2f} seconds")
