@@ -141,15 +141,19 @@ class OptimizedSignOperations:
         from utils import k_hop_subgraph
         sup_data_list = []
         print("Start with SuP data prep")
+
+        K = sign_kwargs['sign_k']
+
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
-
-            u, v, r = ssp.find(tmp[1])
+            csr_subgraph = tmp[1]
+            csr_shape = csr_subgraph.shape[0]
+            u, v, _ = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
             adj_t = SparseTensor(row=u, col=v,
-                                 sparse_sizes=(tmp[1].shape[0], tmp[1].shape[0]))
+                                 sparse_sizes=(csr_shape, csr_shape))
 
             deg = adj_t.sum(dim=1).to(torch.float)
             deg_inv_sqrt = deg.pow(-0.5)
@@ -159,51 +163,26 @@ class OptimizedSignOperations:
             subgraph_features = tmp[3]
             subgraph = adj_t
 
-            if subgraph.size(1) == 0 and subgraph.size(0) == 0:
-                # empty enclosing subgraph
-                continue
-
             assert subgraph_features is not None
 
             powers_of_a = [subgraph]
-            K = sign_kwargs['sign_k']
-
             for _ in range(K - 1):
                 powers_of_a.append(subgraph @ powers_of_a[-1])
 
-            all_a_values = torch.empty(size=[K * 2, subgraph.size(0)])
+            # source, target is always 0, 1
+            selected_rows = [0, 1]
+            for index, power_of_a in enumerate(powers_of_a):
+                powers_of_a[index] = power_of_a[selected_rows]
 
-            # construct A ( (K * 2) X num_nodes)
-            for operator_index in range(0, K * 2, 2):
-                all_a_values[[operator_index, operator_index + 1], :] = torch.tensor(
-                    powers_of_a[operator_index // 2][[0, 1], :].to_dense()
-                )
-            # calculate AX ( (K * 2) X num_input_feat)
-            all_ax_values = all_a_values @ subgraph_features
+            x_a = torch.tensor([[1]] + [[1]] + [[0]] * (csr_shape - 2))
+            x_b = subgraph_features
+            subg_x = torch.hstack([x_a, x_b])
 
-            # inject label info into AX' ( (K * 2) X (num_input_feat + 1))
-            updated_features = torch.empty(size=[K * 2, all_ax_values[0].size()[-1] + 1])
-            for operator_index in range(0, K * 2, 2):
-                label_src = all_a_values[operator_index][0] + all_a_values[operator_index][1]
-                label_dst = all_a_values[operator_index + 1][0] + all_a_values[operator_index + 1][1]
+            trimmed_x = subg_x[[0, 1]]
+            data = Data(x=trimmed_x, y=y)
 
-                updated_features[operator_index, :] = torch.hstack([label_src, all_ax_values[operator_index]])
-                updated_features[operator_index + 1, :] = torch.hstack(
-                    [label_dst, all_ax_values[operator_index + 1]])
-
-            # convert AX' into PyG Data object
-            data = Data(
-                x=torch.hstack(
-                    [torch.tensor([[1], [1]]),
-                     torch.vstack([subgraph_features[0], subgraph_features[1]]),
-                     ]),
-                y=y,
-            )
-
-            for operator_index in range(0, K * 2, 2):
-                data[f'x{operator_index // 2 + 1}'] = torch.vstack(
-                    [updated_features[operator_index], updated_features[operator_index + 1]]
-                )
+            for index, power_of_a in enumerate(powers_of_a, start=1):
+                data[f'x{index}'] = power_of_a @ subg_x
 
             sup_data_list.append(data)
 
@@ -225,19 +204,16 @@ class OptimizedSignOperations:
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
             csr_subgraph = tmp[1]
-            u, v, r = ssp.find(csr_subgraph)
+            csr_shape = csr_subgraph.shape[0]
+            u, v, _ = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
             adj_t = SparseTensor(row=u, col=v,
-                                 sparse_sizes=(csr_subgraph.shape[0], csr_subgraph.shape[0]))
+                                 sparse_sizes=(csr_shape, csr_shape))
 
             deg = adj_t.sum(dim=1).to(torch.float)
             deg_inv_sqrt = deg.pow(-0.5)
             deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
             adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
-            un_norm_powers = [csr_subgraph]
-            for _ in range(K - 1):
-                un_norm_powers.append(csr_subgraph @ un_norm_powers[-1])
 
             subgraph_features = tmp[3]
             subgraph = adj_t
@@ -251,69 +227,35 @@ class OptimizedSignOperations:
 
             # source, target is always 0, 1
             strat = sign_kwargs['k_node_set_strategy']
-            subgraph = csr_subgraph
             if strat == 'union':
-                one_hop_nodes = neighbors({0}, subgraph).union(neighbors({1}, subgraph))
+                one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
             elif strat == 'intersection':
-                one_hop_nodes = neighbors({0}, subgraph).intersection(neighbors({1}, subgraph))
+                one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
             else:
                 raise NotImplementedError(f"check strat {strat}")
             strat_hop_nodes = one_hop_nodes
 
-            all_a_values = []
-            # construct all a rows
-            starting_indices = []
-            slice_helper = []
-            len_so_far = 0
-
-            selected_rows = strat_hop_nodes
-            selected_rows.discard(0)
-            selected_rows.discard(1)
-            selected_rows = [0, 1] + list(selected_rows)
-
-            for sign_k_val in range(0, K, 1):
-                rows_of_op = powers_of_a[sign_k_val][list(selected_rows)].to_dense()
-                all_a_values.extend(rows_of_op)
-
-                starting_indices += [len_so_far, len_so_far + 1]
-                slice_helper.append(len_so_far)
-
-                len_so_far += len(selected_rows)
-
-            all_a_values = torch.stack((all_a_values))
-            # calculate AX
-            all_ax_values = all_a_values @ subgraph_features
-
-            # inject label info
-            row = 0
-            final_a_values = torch.hstack([torch.zeros(size=(all_ax_values.size()[0], 1)), all_ax_values])
-            source_target_indices = set(starting_indices)
-            while row < len(all_ax_values):
-                if row in source_target_indices:
-                    label = all_a_values[row][0] + all_a_values[row][1]
-                    final_a_values[row][0] = label
-
-                row += 1
+            selected_rows = [0, 1] + list(strat_hop_nodes)
+            for index, power_of_a in enumerate(powers_of_a):
+                powers_of_a[index] = power_of_a[selected_rows]
 
             if strat == 'union':
-                x_a = torch.tensor([[1]] + [[1]] + [[0] for _ in range(subgraph_features.size(0) - 2)])
+                x_a = torch.tensor([[1]] + [[1]] + [[0] * (csr_shape - 2)])
                 x_b = subgraph_features
+                subg_x = torch.hstack([x_a, x_b])
             elif strat == 'intersection':
-                x_a = torch.tensor([[1]] + [[1]])
-                x_b = subgraph_features[[0, 1]]
+                x_a = torch.tensor([[1]] + [[1]] + [[0]] * (csr_shape - 2))
+                x_b = subgraph_features
+                subg_x = torch.hstack([x_a, x_b])
             else:
-                raise NotImplementedError(f"check strat {strat}")
+                raise NotImplementedError(f"check strategy {strat}")
 
-            data = Data(
-                x=torch.hstack([x_a, x_b]),
-                y=y,
-            )
+            trimmed_x = subg_x[selected_rows]
+            data = Data(x=trimmed_x, y=y)
+            subg_x = torch.hstack([x_a, x_b])
 
-            index = 0
-            for index, (start, end) in enumerate(zip(slice_helper, slice_helper[1:]), start=1):
-                x_operator = final_a_values[start:end]
-                data[f'x{index}'] = x_operator
-            data[f'x{index + 1}'] = final_a_values[slice_helper[-1]:]
+            for index, power_of_a in enumerate(powers_of_a, start=1):
+                data[f'x{index}'] = power_of_a @ subg_x
 
             sup_data_list.append(data)
 
