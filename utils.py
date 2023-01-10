@@ -502,8 +502,12 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             return sup_data_list
         elif not sign_kwargs['optimize_sign']:
             # SIGN + SEAL flow; includes both SuP and PoS flows
+            print_out = True
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
+                    if print_out:
+                        print("KSuP Non-Optimized Flow.")
+                    print_out = False
                     # SuP flow
 
                     # debug code with graphistry
@@ -533,6 +537,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
                     # check against the nodes that is received in tmp before the relabeling occurs
                     pos_data_list = []
+                    if print_out:
+                        print("PoS Non-Optimized Flow.")
+                    print_out = False
                     for index, power_of_a in enumerate(powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
                                              max_nodes_per_hop, node_features=x, y=y,

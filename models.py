@@ -321,18 +321,11 @@ class SIGNNet(torch.nn.Module):
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
 
-        if num_layers == -1:
-            self.lins.append(Linear(initial_channels, hidden_channels))
-            self.bns.append(BatchNorm1d(hidden_channels))
-            self.mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout, batch_norm=True,
-                           act_first=True, act='relu')
-        else:
-            for _ in range(num_layers + 1):
-                self.lins.append(Linear(initial_channels, hidden_channels))
-                self.bns.append(BatchNorm1d(hidden_channels))
+        mlp_layers = [initial_channels * (num_layers + 1)] + [hidden_channels] * num_layers
+        self.operator_diff = MLP(mlp_layers, dropout=dropout, batch_norm=True, act_first=True, act='elu')
         if not self.k_heuristic:
-            self.mlp = MLP([hidden_channels * (num_layers + 1), hidden_channels, 1], dropout=dropout,
-                           batch_norm=True, act_first=True, act='relu')
+            self.link_pred_mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
+                                     batch_norm=True, act_first=True, act='relu')
         else:
             if self.k_pool_strategy == "mean":
                 channels = 2
@@ -342,8 +335,8 @@ class SIGNNet(torch.nn.Module):
                 channels = 1 + self.k_heuristic
             else:
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
-            self.mlp = MLP([hidden_channels * (num_layers + 1) * channels, hidden_channels, 1], dropout=dropout,
-                           batch_norm=True, act_first=True, act='relu')
+            self.link_pred_mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
+                                     batch_norm=True, act_first=True, act='relu')
 
         for lin_layer in self.lins:
             self._weights_init(lin_layer)
@@ -384,26 +377,18 @@ class SIGNNet(torch.nn.Module):
         return h
 
     def forward(self, xs, batch):
-        hs = []
-        for index, (x, lin) in enumerate(zip(xs, self.lins)):
-            h = lin(x)
-            h = F.elu(h)
-            h = self.bns[index](h)
-            h = F.dropout(h, p=self.dropout, training=self.training)
-            if self.pool_operatorwise:
-                h = self._centre_pool_helper(batch, h, index)
-            hs.append(h)
+        xs_cat = torch.cat(xs, dim=-1)
+        x = xs_cat
+        x = self.operator_diff(x)
 
-        h = torch.cat(hs, dim=-1)
+        x = self._centre_pool_helper(batch, x, -1)
 
-        if not self.pool_operatorwise:
-            raise RuntimeError("Not supported if not used at an operator level.")
-            h = self._centre_pool_helper(batch, h, -1)
-
-        h = self.mlp(h)
-        return h
+        x = self.link_pred_mlp(x)
+        return x
 
     def reset_parameters(self):
         for lin in self.lins:
             lin.reset_parameters()
             self._weights_init(lin)
+        for bn in self.bns:
+            bn.reset_parameters()
