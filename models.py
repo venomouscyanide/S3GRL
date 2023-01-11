@@ -321,8 +321,10 @@ class SIGNNet(torch.nn.Module):
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
 
-        mlp_layers = [initial_channels * (num_layers + 1)] + [hidden_channels] * num_layers
-        self.operator_diff = MLP(mlp_layers, dropout=dropout, batch_norm=True, act_first=True, act='elu')
+        mlp_layers = [initial_channels * (num_layers + 1), hidden_channels]
+        # note; operator_diff MLP is just a linear layer that corresponds to a weight matrix, W
+        self.operator_diff = MLP(mlp_layers, dropout=dropout, batch_norm=True, act_first=True, act='elu',
+                                 plain_last=False)
         if not self.k_heuristic:
             self.link_pred_mlp = MLP([hidden_channels, hidden_channels, 1], dropout=dropout,
                                      batch_norm=True, act_first=True, act='relu')
