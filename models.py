@@ -301,14 +301,10 @@ class GIN(torch.nn.Module):
 class SIGNNet(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, train_dataset, use_feature=False, node_embedding=None, dropout=0.5,
                  pool_operatorwise=False, k_heuristic=0, k_pool_strategy=""):
-        # TODO: dropedge is not really consumed. remove the arg?
         super().__init__()
 
         self.use_feature = use_feature
         self.node_embedding = node_embedding
-
-        self.lins = torch.nn.ModuleList()
-        self.bns = torch.nn.ModuleList()
 
         self.dropout = dropout
         self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for PoS
@@ -339,12 +335,6 @@ class SIGNNet(torch.nn.Module):
                 raise NotImplementedError(f"Check pool strat: {self.k_pool_strategy}")
             self.link_pred_mlp = MLP([hidden_channels * channels, hidden_channels, 1], dropout=dropout,
                                      batch_norm=True, act_first=True, act='relu')
-
-        for lin_layer in self.lins:
-            self._weights_init(lin_layer)
-
-    def _weights_init(self, lin_layer):
-        torch.nn.init.xavier_uniform_(lin_layer.weight.data)
 
     def _centre_pool_helper(self, batch, h, op_index):
         # center pooling
@@ -389,8 +379,5 @@ class SIGNNet(torch.nn.Module):
         return x
 
     def reset_parameters(self):
-        for lin in self.lins:
-            lin.reset_parameters()
-            self._weights_init(lin)
-        for bn in self.bns:
-            bn.reset_parameters()
+        self.operator_diff.reset_parameters()
+        self.link_pred_mlp.reset_parameters()

@@ -125,6 +125,9 @@ def sgrl_master_controller(config, results_json):
         prep_times = []
         total_run_times = []
 
+        all_train_times_arr = []
+        all_inference_times_arr = []
+        total_params_arr = []
         for run, seed in zip(range(1, runs + 1), seeds):
             kwargs.update(
                 {
@@ -140,13 +143,18 @@ def sgrl_master_controller(config, results_json):
             seed_everything(args.seed)
 
             start = default_timer()
+
             if args.profile:
                 out, total_run_time = run_sgrl_with_run_profiling(args, device)
                 total_prep_time, best_test_score = out
             else:
-                total_prep_time, best_test_score = run_sgrl_learning(args, device)
+                total_prep_time, best_test_score, all_train_times, all_inference_times, total_params = run_sgrl_learning(
+                    args, device)
                 end = default_timer()
                 total_run_time = end - start
+                total_params_arr.append(total_params)
+                all_train_times_arr.extend(all_train_times)
+                all_inference_times_arr.extend(all_inference_times)
 
             prep_times.append(total_prep_time)
             total_run_times.append(total_run_time)
@@ -155,12 +163,18 @@ def sgrl_master_controller(config, results_json):
         prep_times = np.array(prep_times)
         total_run_times = np.array(total_run_times)
         best_test_scores = np.array(best_test_scores)
+        all_train_times_arr = np.array(all_train_times_arr)
+        all_inference_times_arr = np.array(all_inference_times_arr)
+        total_params_arr = np.array(total_params_arr)
 
         exp_results[identifier] = {
             "results": {
-                "Average Dataset Prep Time": f"{prep_times.mean():.2f} ± {prep_times.std():.2f}",
                 "Average Runtime": f"{total_run_times.mean():.2f} ± {total_run_times.std():.2f}",
                 "Average Test AUC": f"{best_test_scores.mean():.2f} ± {best_test_scores.std():.2f}",
+                "Average Dataset Prep Time": f"{prep_times.mean():.2f} ± {prep_times.std():.2f}",
+                "Average Train time per epoch": f"{all_train_times_arr.mean():.2f} ± {all_train_times_arr.std():.2f}",
+                "Average Inf time per epoch": f"{all_inference_times_arr.mean():.2f} ± {all_inference_times_arr.std():.2f}",
+                "Total Model Parameters": f"{total_params_arr.mean():.2f} ± {total_params_arr.std():.2f}"
             },
             "config_dump": ds_config
         }
