@@ -1,3 +1,5 @@
+from timeit import default_timer
+
 import torch
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
@@ -199,6 +201,22 @@ class OptimizedSignOperations:
 
         K = sign_kwargs['sign_k']
 
+        values_to_put = num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs
+        args = []
+        for src, dst in link_index.t().tolist():
+            args.append((src, dst, *values_to_put))
+
+        print("Starting out with mp")
+        start = default_timer()
+        with torch.multiprocessing.get_context('spawn').Pool(7) as pool:
+            sup_final_list = []
+            for data in tqdm(pool.starmap(get_subgraphs, args)):
+                sup_final_list.append(data)
+        print("Done")
+        end = default_timer()
+        print(end - start)
+        exit()
+
         for src, dst in tqdm(link_index.t().tolist()):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
@@ -260,3 +278,10 @@ class OptimizedSignOperations:
             sup_data_list.append(data)
 
         return sup_data_list
+
+def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs):
+    from utils import k_hop_subgraph
+    tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+                         max_nodes_per_hop, node_features=x, y=y,
+                         directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+    return tmp
