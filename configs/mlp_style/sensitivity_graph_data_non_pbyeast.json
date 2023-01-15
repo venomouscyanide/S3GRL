@@ -2,7 +2,7 @@
   "datasets": {
     "PB_K_SuP_h1_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -33,7 +33,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -87,7 +87,7 @@
     },
     "PB_K_SuP_h1_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -118,7 +118,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -172,7 +172,7 @@
     },
     "PB_K_SuP_h1_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -203,7 +203,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -257,7 +257,7 @@
     },
     "PB_K_SuP_h1_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -288,7 +288,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -342,7 +342,7 @@
     },
     "PB_K_SuP_h1_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -373,7 +373,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -428,7 +428,7 @@
 
     "PB_K_SuP_h2_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -459,7 +459,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -513,7 +513,7 @@
     },
     "PB_K_SuP_h2_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -544,7 +544,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -598,7 +598,7 @@
     },
     "PB_K_SuP_h2_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -629,7 +629,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -683,7 +683,7 @@
     },
     "PB_K_SuP_h2_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -714,7 +714,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -768,7 +768,7 @@
     },
     "PB_K_SuP_h2_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -799,7 +799,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -854,7 +854,7 @@
 
     "PB_K_SuP_h3_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -885,7 +885,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -939,7 +939,7 @@
     },
     "PB_K_SuP_h3_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -970,7 +970,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1024,7 +1024,7 @@
     },
     "PB_K_SuP_h3_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1055,7 +1055,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1109,7 +1109,7 @@
     },
     "PB_K_SuP_h3_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1140,7 +1140,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1194,7 +1194,7 @@
     },
     "PB_K_SuP_h3_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1225,7 +1225,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1280,7 +1280,7 @@
     
     "PB_PoS_h1_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1311,7 +1311,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1365,7 +1365,7 @@
     },
     "PB_PoS_h1_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1396,7 +1396,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1450,7 +1450,7 @@
     },
     "PB_PoS_h1_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1481,7 +1481,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1535,7 +1535,7 @@
     },
     "PB_PoS_h1_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1566,7 +1566,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1620,7 +1620,7 @@
     },
     "PB_PoS_h1_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1651,7 +1651,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1706,7 +1706,7 @@
 
     "Yeast_K_SuP_h1_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1737,7 +1737,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1791,7 +1791,7 @@
     },
     "Yeast_K_SuP_h1_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1822,7 +1822,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1876,7 +1876,7 @@
     },
     "Yeast_K_SuP_h1_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1907,7 +1907,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -1961,7 +1961,7 @@
     },
     "Yeast_K_SuP_h1_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -1992,7 +1992,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2046,7 +2046,7 @@
     },
     "Yeast_K_SuP_h1_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2077,7 +2077,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2132,7 +2132,7 @@
 
     "Yeast_K_SuP_h2_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2163,7 +2163,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2217,7 +2217,7 @@
     },
     "Yeast_K_SuP_h2_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2248,7 +2248,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2302,7 +2302,7 @@
     },
     "Yeast_K_SuP_h2_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2333,7 +2333,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2387,7 +2387,7 @@
     },
     "Yeast_K_SuP_h2_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2418,7 +2418,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2472,7 +2472,7 @@
     },
     "Yeast_K_SuP_h2_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2503,7 +2503,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2558,7 +2558,7 @@
 
     "Yeast_K_SuP_h3_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2589,7 +2589,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2643,7 +2643,7 @@
     },
     "Yeast_K_SuP_h3_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2674,7 +2674,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2728,7 +2728,7 @@
     },
     "Yeast_K_SuP_h3_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2759,7 +2759,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2813,7 +2813,7 @@
     },
     "Yeast_K_SuP_h3_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2844,7 +2844,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2898,7 +2898,7 @@
     },
     "Yeast_K_SuP_h3_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -2929,7 +2929,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -2984,7 +2984,7 @@
     
     "Yeast_PoS_h1_r1": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -3015,7 +3015,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -3069,7 +3069,7 @@
     },
     "Yeast_PoS_h1_r2": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -3100,7 +3100,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -3154,7 +3154,7 @@
     },
     "Yeast_PoS_h1_r3": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -3185,7 +3185,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -3239,7 +3239,7 @@
     },
     "Yeast_PoS_h1_r4": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -3270,7 +3270,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
@@ -3324,7 +3324,7 @@
     },
     "Yeast_PoS_h1_r5": {
       "ds_params": {
-        "ruPB": 10,
+        "runs": 10,
         "seeds": [
           1,
           2,
@@ -3355,7 +3355,7 @@
         "use_edge_weight": false,
         "lr": 0.0001,
         "epochs": 50,
-        "ruPB": 1,
+        "runs": 1,
         "train_percent": 100,
         "val_percent": 100,
         "test_percent": 100,
