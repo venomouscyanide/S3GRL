@@ -209,18 +209,17 @@ class OptimizedSignOperations:
         print("Starting out with mp")
         start = default_timer()
         with torch.multiprocessing.get_context('spawn').Pool(7) as pool:
-            sup_final_list = []
+            tmp_data = []
             for data in tqdm(pool.starmap(get_subgraphs, args)):
-                sup_final_list.append(data)
+                tmp_data.append(data)
         print("Done")
         end = default_timer()
         print(end - start)
-        exit()
 
-        for src, dst in tqdm(link_index.t().tolist()):
-            tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
-                                 max_nodes_per_hop, node_features=x, y=y,
-                                 directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
+        for tmp in tqdm(tmp_data):
+            # tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
+            #                      max_nodes_per_hop, node_features=x, y=y,
+            #                      directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
             csr_subgraph = tmp[1]
             csr_shape = csr_subgraph.shape[0]
             u, v, _ = ssp.find(csr_subgraph)
@@ -278,6 +277,7 @@ class OptimizedSignOperations:
             sup_data_list.append(data)
 
         return sup_data_list
+
 
 def get_subgraphs(src, dst, num_hops, A, ratio_per_hop, max_nodes_per_hop, x, y, directed, A_csc, rw_kwargs):
     from utils import k_hop_subgraph
