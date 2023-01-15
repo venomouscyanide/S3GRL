@@ -966,7 +966,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
     elif init_features == "n2v":
         extra_identifier = ''
         if args.model == "SIGN":
-            extra_identifier = f"{args.k_heuristic}{args.sign_type}{args.hidden_channels}"
+            extra_identifier = f"{args.k_heuristic}{args.sign_type}{args.hidden_channels}{args.num_hops}"
         data.x = node_2_vec_pretrain(args.dataset, data.edge_index, data.num_nodes, args.n2v_dim, args.seed, device,
                                      args.epochs, hypertuning, extra_identifier)
 
