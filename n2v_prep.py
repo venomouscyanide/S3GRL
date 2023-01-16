@@ -8,16 +8,16 @@ import os
 
 
 def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, epochs, hypertuning=False,
-                        extra_identifier=''):
+                        extra_identifier='', cache=False):
     if hypertuning:
         emb_folder = f'{Path.home()}/Emb'
     else:
         emb_folder = "Emb"
-    if not os.path.exists(emb_folder):
+    if not os.path.exists(emb_folder) and cache:
         os.makedirs(emb_folder)
 
     unique_identifier = f"{emb_folder}/{dataset}_{emb_dim}_seed{seed}_{extra_identifier}.pt"
-    if os.path.exists(unique_identifier):
+    if os.path.exists(unique_identifier) and cache:
         print("Using cached n2v embeddings. Skipping n2v pretraining.")
         return torch.load(unique_identifier, map_location=torch.device('cpu')).detach()
 
@@ -43,5 +43,6 @@ def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, e
     output = (n2v.forward()).cpu().clone().detach()
 
     print('Finish prepping n2v embeddings')
-    torch.save(output, unique_identifier)
+    if cache:
+        torch.save(output, unique_identifier)
     return output
