@@ -26,7 +26,7 @@ from torch.nn import BCEWithLogitsLoss
 
 from torch_sparse import coalesce, SparseTensor
 
-from torch_geometric.datasets import Planetoid, AttributedGraphDataset, WikipediaNetwork, WebKB
+from torch_geometric.datasets import Planetoid, AttributedGraphDataset, WikipediaNetwork, WebKB, Coauthor
 from torch_geometric.data import Dataset, InMemoryDataset, Data
 from torch_geometric.utils import to_undirected, to_dense_adj
 
@@ -916,6 +916,16 @@ def run_sgrl_learning(args, device, hypertuning=False):
     elif args.dataset in ['Cornell', 'Texas', 'Wisconsin']:
         path = osp.join('dataset', args.dataset)
         dataset = WebKB(path, args.dataset, transform=NormalizeFeatures())
+        split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
+                                   test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
+        data = dataset[0]
+        data.edge_index = split_edge['train']['edge'].t()
+        import networkx as nx
+        G = nx.Graph()
+        G.add_edges_from(data.edge_index.T.detach().numpy())
+    elif args.dataset in ['CS', 'Physics']:
+        path = osp.join('dataset', args.dataset)
+        dataset = Coauthor(path, args.dataset, transform=NormalizeFeatures())
         split_edge = do_edge_split(dataset, args.fast_split, val_ratio=args.split_val_ratio,
                                    test_ratio=args.split_test_ratio, neg_ratio=args.neg_ratio)
         data = dataset[0]
