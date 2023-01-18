@@ -2,6 +2,7 @@ from pathlib import Path
 from timeit import default_timer
 
 import torch
+torch.set_num_threads(2)
 import shutil
 
 import argparse
@@ -1477,10 +1478,6 @@ def run_sgrl_with_run_profiling(args, device):
 
 
 if __name__ == '__main__':
-    torch.set_num_threads(1)
-    os.environ["OMP_NUM_THREADS"] = "1"
-    os.environ["MKL_NUM_THREADS"] = "1"
-
     # Data settings
     parser = argparse.ArgumentParser(description='OGBL (SEAL)')
     parser.add_argument('--dataset', type=str, default='ogbl-collab')
