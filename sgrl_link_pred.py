@@ -331,7 +331,7 @@ class SEALDynamicDataset(Dataset):
                 for _ in tqdm(range(2, self.args.sign_k + 1), ncols=70):
                     self.powers_of_A += [adj_t @ self.powers_of_A[-1]]
 
-                if not self.args['optimize_sign']:
+                if not getattr(self.args, 'optimize_sign'):
                     for index in range(len(self.powers_of_A)):
                         self.powers_of_A[index] = ssp.csr_matrix(self.powers_of_A[index].to_dense())
 
