@@ -944,7 +944,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             val_edge_index = to_undirected(val_edge_index)
         data.edge_index = torch.cat([data.edge_index, val_edge_index], dim=-1)
         split_edge['train']['edge'] = data.edge_index.t()
-        if data.edge_weight:
+        if data.edge_weight.nelement():
             val_edge_weight = torch.ones([val_edge_index.size(1), 1], dtype=int)
             data.edge_weight = torch.cat([data.edge_weight, val_edge_weight], 0)
 
