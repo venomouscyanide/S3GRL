@@ -333,7 +333,6 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        print("get() called")
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
             "rw_M": self.rw_kwargs.get('M'),
