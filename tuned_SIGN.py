@@ -47,7 +47,7 @@ class TunedSIGN(SIGN):
 class OptimizedSignOperations:
     @staticmethod
     def get_PoS_prepped_ds(powers_of_A, link_index, A, x, y):
-        print("PoS Optimized Flow.")
+        # print("PoS Optimized Flow.")
         # optimized PoS flow, everything is created on the CPU, then in train() sent to GPU on a batch basis
 
         pos_data_list = []
