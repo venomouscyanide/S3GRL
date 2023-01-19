@@ -287,18 +287,27 @@ class SEALDynamicDataset(Dataset):
             self.A_csc = None
 
         self.unique_nodes = {}
+        self.cached_pos_rws = None
+        self.cached_neg_rws = None
         if self.rw_kwargs.get('M'):
             print("Start caching random walk unique nodes")
             # if in dynamic ScaLed mode, need to cache the unique nodes of random walks before get() due to below error
             # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
             # To use CUDA with multiprocessing, you must use the 'spawn' start method
-            for link in self.links:
-                rw_M = self.rw_kwargs.get('M')
-                starting_nodes = []
-                [starting_nodes.extend(link) for _ in range(rw_M)]
-                start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
-                rw = self.sparse_adj.random_walk(start.flatten(), self.rw_kwargs.get('m'))
-                self.unique_nodes[tuple(link)] = torch.unique(rw.flatten()).tolist()
+            if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "SuP":
+                # currently only cache for flows involving SuP + Optimized using the SIGN + ScaLed flow
+                self.cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.device, self.rw_kwargs['m'],
+                                                      self.rw_kwargs['M'])
+                self.cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.device, self.rw_kwargs['m'],
+                                                      self.rw_kwargs['M'])
+            else:
+                for link in self.links:
+                    rw_M = self.rw_kwargs.get('M')
+                    starting_nodes = []
+                    [starting_nodes.extend(link) for _ in range(rw_M)]
+                    start = torch.tensor(starting_nodes, dtype=torch.long, device=device)
+                    rw = self.sparse_adj.random_walk(start.flatten(), self.rw_kwargs.get('m'))
+                    self.unique_nodes[tuple(link)] = torch.unique(rw.flatten()).tolist()
             print("Finish caching random walk unique nodes")
 
         self.powers_of_A = []
@@ -342,6 +351,9 @@ class SEALDynamicDataset(Dataset):
             "data": self.data,
             "unique_nodes": self.unique_nodes,
             "node_label": self.node_label,
+            "cached_pos_rws": self.cached_pos_rws,
+            "cached_neg_rws": self.cached_neg_rws,
+
         }
         sign_kwargs = {}
         if self.args.model == 'SIGN':
