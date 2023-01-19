@@ -165,7 +165,7 @@ class SEALDataset(InMemoryDataset):
                 num_nodes = self.data.num_nodes
 
                 row, col = edge_index
-                adj_t = SparseTensor(row=row, col=col,
+                adj_t = SparseTensor(row=row, col=col, value=torch.tensor(self.data.edge_weight),
                                      sparse_sizes=(num_nodes, num_nodes)
                                      )
 
@@ -317,7 +317,7 @@ class SEALDynamicDataset(Dataset):
                 num_nodes = self.data.num_nodes
 
                 row, col = edge_index
-                adj_t = SparseTensor(row=row, col=col,
+                adj_t = SparseTensor(row=row, col=col, value=self.data.edge_weight,
                                      sparse_sizes=(num_nodes, num_nodes)
                                      )
 
@@ -944,7 +944,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             val_edge_index = to_undirected(val_edge_index)
         data.edge_index = torch.cat([data.edge_index, val_edge_index], dim=-1)
         split_edge['train']['edge'] = data.edge_index.t()
-        if data.edge_weight.nelement():
+        if torch.any(data.edge_weight):
             val_edge_weight = torch.ones([val_edge_index.size(1), 1], dtype=int)
             data.edge_weight = torch.cat([data.edge_weight, val_edge_weight], 0)
 

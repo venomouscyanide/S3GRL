@@ -150,9 +150,9 @@ class OptimizedSignOperations:
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
             csr_subgraph = tmp[1]
             csr_shape = csr_subgraph.shape[0]
-            u, v, _ = ssp.find(csr_subgraph)
+            u, v, r = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v,
+            adj_t = SparseTensor(row=u, col=v, value=torch.tensor(r),
                                  sparse_sizes=(csr_shape, csr_shape))
 
             deg = adj_t.sum(dim=1).to(torch.float)
@@ -205,9 +205,9 @@ class OptimizedSignOperations:
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
             csr_subgraph = tmp[1]
             csr_shape = csr_subgraph.shape[0]
-            u, v, _ = ssp.find(csr_subgraph)
+            u, v, r = ssp.find(csr_subgraph)
             u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v,
+            adj_t = SparseTensor(row=u, col=v, value=torch.tensor(r),
                                  sparse_sizes=(csr_shape, csr_shape))
 
             deg = adj_t.sum(dim=1).to(torch.float)
