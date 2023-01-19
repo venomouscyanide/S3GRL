@@ -303,15 +303,28 @@ class SEALDynamicDataset(Dataset):
 
         self.powers_of_A = []
         if self.args.model == 'SIGN':
-            if self.sign_type == 'PoS':
+            if self.sign_type == 'PoS' or sign_type == "hybrid":
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
-                dense_adj = to_dense_adj(edge_index).reshape([num_nodes, num_nodes])
-                self.powers_of_A = [self.A]
-                for sign_k in range(2, self.args.sign_k + 1):
-                    dense_adj_power = torch.linalg.matrix_power(dense_adj, sign_k)
-                    self.powers_of_A.append(ssp.csr_matrix(dense_adj_power))
+                row, col = edge_index
+                adj_t = SparseTensor(row=row, col=col,
+                                     sparse_sizes=(num_nodes, num_nodes)
+                                     )
+
+                deg = adj_t.sum(dim=1).to(torch.float)
+                deg_inv_sqrt = deg.pow(-0.5)
+                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+
+                print("Begin taking powers of A")
+                self.powers_of_A = [adj_t]
+                for _ in tqdm(range(2, self.args.sign_k + 1), ncols=70):
+                    self.powers_of_A += [adj_t @ self.powers_of_A[-1]]
+
+                if not self.args['optimize_sign']:
+                    for index in range(len(self.powers_of_A)):
+                        self.powers_of_A[index] = ssp.csr_matrix(self.powers_of_A[index].to_dense())
 
     def __len__(self):
         return len(self.links)
@@ -320,13 +333,7 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        # TODO: add support for dynamic PoS and SuP
-        if self.args.model == 'SIGN':
-            raise NotImplementedError("PoS and SuP support in dynamic mode is not implemented (yet)")
-
-        src, dst = self.links[idx]
-        y = self.labels[idx]
-
+        print("get() called")
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
             "rw_M": self.rw_kwargs.get('M'),
@@ -337,79 +344,30 @@ class SEALDynamicDataset(Dataset):
             "unique_nodes": self.unique_nodes,
             "node_label": self.node_label,
         }
-
         sign_kwargs = {}
         if self.args.model == 'SIGN':
+            sign_k = self.args.sign_k
+            sign_type = self.sign_type
+            sign_kwargs.update({
+                "sign_k": sign_k,
+                "use_feature": self.use_feature,
+                "sign_type": sign_type,
+                "optimize_sign": self.args.optimize_sign,
+                "k_heuristic": self.args.k_heuristic,
+                "k_node_set_strategy": self.args.k_node_set_strategy,
+            })
             if not self.rw_kwargs.get('m'):
-                if not self.powers_of_A:
-                    # SuP flow
-
-                    # debug code with graphistry
-                    # networkx_G = to_networkx(data)  # the full graph
-                    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
-                    # check against the nodes that is received in tmp before the relabeling occurs
-
-                    tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
-                                         self.max_nodes_per_hop, node_features=self.data.x,
-                                         y=y, directed=self.directed, A_csc=self.A_csc)
-
-                    sign_pyg_kwargs = {
-                        'use_feature': self.use_feature,
-                    }
-
-                    data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
-
-                    sign_t = TunedSIGN(self.args.sign_k)
-                    data = sign_t(data, self.args.sign_k)
-
-                else:
-                    # PoS flow
-
-                    # debug code with graphistry
-                    # networkx_G = to_networkx(data)  # the full graph
-                    # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
-                    # check against the nodes that is received in tmp before the relabeling occurs
-
-                    pos_data_list = []
-                    for index, power_of_a in enumerate(self.powers_of_A, start=1):
-                        tmp = k_hop_subgraph(src, dst, self.num_hops, power_of_a, self.ratio_per_hop,
-                                             self.max_nodes_per_hop, node_features=self.data.x,
-                                             y=y, directed=self.directed, A_csc=self.A_csc)
-                        sign_pyg_kwargs = {
-                            'use_feature': self.use_feature,
-                        }
-
-                        data = construct_pyg_graph(*tmp, self.node_label, sign_pyg_kwargs)
-                        pos_data_list.append(data)
-
-                    sign_t = TunedSIGN(self.args.sign_k)
-                    data = sign_t.PoS_data_creation(pos_data_list)
-
-
+                rw_kwargs = None
             else:
-                # SIGN + ScaLed flow (research is pending for this)
-                # TODO: this is not yet fully implemented and tested
-                rw_kwargs.update({'sign': True})
-                data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
-                                      self.max_nodes_per_hop, node_features=self.data.x,
-                                      y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
-                sign_t = TunedSIGN(self.args.sign_k)
-                data = sign_t(data, self.args.sign_k)
+                rw_kwargs.update({"sign": True})
+        y = self.labels[idx]
+        link_index = torch.tensor([[self.links[idx][0]], [self.links[idx][1]]])
+        data = extract_enclosing_subgraphs(
+            link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
+            powers_of_A=self.powers_of_A, data=self.data)
 
-        else:
-            if not rw_kwargs['rw_m']:
-                # SEAL flow
-                tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
-                                     self.max_nodes_per_hop, node_features=self.data.x,
-                                     y=y, directed=self.directed, A_csc=self.A_csc)
-                data = construct_pyg_graph(*tmp, self.node_label, sign_kwargs)
-            else:
-                # ScaLed flow
-                data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
-                                      self.max_nodes_per_hop, node_features=self.data.x,
-                                      y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
-
-        return data
+        return data[0]
 
 
 @profileit()

@@ -192,14 +192,14 @@ class OptimizedSignOperations:
     def get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                             sign_kwargs, rw_kwargs):
         # optimized k-heuristic SuP flow
-        print("K Heuristic SuP Optimized Flow.")
+        # print("K Heuristic SuP Optimized Flow.")
         from utils import k_hop_subgraph, neighbors
         sup_data_list = []
-        print("Start with SuP data prep")
+        # print("Start with SuP data prep")
 
         K = sign_kwargs['sign_k']
 
-        for src, dst in tqdm(link_index.t().tolist()):
+        for src, dst in link_index.t().tolist():
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
