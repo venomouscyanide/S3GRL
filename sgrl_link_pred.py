@@ -377,6 +377,7 @@ class SEALDynamicDataset(Dataset):
         y = self.labels[idx]
         link_index = torch.tensor([[self.links[idx][0]], [self.links[idx][1]]])
         cached_data = self.cache.get((self.links[idx][0], self.links[idx][1]))
+        print(len(self.cache))
         if not cached_data:
             data = extract_enclosing_subgraphs(
                 link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
