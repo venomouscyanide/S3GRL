@@ -45,6 +45,10 @@ from tuned_SIGN import TunedSIGN
 # DO NOT REMOVE AA CN PPR IMPORTS
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, create_rw_cache
+import ctypes
+import torch.multiprocessing as mp
+
+import numpy as np
 
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 warnings.simplefilter('ignore', FutureWarning)
@@ -337,6 +341,15 @@ class SEALDynamicDataset(Dataset):
                     for index in range(len(self.powers_of_A)):
                         self.powers_of_A[index] = ssp.csr_matrix(self.powers_of_A[index].to_dense())
 
+        shared_array_base = mp.Array(ctypes.c_float, len(self.links))
+        shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
+        shared_array = shared_array.reshape(len(self.links))
+        self.shared_array = torch.from_numpy(shared_array)
+        self.use_cache = False
+
+    def set_use_cache(self, use_cache):
+        self.use_cache = use_cache
+
     def __len__(self):
         return len(self.links)
 
@@ -344,6 +357,8 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
+        if self.use_cache:
+            return self.shared_array[idx]
         verbose = False
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
@@ -376,17 +391,13 @@ class SEALDynamicDataset(Dataset):
                 rw_kwargs.update({"sign": True})
         y = self.labels[idx]
         link_index = torch.tensor([[self.links[idx][0]], [self.links[idx][1]]])
-        cached_data = self.cache.get((self.links[idx][0], self.links[idx][1]))
-        print(len(self.cache))
-        if not cached_data:
-            data = extract_enclosing_subgraphs(
-                link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
-                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
-                powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
-            self.cache[(self.links[idx][0], self.links[idx][1])] = data
-        else:
-            print("Got cache")
-            data = cached_data.detach()
+
+        data = extract_enclosing_subgraphs(
+            link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
+            powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
+        self.shared_array[idx] = data
+
         return data
 
 
@@ -1411,6 +1422,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
+            if epoch == 0:
+                train_dataset.set_use_cache = False
 
         if args.profile:
             extra_identifier = ''
