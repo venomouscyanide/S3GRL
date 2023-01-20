@@ -254,8 +254,6 @@ class SEALDynamicDataset(Dataset):
         self.use_feature = use_feature
         self.sign_type = sign_type
         self.args = args
-        self.cached_data = []
-        self.use_cache = False
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -272,6 +270,9 @@ class SEALDynamicDataset(Dataset):
         else:
             self.links = torch.cat([pos_edge, neg_edge], 1).t().tolist()
             self.labels = [1] * pos_edge.size(1) + [0] * neg_edge.size(1)
+
+        self.cached_data = [0] * len(self.links)
+        self.use_cache = False
 
         if self.use_coalesce:  # compress mutli-edge into edge with weight
             self.data.edge_index, self.data.edge_weight = coalesce(
@@ -1376,14 +1377,14 @@ def run_sgrl_learning(args, device, hypertuning=False):
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
-                if epoch == 0:
+                if epoch == 0 and args.dynamic_train:
                     train_loader_epoch = train_loader_init
                 else:
                     train_loader_epoch = train_loader
                 loss, stats = profile_train(model, train_loader_epoch, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
-                if epoch == 0:
+                if epoch == 0 and args.dynamic_train:
                     train_loader_epoch = train_loader_init
                 else:
                     train_loader_epoch = train_loader
@@ -1425,7 +1426,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
-            if epoch == 0:
+            if epoch == 0 and args.dynamic_train:
                 train_dataset.set_use_cache(True)
 
         if args.profile:
