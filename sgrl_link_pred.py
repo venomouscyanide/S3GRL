@@ -252,6 +252,7 @@ class SEALDynamicDataset(Dataset):
         self.use_feature = use_feature
         self.sign_type = sign_type
         self.args = args
+        self.cache = {}
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -375,12 +376,16 @@ class SEALDynamicDataset(Dataset):
                 rw_kwargs.update({"sign": True})
         y = self.labels[idx]
         link_index = torch.tensor([[self.links[idx][0]], [self.links[idx][1]]])
-        data = extract_enclosing_subgraphs(
-            link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
-            powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)
-
-        return data[0]
+        cached_data = self.cache.get((self.links[idx][0], self.links[idx][1]))
+        if not cached_data:
+            data = extract_enclosing_subgraphs(
+                link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
+                self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
+                powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
+            self.cache[(self.links[idx][0], self.links[idx][1])] = data.detach().cpu()
+        else:
+            data = cached_data.to(device)
+        return data
 
 
 @profileit()
