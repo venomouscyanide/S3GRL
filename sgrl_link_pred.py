@@ -45,8 +45,6 @@ from tuned_SIGN import TunedSIGN
 # DO NOT REMOVE AA CN PPR IMPORTS
 from utils import get_pos_neg_edges, extract_enclosing_subgraphs, construct_pyg_graph, k_hop_subgraph, do_edge_split, \
     Logger, AA, CN, PPR, calc_ratio_helper, create_rw_cache
-import ctypes
-import torch.multiprocessing as mp
 
 import numpy as np
 
@@ -256,7 +254,6 @@ class SEALDynamicDataset(Dataset):
         self.use_feature = use_feature
         self.sign_type = sign_type
         self.args = args
-        self.cache = {}
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -341,15 +338,6 @@ class SEALDynamicDataset(Dataset):
                     for index in range(len(self.powers_of_A)):
                         self.powers_of_A[index] = ssp.csr_matrix(self.powers_of_A[index].to_dense())
 
-        shared_array_base = mp.Array(ctypes.c_float, len(self.links))
-        shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
-        shared_array = shared_array.reshape(len(self.links))
-        self.shared_array = torch.from_numpy(shared_array)
-        self.use_cache = False
-
-    def set_use_cache(self, use_cache):
-        self.use_cache = use_cache
-
     def __len__(self):
         return len(self.links)
 
@@ -357,8 +345,6 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        if self.use_cache:
-            return self.shared_array[idx]
         verbose = False
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
@@ -396,8 +382,6 @@ class SEALDynamicDataset(Dataset):
             link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
             powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
-        self.shared_array[idx] = data
-
         return data
 
 
