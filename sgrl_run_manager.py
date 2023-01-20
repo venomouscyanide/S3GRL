@@ -140,6 +140,7 @@ def sgrl_master_controller(config, results_json):
             print(f"Run {run} of {dataset} with id {identifier} using device {device}")
 
             args = SGRLArgumentParser(**kwargs)
+            args.device = device
             seed_everything(args.seed)
 
             start = default_timer()
