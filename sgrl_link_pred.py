@@ -15,6 +15,7 @@ import copy as cp
 from ray import tune
 from torch_geometric import seed_everything
 from torch_geometric.loader import DataLoader
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.profile import profileit, timeit
 from torch_geometric.transforms import OneHotDegree, NormalizeFeatures
 from tqdm import tqdm
@@ -161,18 +162,12 @@ class SEALDataset(InMemoryDataset):
                 rw_kwargs.update({"sign": True})
 
             if sign_type == 'PoS' or sign_type == "hybrid":
-                edge_index = self.data.edge_index
-                num_nodes = self.data.num_nodes
-
+                edge_index, edge_weight = gcn_norm(
+                    self.data.edge_index, torch.tensor(self.data.edge_weight, dtype=torch.float), self.data.num_nodes,
+                    False, True, 'source_to_target', dtype=self.data.x.dtype)
                 row, col = edge_index
-                adj_t = SparseTensor(row=row, col=col, value=torch.tensor(self.data.edge_weight),
-                                     sparse_sizes=(num_nodes, num_nodes)
-                                     )
-
-                deg = adj_t.sum(dim=1).to(torch.float)
-                deg_inv_sqrt = deg.pow(-0.5)
-                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+                adj_t = SparseTensor(row=col, col=row, value=edge_weight,
+                                     sparse_sizes=(self.data.num_nodes, self.data.num_nodes))
 
                 print("Begin taking powers of A")
                 powers_of_A = [adj_t]
@@ -313,18 +308,12 @@ class SEALDynamicDataset(Dataset):
         self.powers_of_A = []
         if self.args.model == 'SIGN':
             if self.sign_type == 'PoS' or sign_type == "hybrid":
-                edge_index = self.data.edge_index
-                num_nodes = self.data.num_nodes
-
+                edge_index, edge_weight = gcn_norm(
+                    self.data.edge_index, torch.tensor(self.data.edge_weight, dtype=torch.float), self.data.num_nodes,
+                    False, True, 'source_to_target', dtype=self.data.x.dtype)
                 row, col = edge_index
-                adj_t = SparseTensor(row=row, col=col, value=self.data.edge_weight,
-                                     sparse_sizes=(num_nodes, num_nodes)
-                                     )
-
-                deg = adj_t.sum(dim=1).to(torch.float)
-                deg_inv_sqrt = deg.pow(-0.5)
-                deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-                adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
+                adj_t = SparseTensor(row=col, col=row, value=edge_weight,
+                                     sparse_sizes=(self.data.num_nodes, self.data.num_nodes))
 
                 print("Begin taking powers of A")
                 self.powers_of_A = [adj_t]
@@ -944,7 +933,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
             val_edge_index = to_undirected(val_edge_index)
         data.edge_index = torch.cat([data.edge_index, val_edge_index], dim=-1)
         split_edge['train']['edge'] = data.edge_index.t()
-        if torch.any(data.edge_weight):
+        if data.edge_weight and torch.any(data.edge_weight):
             val_edge_weight = torch.ones([val_edge_index.size(1), 1], dtype=int)
             data.edge_weight = torch.cat([data.edge_weight, val_edge_weight], 0)
 
@@ -994,8 +983,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
         norm = NormalizeFeatures()
         transformed_data = norm(data)
         data.x = transformed_data.x
-
-
 
     evaluator = None
     if args.dataset.startswith('ogbl'):

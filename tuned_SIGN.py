@@ -1,6 +1,7 @@
 import torch
 from scipy.sparse import dok_matrix
 from torch_geometric.data import Data
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.transforms import SIGN
 from torch_sparse import SparseTensor, from_scipy, spspmm
 import torch.nn.functional as F
@@ -16,7 +17,19 @@ class TunedSIGN(SIGN):
     """
 
     def __call__(self, data, sign_k):
-        data = super().__call__(data)
+        assert data.edge_index is not None
+        edge_index, edge_weight = gcn_norm(
+            data.edge_index, torch.tensor(data.edge_weight, dtype=torch.float), data.num_nodes, False,
+            True, 'source_to_target', dtype=data.x.dtype)
+        row, col = edge_index
+        adj_t = SparseTensor(row=col, col=row, value=edge_weight,
+                             sparse_sizes=(data.num_nodes, data.num_nodes))
+        assert data.x is not None
+        xs = [data.x]
+        for i in range(1, self.K + 1):
+            xs += [adj_t @ xs[-1]]
+            data[f'x{i}'] = xs[-1]
+
         if sign_k == -1:
             for idx in range(1, self.K):
                 data.pop(f'x{idx}')
@@ -149,18 +162,16 @@ class OptimizedSignOperations:
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
             csr_subgraph = tmp[1]
+            subgraph_features = tmp[3]
             csr_shape = csr_subgraph.shape[0]
             u, v, r = ssp.find(csr_subgraph)
-            u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v, value=torch.tensor(r),
+            edge_index, edge_weight = gcn_norm(
+                torch.tensor([u, v], dtype=torch.int64), torch.tensor(torch.tensor(r), dtype=torch.float), csr_shape,
+                False, True, 'source_to_target', dtype=subgraph_features.dtype)
+            row, col = edge_index
+            adj_t = SparseTensor(row=col, col=row, value=edge_weight,
                                  sparse_sizes=(csr_shape, csr_shape))
 
-            deg = adj_t.sum(dim=1).to(torch.float)
-            deg_inv_sqrt = deg.pow(-0.5)
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
-            subgraph_features = tmp[3]
             subgraph = adj_t
 
             assert subgraph_features is not None
@@ -204,18 +215,17 @@ class OptimizedSignOperations:
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
             csr_subgraph = tmp[1]
+            subgraph_features = tmp[3]
             csr_shape = csr_subgraph.shape[0]
             u, v, r = ssp.find(csr_subgraph)
-            u, v = torch.LongTensor(u), torch.LongTensor(v)
-            adj_t = SparseTensor(row=u, col=v, value=torch.tensor(r),
+            edge_index, edge_weight = gcn_norm(
+                torch.tensor([u, v], dtype=torch.int64), torch.tensor(torch.tensor(r), dtype=torch.float), csr_shape,
+                False, True, 'source_to_target', dtype=subgraph_features.dtype)
+
+            row, col = edge_index
+            adj_t = SparseTensor(row=col, col=row, value=edge_weight,
                                  sparse_sizes=(csr_shape, csr_shape))
 
-            deg = adj_t.sum(dim=1).to(torch.float)
-            deg_inv_sqrt = deg.pow(-0.5)
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            adj_t = deg_inv_sqrt.view(-1, 1) * adj_t * deg_inv_sqrt.view(1, -1)
-
-            subgraph_features = tmp[3]
             subgraph = adj_t
 
             assert subgraph_features is not None
