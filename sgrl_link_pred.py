@@ -382,9 +382,9 @@ class SEALDynamicDataset(Dataset):
                 link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
                 powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
-            self.cache[(self.links[idx][0], self.links[idx][1])] = data.detach().cpu()
+            self.cache[(self.links[idx][0], self.links[idx][1])] = data
         else:
-            data = cached_data.detach().clone()
+            data = cached_data.detach()
         return data
 
 
