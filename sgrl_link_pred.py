@@ -384,6 +384,7 @@ class SEALDynamicDataset(Dataset):
                 powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
             self.cache[(self.links[idx][0], self.links[idx][1])] = data
         else:
+            print("Got cache")
             data = cached_data.detach()
         return data
 
