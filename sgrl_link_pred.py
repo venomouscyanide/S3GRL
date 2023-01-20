@@ -1378,11 +1378,15 @@ def run_sgrl_learning(args, device, hypertuning=False):
                 # this gives the stats for exactly one training epoch
                 if epoch == 0 and args.dynamic_train:
                     train_loader.num_workers = 0
+                    val_loader.num_workers = 0
+                    test_loader.num_workers = 0
                 loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
                 if epoch == 1 and args.dynamic_train:
                     train_loader.num_workers = 0
+                    val_loader.num_workers = 0
+                    test_loader.num_workers = 0
 
                 if not args.pairwise:
                     time_start_for_train_epoch = default_timer()
@@ -1424,6 +1428,12 @@ def run_sgrl_learning(args, device, hypertuning=False):
             if epoch == 1 and args.dynamic_train:
                 train_loader.dataset.set_use_cache(True)
                 train_loader.num_workers = args.num_workers
+
+                val_loader.dataset.set_use_cache(True)
+                val_loader.dataset.num_workers = args.num_workers
+
+                test_loader.dataset.set_use_cache(True)
+                test_loader.dataset.num_workers = args.num_workers
 
         if args.profile:
             extra_identifier = ''
