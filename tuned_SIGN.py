@@ -46,7 +46,7 @@ class TunedSIGN(SIGN):
 
 class OptimizedSignOperations:
     @staticmethod
-    def get_PoS_prepped_ds(powers_of_A, link_index, A, x, y):
+    def get_PoS_prepped_ds(powers_of_A, link_index, A, x, y, verbose=True):
         # print("PoS Optimized Flow.")
         # optimized PoS flow, everything is created on the CPU, then in train() sent to GPU on a batch basis
 
@@ -60,15 +60,17 @@ class OptimizedSignOperations:
         list_of_training_edges = link_index.t().tolist()
         num_training_egs = len(list_of_training_edges)
 
-        # print("Setting up A Global List")
+        if verbose:
+            print("Setting up A Global List")
         for index, power_of_a in enumerate(normalized_powers_of_A, start=0):
-            # print(f"Constructing A[{index}]")
+            if verbose:
+                print(f"Constructing A[{index}]")
             a_global_list.append(
                 dok_matrix((num_training_egs * 2, A.shape[0]), dtype=np.float32)
             )
             power_of_a_scipy_lil = power_of_a.to_scipy().tolil()
             list_of_lilmtrx = []
-            for link_number in range(0, num_training_egs * 2, 2):
+            for link_number in tqdm(range(0, num_training_egs * 2, 2), disable=not verbose, ncols=70):
                 src, dst = list_of_training_edges[int(link_number / 2)]
                 interim_src = power_of_a_scipy_lil.getrow(src)
                 interim_src[0, dst] = 0
@@ -78,8 +80,9 @@ class OptimizedSignOperations:
                 list_of_lilmtrx.append(interim_dst)
 
             to_update = a_global_list[index]
-            # print("Converting to DOK")
-            for overall_row, item in enumerate(list_of_lilmtrx):
+            if verbose:
+                print("Converting to DOK")
+            for overall_row, item in tqdm(enumerate(list_of_lilmtrx), disable=not verbose, ncols=70):
                 data = item.data
                 rows = item.rows
 
@@ -88,21 +91,23 @@ class OptimizedSignOperations:
             idx, values = from_scipy(a_global_list[index])
             a_global_list[index] = torch.sparse_coo_tensor(idx, values, size=[num_training_egs * 2, A.shape[0]],
                                                            dtype=torch.float32)
-        # print("Setting up G Global List")
+        if verbose:
+            print("Setting up G Global List")
         original_x = x.detach()
         x = x.to_sparse()
-        for operator_id in range(len(normalized_powers_of_A)):
+        for operator_id in tqdm(range(len(normalized_powers_of_A)), disable=not verbose, ncols=70):
             mult_index, mult_value = spspmm(a_global_list[operator_id].coalesce().indices(),
                                             a_global_list[operator_id].coalesce().values(), x.indices(),
                                             x.values(), a_global_list[0].size()[0], a_global_list[0].size()[1],
                                             x.size()[1])
             g_global_list.append(torch.sparse_coo_tensor(mult_index, mult_value, size=[a_global_list[0].size()[0],
                                                                                        x.size()[-1]]).to_dense())
-
-        # print("Setting up G H Global List")
-        for index, src_dst_x in enumerate(g_global_list, start=0):
+        if verbose:
+            print("Setting up G H Global List")
+        for index, src_dst_x in tqdm(enumerate(g_global_list, start=0), disable=not verbose, ncols=70):
             g_h_global_list.append(torch.empty(size=[num_training_egs * 2, g_global_list[index].shape[-1] + 1]))
-            # print(f"Setting up G H Global [{index}]")
+            if verbose:
+                print(f"Setting up G H Global [{index}]")
             for link_number in range(0, num_training_egs * 2, 2):
                 src, dst = list_of_training_edges[int(link_number / 2)]
                 h_src = normalized_powers_of_A[index][src, src].to_dense()
@@ -111,10 +116,10 @@ class OptimizedSignOperations:
                     [h_src[0], g_global_list[index][link_number]])
                 g_h_global_list[index][link_number + 1] = torch.hstack(
                     [h_dst[0], g_global_list[index][link_number + 1]])
-
-        # print("Finishing Prep with creation of data")
+        if verbose:
+            print("Finishing Prep with creation of data")
         x = original_x
-        for link_number in range(0, num_training_egs * 2, 2):
+        for link_number in tqdm(range(0, num_training_egs * 2, 2), disable=not verbose, ncols=70):
             src, dst = list_of_training_edges[int(link_number / 2)]
             data = Data(
                 x=torch.hstack(
@@ -135,16 +140,17 @@ class OptimizedSignOperations:
 
     @staticmethod
     def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
-                           sign_kwargs, rw_kwargs):
+                           sign_kwargs, rw_kwargs, verbose=True):
         # optimized SuP flow
-        # print("SuP Optimized Flow.")
+        if verbose:
+            print("SuP Optimized Flow.")
         from utils import k_hop_subgraph
         sup_data_list = []
         # print("Start with SuP data prep")
 
         K = sign_kwargs['sign_k']
 
-        for src, dst in link_index.t().tolist():
+        for src, dst in tqdm(link_index.t().tolist(), disable=not verbose):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
@@ -190,16 +196,18 @@ class OptimizedSignOperations:
 
     @staticmethod
     def get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
-                            sign_kwargs, rw_kwargs):
+                            sign_kwargs, rw_kwargs, verbose=True):
         # optimized k-heuristic SuP flow
-        # print("K Heuristic SuP Optimized Flow.")
+        if verbose:
+            print("K Heuristic SuP Optimized Flow.")
         from utils import k_hop_subgraph, neighbors
         sup_data_list = []
-        # print("Start with SuP data prep")
+        if verbose:
+            print("Start with SuP data prep")
 
         K = sign_kwargs['sign_k']
 
-        for src, dst in link_index.t().tolist():
+        for src, dst in tqdm(link_index.t().tolist(), disable=not verbose):
             tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                  max_nodes_per_hop, node_features=x, y=y,
                                  directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)

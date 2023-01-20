@@ -452,7 +452,7 @@ def create_rw_cache(sparse_adj, edges, device, rw_m, rw_M):
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl',
                                 ratio_per_hop=1.0, max_nodes_per_hop=None,
                                 directed=False, A_csc=None, rw_kwargs=None, sign_kwargs=None, powers_of_A=None,
-                                data=None):
+                                data=None, verbose=True):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
 
@@ -468,12 +468,13 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             print("Prepping SuP data")
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
-                                                                       sign_kwargs, rw_kwargs)
+                                                                       sign_kwargs, rw_kwargs, verbose=verbose)
             if sign_k == 1:
                 return sup_data_list
 
             print("Prepping PoS data")
-            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
+            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y,
+                                                                       verbose=verbose)
 
             combined_data = []
             for sup_data, pos_data in zip(sup_data_list, pos_data_list):
@@ -486,26 +487,27 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             return combined_data
         elif powers_of_A and sign_kwargs['optimize_sign']:
             # optimized PoS flow
-            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
+            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y,
+                                                                       verbose=verbose)
             return pos_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign'] and not sign_kwargs['k_heuristic']:
             # optimized SuP flow
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
-                                                                       sign_kwargs, rw_kwargs)
+                                                                       sign_kwargs, rw_kwargs, verbose=verbose)
             return sup_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign'] and sign_kwargs['k_heuristic']:
             # optimized k-heuristic SuP flow
             sup_data_list = OptimizedSignOperations.get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                         max_nodes_per_hop, directed, A_csc, x, y,
-                                                                        sign_kwargs, rw_kwargs)
+                                                                        sign_kwargs, rw_kwargs, verbose=verbose)
             return sup_data_list
         elif not sign_kwargs['optimize_sign']:
             # SIGN + SEAL flow; includes both SuP and PoS flows
             print_out = True
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
-                    if print_out:
+                    if print_out and verbose:
                         print("KSuP Non-Optimized Flow.")
                     print_out = False
                     # SuP flow
@@ -537,7 +539,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                     # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
                     # check against the nodes that is received in tmp before the relabeling occurs
                     pos_data_list = []
-                    if print_out:
+                    if print_out and verbose:
                         print("PoS Non-Optimized Flow.")
                     print_out = False
                     for index, power_of_a in enumerate(powers_of_A, start=1):

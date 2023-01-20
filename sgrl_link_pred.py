@@ -192,17 +192,18 @@ class SEALDataset(InMemoryDataset):
                               self.args.dataset, self.args.seed)
             exit()
 
+        verbose = True
         if not self.pairwise:
             print("Setting up Positive Subgraphs")
             pos_list = extract_enclosing_subgraphs(
                 pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
-                powers_of_A=powers_of_A, data=self.data)
+                powers_of_A=powers_of_A, data=self.data, verbose=verbose)
             print("Setting up Negative Subgraphs")
             neg_list = extract_enclosing_subgraphs(
                 neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                 self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
-                powers_of_A=powers_of_A, data=self.data)
+                powers_of_A=powers_of_A, data=self.data, verbose=verbose)
             torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
             del pos_list, neg_list
         else:
@@ -210,14 +211,14 @@ class SEALDataset(InMemoryDataset):
                 pos_list = extract_enclosing_subgraphs(
                     pos_edge, A, self.data.x, 1, self.num_hops, self.node_label,
                     self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
-                    powers_of_A=powers_of_A, data=self.data)
+                    powers_of_A=powers_of_A, data=self.data, verbose=verbose)
                 torch.save(self.collate(pos_list), self.processed_paths[0])
                 del pos_list
             else:
                 neg_list = extract_enclosing_subgraphs(
                     neg_edge, A, self.data.x, 0, self.num_hops, self.node_label,
                     self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc, rw_kwargs, sign_kwargs,
-                    powers_of_A=powers_of_A, data=self.data)
+                    powers_of_A=powers_of_A, data=self.data, verbose=verbose)
                 torch.save(self.collate(neg_list), self.processed_paths[0])
                 del neg_list
 
@@ -342,6 +343,7 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
+        verbose = False
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
             "rw_M": self.rw_kwargs.get('M'),
@@ -376,7 +378,7 @@ class SEALDynamicDataset(Dataset):
         data = extract_enclosing_subgraphs(
             link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
-            powers_of_A=self.powers_of_A, data=self.data)
+            powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)
 
         return data[0]
 
