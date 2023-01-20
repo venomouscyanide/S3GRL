@@ -254,6 +254,8 @@ class SEALDynamicDataset(Dataset):
         self.use_feature = use_feature
         self.sign_type = sign_type
         self.args = args
+        self.cached_data = []
+        self.use_cache = False
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge,
@@ -344,7 +346,12 @@ class SEALDynamicDataset(Dataset):
     def len(self):
         return self.__len__()
 
+    def set_use_cache(self, flag):
+        self.use_cache = flag
+
     def get(self, idx):
+        if self.use_cache:
+            return self.cached_data[idx]
         verbose = False
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
@@ -382,6 +389,7 @@ class SEALDynamicDataset(Dataset):
             link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
             powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
+        self.cached_data[idx] = data
         return data
 
 
@@ -1240,6 +1248,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
             train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size * args.neg_ratio,
                                           shuffle=True, num_workers=args.num_workers)
         else:
+            train_loader_init = DataLoader(train_dataset, batch_size=args.batch_size,
+                                           shuffle=True, num_workers=0, follow_batch=follow_batch)
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                       shuffle=True, num_workers=args.num_workers, follow_batch=follow_batch)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
@@ -1366,12 +1376,21 @@ def run_sgrl_learning(args, device, hypertuning=False):
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
-                loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
+                if epoch == 0:
+                    train_loader_epoch = train_loader_init
+                else:
+                    train_loader_epoch = train_loader
+                loss, stats = profile_train(model, train_loader_epoch, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
+                if epoch == 0:
+                    train_loader_epoch = train_loader_init
+                else:
+                    train_loader_epoch = train_loader
+
                 if not args.pairwise:
                     time_start_for_train_epoch = default_timer()
-                    loss = train_bce(model, train_loader, optimizer, device, emb, train_dataset, args)
+                    loss = train_bce(model, train_loader_epoch, optimizer, device, emb, train_dataset, args)
                     time_end_for_train_epoch = default_timer()
                     all_train_times.append(time_end_for_train_epoch - time_start_for_train_epoch)
                 else:
@@ -1407,7 +1426,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
                             print(key, file=f)
                             print(to_print, file=f)
             if epoch == 0:
-                train_dataset.set_use_cache = False
+                train_dataset.set_use_cache(True)
 
         if args.profile:
             extra_identifier = ''
