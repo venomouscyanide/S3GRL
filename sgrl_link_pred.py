@@ -349,6 +349,7 @@ class SEALDynamicDataset(Dataset):
 
     def set_use_cache(self, flag):
         self.use_cache = flag
+        print(f"Updated use_cache to {flag}")
 
     def get(self, idx):
         if self.use_cache:
@@ -1249,8 +1250,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
             train_neg_loader = DataLoader(train_negative_dataset, batch_size=args.batch_size * args.neg_ratio,
                                           shuffle=True, num_workers=args.num_workers)
         else:
-            train_loader_init = DataLoader(train_dataset, batch_size=args.batch_size,
-                                           shuffle=True, num_workers=0, follow_batch=follow_batch)
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                       shuffle=True, num_workers=args.num_workers, follow_batch=follow_batch)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
@@ -1378,20 +1377,16 @@ def run_sgrl_learning(args, device, hypertuning=False):
             if args.profile:
                 # this gives the stats for exactly one training epoch
                 if epoch == 0 and args.dynamic_train:
-                    train_loader_epoch = train_loader_init
-                else:
-                    train_loader_epoch = train_loader
-                loss, stats = profile_train(model, train_loader_epoch, optimizer, device, emb, train_dataset, args)
+                    train_loader.num_workers = 0
+                loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
                 if epoch == 0 and args.dynamic_train:
-                    train_loader_epoch = train_loader_init
-                else:
-                    train_loader_epoch = train_loader
+                    train_loader.num_workers = 0
 
                 if not args.pairwise:
                     time_start_for_train_epoch = default_timer()
-                    loss = train_bce(model, train_loader_epoch, optimizer, device, emb, train_dataset, args)
+                    loss = train_bce(model, train_loader, optimizer, device, emb, train_dataset, args)
                     time_end_for_train_epoch = default_timer()
                     all_train_times.append(time_end_for_train_epoch - time_start_for_train_epoch)
                 else:
@@ -1427,7 +1422,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
                             print(key, file=f)
                             print(to_print, file=f)
             if epoch == 0 and args.dynamic_train:
-                train_dataset.set_use_cache(True)
+                train_loader.dataset.set_use_cache(True)
+                train_loader.num_workers = args.num_workers
 
         if args.profile:
             extra_identifier = ''
