@@ -1381,7 +1381,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
                 loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
-                if epoch == 0 and args.dynamic_train:
+                if epoch == 1 and args.dynamic_train:
                     train_loader.num_workers = 0
 
                 if not args.pairwise:
@@ -1421,7 +1421,7 @@ def run_sgrl_learning(args, device, hypertuning=False):
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
-            if epoch == 0 and args.dynamic_train:
+            if epoch == 1 and args.dynamic_train:
                 train_loader.dataset.set_use_cache(True)
                 train_loader.num_workers = args.num_workers
 
