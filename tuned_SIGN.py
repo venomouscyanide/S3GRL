@@ -229,6 +229,8 @@ class OptimizedSignOperations:
             strat = sign_kwargs['k_node_set_strategy']
             if strat == 'union':
                 one_hop_nodes = neighbors({0}, csr_subgraph).union(neighbors({1}, csr_subgraph))
+                one_hop_nodes.discard(0)
+                one_hop_nodes.discard(1)
             elif strat == 'intersection':
                 one_hop_nodes = neighbors({0}, csr_subgraph).intersection(neighbors({1}, csr_subgraph))
             else:
@@ -240,7 +242,7 @@ class OptimizedSignOperations:
                 powers_of_a[index] = power_of_a[selected_rows]
 
             if strat == 'union':
-                x_a = torch.tensor([[1]] + [[1]] + [[0] * (csr_shape - 2)])
+                x_a = torch.tensor([[1]] + [[1]] + [[0]] * (csr_shape - 2))
                 x_b = subgraph_features
                 subg_x = torch.hstack([x_a, x_b])
             elif strat == 'intersection':
