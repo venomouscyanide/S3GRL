@@ -271,6 +271,9 @@ class SEALDynamicDataset(Dataset):
             self.links = torch.cat([pos_edge, neg_edge], 1).t().tolist()
             self.labels = [1] * pos_edge.size(1) + [0] * neg_edge.size(1)
 
+        self.cached_data = [0] * len(self.links)
+        self.use_cache = False
+
         if self.use_coalesce:  # compress mutli-edge into edge with weight
             self.data.edge_index, self.data.edge_weight = coalesce(
                 self.data.edge_index, self.data.edge_weight,
@@ -344,7 +347,13 @@ class SEALDynamicDataset(Dataset):
     def len(self):
         return self.__len__()
 
+    def set_use_cache(self, flag, id):
+        self.use_cache = flag
+        print(f"Updated {id} loader use_cache to {flag}")
+
     def get(self, idx):
+        if self.use_cache:
+            return self.cached_data[idx]
         verbose = False
         rw_kwargs = {
             "rw_m": self.rw_kwargs.get('m'),
@@ -382,6 +391,7 @@ class SEALDynamicDataset(Dataset):
             link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
             powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
+        self.cached_data[idx] = data
         return data
 
 
@@ -1366,9 +1376,22 @@ def run_sgrl_learning(args, device, hypertuning=False):
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
+                if epoch == 1 and args.dynamic_train:
+                    train_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_val:
+                    val_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_test:
+                    test_loader.num_workers = 0
                 loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
+                if epoch == 1 and args.dynamic_train:
+                    train_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_val:
+                    val_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_test:
+                    test_loader.num_workers = 0
+
                 if not args.pairwise:
                     time_start_for_train_epoch = default_timer()
                     loss = train_bce(model, train_loader, optimizer, device, emb, train_dataset, args)
@@ -1406,8 +1429,17 @@ def run_sgrl_learning(args, device, hypertuning=False):
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
-            if epoch == 0:
-                train_dataset.set_use_cache = False
+            if epoch == 1 and args.dynamic_train:
+                train_loader.dataset.set_use_cache(True, id="train")
+                train_loader.num_workers = args.num_workers
+
+            if epoch == 1 and args.dynamic_val:
+                val_loader.dataset.set_use_cache(True, id="val")
+                val_loader.dataset.num_workers = args.num_workers
+
+            if epoch == 1 and args.dynamic_test:
+                test_loader.dataset.set_use_cache(True, id="test")
+                test_loader.dataset.num_workers = args.num_workers
 
         if args.profile:
             extra_identifier = ''
