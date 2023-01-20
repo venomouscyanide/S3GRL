@@ -347,9 +347,9 @@ class SEALDynamicDataset(Dataset):
     def len(self):
         return self.__len__()
 
-    def set_use_cache(self, flag):
+    def set_use_cache(self, flag, id):
         self.use_cache = flag
-        print(f"Updated use_cache to {flag}")
+        print(f"Updated {id} loader use_cache to {flag}")
 
     def get(self, idx):
         if self.use_cache:
@@ -1376,16 +1376,20 @@ def run_sgrl_learning(args, device, hypertuning=False):
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
-                if epoch == 0 and args.dynamic_train:
+                if epoch == 1 and args.dynamic_train:
                     train_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_val:
                     val_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_test:
                     test_loader.num_workers = 0
                 loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
                 if epoch == 1 and args.dynamic_train:
                     train_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_val:
                     val_loader.num_workers = 0
+                if epoch == 1 and args.dynamic_test:
                     test_loader.num_workers = 0
 
                 if not args.pairwise:
@@ -1426,13 +1430,15 @@ def run_sgrl_learning(args, device, hypertuning=False):
                             print(key, file=f)
                             print(to_print, file=f)
             if epoch == 1 and args.dynamic_train:
-                train_loader.dataset.set_use_cache(True)
+                train_loader.dataset.set_use_cache(True, id="train")
                 train_loader.num_workers = args.num_workers
 
-                val_loader.dataset.set_use_cache(True)
+            if epoch == 1 and args.dynamic_val:
+                val_loader.dataset.set_use_cache(True, id="val")
                 val_loader.dataset.num_workers = args.num_workers
 
-                test_loader.dataset.set_use_cache(True)
+            if epoch == 1 and args.dynamic_test:
+                test_loader.dataset.set_use_cache(True, id="test")
                 test_loader.dataset.num_workers = args.num_workers
 
         if args.profile:
