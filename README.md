@@ -13,13 +13,13 @@ All the requirements for getting the dev environment ready is available in `quic
   baseline script.
 - All SGRL baselines (except WalkPool) can be reproduced
   using `python sgrl_run_manager.py --config configs/paper/table_2.json`.
-- WalkPool results can be reproduced using `bash Software/WalkPooling/bash/run_ssgrl.sh`
+- WalkPool results can be reproduced using `bash run_ssgrl.sh` by running from Software/WalkPooling/bash
 - S3GRL results can be reproduced using `python sgrl_run_manager.py --config configs/paper/auc_s3grl.json`.
 
 ### Reproducing Table 3
 
-- WalkPool can be reproduced using `bash Software/WalkPooling/bash/run_ssgrl_profile_attr.sh`
-  and `bash Software/WalkPooling/bash/run_ssgrl_profile_non.sh`
+- WalkPool can be reproduced using `bash run_ssgrl_profile_attr.sh`
+  and `bash run_ssgrl_profile_non.sh` by running from Software/WalkPooling/bash
 - All other S3GRL and SGRL models can be reproduced
   using `python sgrl_run_manager.py --config configs/paper/profiling_attr.json`
   and `python sgrl_run_manager.py --config configs/paper/profiling_non.json`
