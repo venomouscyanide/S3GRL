@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "Cora_SuP": {
+    "Cora_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -65,7 +65,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -76,7 +76,7 @@
         "init_representation": ""
       }
     },
-    "CiteSeer_SuP": {
+    "CiteSeer_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -141,7 +141,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -152,7 +152,7 @@
         "init_representation": ""
       }
     },
-    "Pubmed_SuP": {
+    "Pubmed_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -217,7 +217,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -228,7 +228,7 @@
         "init_representation": ""
       }
     },
-    "Cornell_SuP": {
+    "Cornell_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -293,7 +293,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -304,7 +304,7 @@
         "init_representation": ""
       }
     },
-    "Wisconsin_SuP": {
+    "Wisconsin_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -369,7 +369,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -380,7 +380,7 @@
         "init_representation": ""
       }
     },
-    "Texas_SuP": {
+    "Texas_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -445,7 +445,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -457,7 +457,7 @@
       }
     },
 
-    "Cora_K_SuP": {
+    "Cora_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -522,7 +522,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -533,7 +533,7 @@
         "init_representation": ""
       }
     },
-    "CiteSeer_K_SuP": {
+    "CiteSeer_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -598,7 +598,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -609,7 +609,7 @@
         "init_representation": ""
       }
     },
-    "Pubmed_K_SuP": {
+    "Pubmed_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -674,7 +674,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -685,7 +685,7 @@
         "init_representation": ""
       }
     },
-    "Cornell_K_SuP": {
+    "Cornell_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -750,7 +750,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -761,7 +761,7 @@
         "init_representation": ""
       }
     },
-    "Wisconsin_K_SuP": {
+    "Wisconsin_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -826,7 +826,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",
@@ -837,7 +837,7 @@
         "init_representation": ""
       }
     },
-    "Texas_K_SuP": {
+    "Texas_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -902,7 +902,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "",

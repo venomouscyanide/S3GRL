@@ -1,6 +1,6 @@
 {
   "datasets": {
-    "NS_SuP": {
+    "NS_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -65,7 +65,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -76,7 +76,7 @@
         "init_representation": ""
       }
     },
-    "Power_SuP": {
+    "Power_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -141,7 +141,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -152,7 +152,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_SuP": {
+    "Yeast_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -217,7 +217,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -228,7 +228,7 @@
         "init_representation": ""
       }
     },
-    "Ecoli_SuP": {
+    "Ecoli_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -293,7 +293,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -304,7 +304,7 @@
         "init_representation": ""
       }
     },
-    "PB_SuP": {
+    "PB_PoS": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -369,7 +369,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -381,7 +381,7 @@
       }
     },
 
-    "NS_K_SuP": {
+    "NS_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -446,7 +446,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -457,7 +457,7 @@
         "init_representation": ""
       }
     },
-    "Power_K_SuP": {
+    "Power_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -522,7 +522,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -533,7 +533,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_K_SuP": {
+    "Yeast_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -598,7 +598,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -609,7 +609,7 @@
         "init_representation": ""
       }
     },
-    "Ecoli_K_SuP": {
+    "Ecoli_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -674,7 +674,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -685,7 +685,7 @@
         "init_representation": ""
       }
     },
-    "PB_K_SuP": {
+    "PB_PoS_Plus": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -750,7 +750,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "SuP",
+        "sign_type": "PoS",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",

@@ -461,12 +461,12 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             # Keep in mind that in hybrid, you do not need to set sign_k to 5. Just set it at the individual level.
             # ie; the operators per model you want. If you need 5 in total, use sign_k as 3. This is confusing,
             # but, works.
-            # optimized hybrid (SoP + SuP) flow. We do not support non-optimized hybrid flow.
-            # SuP in hybrid is currently only vanilla SuP and not k-heuristic SuP.
+            # optimized hybrid (SoP + PoS) flow. We do not support non-optimized hybrid flow.
+            # PoS in hybrid is currently only vanilla PoS and not PoS Plus.
             sign_k = sign_kwargs['sign_k']
 
-            print("Prepping SuP data")
-            sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
+            print("Prepping PoS (plus) data")
+            sup_data_list = OptimizedSignOperations.get_PoS_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs, rw_kwargs)
             if sign_k == 1:
@@ -489,26 +489,26 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             sop_data_list = OptimizedSignOperations.get_SoP_prepped_ds(powers_of_A, link_index, A, x, y)
             return sop_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign'] and not sign_kwargs['k_heuristic']:
-            # optimized SuP flow
-            sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
+            # optimized PoS flow
+            sup_data_list = OptimizedSignOperations.get_PoS_prepped_ds(link_index, num_hops, A, ratio_per_hop,
                                                                        max_nodes_per_hop, directed, A_csc, x, y,
                                                                        sign_kwargs, rw_kwargs)
             return sup_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign'] and sign_kwargs['k_heuristic']:
-            # optimized k-heuristic SuP flow
-            sup_data_list = OptimizedSignOperations.get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
-                                                                        max_nodes_per_hop, directed, A_csc, x, y,
-                                                                        sign_kwargs, rw_kwargs)
+            # optimized PoS Plus flow
+            sup_data_list = OptimizedSignOperations.get_PoS_Plus_prepped_ds(link_index, num_hops, A, ratio_per_hop,
+                                                                            max_nodes_per_hop, directed, A_csc, x, y,
+                                                                            sign_kwargs, rw_kwargs)
             return sup_data_list
         elif not sign_kwargs['optimize_sign']:
-            # SIGN + SEAL flow; includes both SuP and SoP flows
+            # SIGN + SEAL flow; includes both PoS and SoP flows
             print_out = True
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
                     if print_out:
-                        print("KSuP Non-Optimized Flow.")
+                        print("PoS Plus Non-Optimized Flow.")
                     print_out = False
-                    # SuP flow
+                    # PoS flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph

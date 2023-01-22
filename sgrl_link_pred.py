@@ -122,8 +122,8 @@ class SEALDataset(InMemoryDataset):
         # Extract enclosing subgraphs for pos and neg edges
 
         cached_pos_rws = cached_neg_rws = None
-        if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "SuP":
-            # currently only cache for flows involving SuP + Optimized using the SIGN + ScaLed flow
+        if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "PoS":
+            # currently only cache for flows involving PoS + Optimized using the SIGN + ScaLed flow
             cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.device, self.rw_kwargs['m'],
                                              self.rw_kwargs['M'])
             cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.device, self.rw_kwargs['m'],
@@ -320,9 +320,9 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        # TODO: add support for dynamic SoP and SuP
+        # TODO: add support for dynamic SoP and PoS
         if self.args.model == 'SIGN':
-            raise NotImplementedError("SoP and SuP support in dynamic mode is not implemented (yet)")
+            raise NotImplementedError("SoP and PoS (plus) support in dynamic mode is not implemented (yet)")
 
         src, dst = self.links[idx]
         y = self.labels[idx]
@@ -342,7 +342,7 @@ class SEALDynamicDataset(Dataset):
         if self.args.model == 'SIGN':
             if not self.rw_kwargs.get('m'):
                 if not self.powers_of_A:
-                    # SuP flow
+                    # PoS flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -1576,7 +1576,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'SoP', 'hybrid'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['PoS', 'SoP', 'hybrid'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',

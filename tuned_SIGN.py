@@ -12,7 +12,7 @@ import numpy as np
 
 class TunedSIGN(SIGN):
     """
-    Custom SIGN class for SuP and SoP
+    Custom SIGN class for PoS and SoP
     """
 
     def __call__(self, data, sign_k):
@@ -134,13 +134,13 @@ class OptimizedSignOperations:
         return sop_data_list
 
     @staticmethod
-    def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+    def get_PoS_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
                            sign_kwargs, rw_kwargs):
-        # optimized SuP flow
-        print("SuP Optimized Flow.")
+        # optimized PoS flow
+        print("PoS Optimized Flow.")
         from utils import k_hop_subgraph
-        sup_data_list = []
-        print("Start with SuP data prep")
+        pos_data_list = []
+        print("Start with PoS data prep")
 
         K = sign_kwargs['sign_k']
 
@@ -184,18 +184,18 @@ class OptimizedSignOperations:
             for index, power_of_a in enumerate(powers_of_a, start=1):
                 data[f'x{index}'] = power_of_a @ subg_x
 
-            sup_data_list.append(data)
+            pos_data_list.append(data)
 
-        return sup_data_list
+        return pos_data_list
 
     @staticmethod
-    def get_KSuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
-                            sign_kwargs, rw_kwargs):
-        # optimized k-heuristic SuP flow
-        print("K Heuristic SuP Optimized Flow.")
+    def get_PoS_Plus_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,
+                                sign_kwargs, rw_kwargs):
+        # optimized PoS Plus flow
+        print("PoS Plus Optimized Flow.")
         from utils import k_hop_subgraph, neighbors
-        sup_data_list = []
-        print("Start with SuP data prep")
+        pos_data_list = []
+        print("Start with PoS Plus data prep")
 
         K = sign_kwargs['sign_k']
 
@@ -257,6 +257,6 @@ class OptimizedSignOperations:
             for index, power_of_a in enumerate(powers_of_a, start=1):
                 data[f'x{index}'] = power_of_a @ subg_x
 
-            sup_data_list.append(data)
+            pos_data_list.append(data)
 
-        return sup_data_list
+        return pos_data_list

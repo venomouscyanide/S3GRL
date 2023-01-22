@@ -308,7 +308,7 @@ class SIGNNet(torch.nn.Module):
 
         self.dropout = dropout
         self.pool_operatorwise = pool_operatorwise  # pool at the operator level, esp. useful for SoP
-        self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic SuP
+        self.k_heuristic = k_heuristic  # k-heuristic in k-heuristic PoS Plus
         self.k_pool_strategy = k_pool_strategy  # k-heuristic pool strat
         self.hidden_channels = hidden_channels
         initial_channels = hidden_channels

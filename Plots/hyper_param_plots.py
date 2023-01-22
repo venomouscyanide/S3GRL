@@ -17,7 +17,7 @@ def plot_helper(result_json):
     # multi-line graph plots for hyperparameter tuning results
     all_plot_data = defaultdict(list)
     for identifier, values in results_dict.items():
-        key = "_".join(identifier.split('_SuP')[0].split('_')[1:][::-1])
+        key = "_".join(identifier.split('_PoS')[0].split('_')[1:][::-1])
         key = f"{identifier.split('_')[0]}_{key.split('_')[0]}"
         dataset_prep_time = float(values['results']['Average Dataset Prep Time'].split('±')[0])
         acc = float(values['results']['Average Test AUC'].split('±')[0])
