@@ -28,3 +28,11 @@ All the requirements for getting the dev environment ready is available in `quic
 
 - S3GRL models with ScaLed enabled can be reproduced
   using `python sgrl_run_manager.py --config configs/paper/scaled.json`.
+
+## Acknowledgements
+
+The code for S3GRL is based off a clone of SEAL-OGB by Zhang et.al (https://github.com/facebookresearch/SEAL_OGB). The
+baseline softwares used are adapted from GIC Mavromatis et.al (https://github.com/cmavro/Graph-InfoClust-GIC) and
+WalkPool by Pan et. al (https://github.com/DaDaCheng/WalkPooling). There are also some baseline model codes taken from
+OGB implementations (https://github.com/snap-stanford/ogb) and other Pytorch Geometric
+Implementations (https://github.com/pyg-team/pytorch_geometric).
