@@ -23,6 +23,7 @@ class DummyArgs:
         self.dropedge = False
         self.use_valedges_as_input = False
         self.fast_split = False
+        self.init_representation = None
 
         # important hyperparameters
         self.split_val_ratio = 0.05
