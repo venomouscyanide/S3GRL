@@ -122,8 +122,8 @@ class SEALDataset(InMemoryDataset):
         # Extract enclosing subgraphs for pos and neg edges
 
         cached_pos_rws = cached_neg_rws = None
-        if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "SuP":
-            # currently only cache for flows involving SuP + Optimized using the SIGN + ScaLed flow
+        if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "PoS":
+            # currently only cache for flows involving PoS + Optimized using the SIGN + ScaLed flow
             cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.device, self.rw_kwargs['m'],
                                              self.rw_kwargs['M'])
             cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.device, self.rw_kwargs['m'],
@@ -160,7 +160,7 @@ class SEALDataset(InMemoryDataset):
             else:
                 rw_kwargs.update({"sign": True})
 
-            if sign_type == 'PoS' or sign_type == "hybrid":
+            if sign_type == 'SoP' or sign_type == "hybrid":
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -303,7 +303,7 @@ class SEALDynamicDataset(Dataset):
 
         self.powers_of_A = []
         if self.args.model == 'SIGN':
-            if self.sign_type == 'PoS':
+            if self.sign_type == 'SoP':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -320,9 +320,9 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        # TODO: add support for dynamic PoS and SuP
+        # TODO: add support for dynamic SoP and PoS
         if self.args.model == 'SIGN':
-            raise NotImplementedError("PoS and SuP support in dynamic mode is not implemented (yet)")
+            raise NotImplementedError("SoP and PoS (plus) support in dynamic mode is not implemented (yet)")
 
         src, dst = self.links[idx]
         y = self.labels[idx]
@@ -342,7 +342,7 @@ class SEALDynamicDataset(Dataset):
         if self.args.model == 'SIGN':
             if not self.rw_kwargs.get('m'):
                 if not self.powers_of_A:
-                    # SuP flow
+                    # PoS flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -363,7 +363,7 @@ class SEALDynamicDataset(Dataset):
                     data = sign_t(data, self.args.sign_k)
 
                 else:
-                    # PoS flow
+                    # SoP flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -383,7 +383,7 @@ class SEALDynamicDataset(Dataset):
                         pos_data_list.append(data)
 
                     sign_t = TunedSIGN(self.args.sign_k)
-                    data = sign_t.PoS_data_creation(pos_data_list)
+                    data = sign_t.SoP_data_creation(pos_data_list)
 
 
             else:
@@ -872,9 +872,9 @@ def run_sgrl_learning(args, device, hypertuning=False):
             file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
         else:
             # we consume user path
-            file_name = os.path.join(str(Path.home()), 'ExtendoScaLed', 'data', 'link_prediction', args.dataset.lower())
+            file_name = os.path.join(str(Path.home()), 'S3GRL', 'data', 'link_prediction', args.dataset.lower())
             if not os.path.exists(file_name):
-                raise FileNotFoundError("Clone repo in your user path")
+                raise FileNotFoundError("Check your file path is correct")
         node_id_mapping = read_label(file_name)
         edges = read_edges(file_name, node_id_mapping)
 
@@ -1576,7 +1576,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS', 'hybrid'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['PoS', 'SoP', 'hybrid'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
@@ -1606,8 +1606,8 @@ if __name__ == '__main__':
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
-    if (args.sign_type == 'PoS' or args.sign_type == 'hybrid') and not args.pool_operatorwise:
-        raise Exception(f"Cannot run PoS with pool_operatorwise: {args.pool_operatorwise}")
+    if (args.sign_type == 'SoP' or args.sign_type == 'hybrid') and not args.pool_operatorwise:
+        raise Exception(f"Cannot run SoP with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.sign_type == 'hybrid' and not args.optimize_sign:
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")

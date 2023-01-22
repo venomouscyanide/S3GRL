@@ -28,9 +28,9 @@ def get_data_helper(args):
             file_name = os.path.join('data', 'link_prediction', args.dataset.lower())
         else:
             # we consume user path
-            file_name = os.path.join(str(Path.home()), 'ExtendoScaLed', 'data', 'link_prediction', args.dataset.lower())
+            file_name = os.path.join(str(Path.home()), 'S3GRL', 'data', 'link_prediction', args.dataset.lower())
             if not os.path.exists(file_name):
-                raise FileNotFoundError("Clone repo in your user path")
+                raise FileNotFoundError("Check your file path is correct")
         node_id_mapping = read_label(file_name)
         edges = read_edges(file_name, node_id_mapping)
 

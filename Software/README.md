@@ -1,1 +1,2 @@
-Adapted slightly, mostly taken from the authors of WalkPool: https://github.com/DaDaCheng/WalkPooling/tree/main/software/GIC
+Adapted slightly, mostly taken from the authors of WalkPool: https://github.com/DaDaCheng/WalkPooling/
+and https://github.com/cmavro/Graph-InfoClust-GIC

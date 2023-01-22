@@ -94,7 +94,7 @@ class HyperParameterTuning:
             "train_n2v": False,
             "train_mf": False,
             "sign_k": 3,  # configurable
-            "sign_type": "SuP",
+            "sign_type": "PoS",
             "pool_operatorwise": True,
             "optimize_sign": True,
             "init_features": "n2v",
@@ -109,7 +109,7 @@ def ray_tune_helper(identifier, output_path, dataset, sign_type):
     hyper_class = HyperParameterTuning
     hyper_class.base_config['hyperparams_per_run']['dataset'] = dataset
 
-    if sign_type == "KSuP":
+    if sign_type == "PoS Plus":
         k_heuristic = tune.choice([2, 4, 6, 8, 10])
     else:
         k_heuristic = 0
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     parser.add_argument('--identifier', type=str, required=True)
     parser.add_argument('--output_path', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
-    parser.add_argument('--sign_type', type=str, required=True, choices=["SuP", "KSuP"])
+    parser.add_argument('--sign_type', type=str, required=True, choices=["PoS", "PoS Plus"])
 
     args = parser.parse_args()
     ray_tune_helper(args.identifier, args.output_path, args.dataset, args.sign_type)
