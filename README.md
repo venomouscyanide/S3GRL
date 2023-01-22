@@ -9,7 +9,8 @@ All the requirements for getting the dev environment ready is available in `quic
 
 ### Reproducing Table 2
 
-- All baselines (except SGRL) can be reproduced using `baseline/run_helpers/run_*.py`.
+- All baselines (except SGRL) can be reproduced using `baseline/run_helpers/run_*.py`, where * is the respective
+  baseline script.
 - All SGRL baselines (except WalkPool) can be reproduced
   using `python sgrl_run_manager.py --config configs/paper/table_2.json`.
 - WalkPool results can be reproduced using `bash Software/WalkPooling/bash/run_ssgrl.sh`
