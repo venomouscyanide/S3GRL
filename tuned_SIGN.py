@@ -12,7 +12,7 @@ import numpy as np
 
 class TunedSIGN(SIGN):
     """
-    Custom SIGN class for SuP and PoS
+    Custom SIGN class for SuP and SoP
     """
 
     def __call__(self, data, sign_k):
@@ -22,10 +22,10 @@ class TunedSIGN(SIGN):
                 data.pop(f'x{idx}')
         return data
 
-    def PoS_data_creation(self, pos_data_list):
-        original_data = pos_data_list[0]
+    def SoP_data_creation(self, sop_data_list):
+        original_data = sop_data_list[0]
 
-        for index, data in enumerate(pos_data_list, start=1):
+        for index, data in enumerate(sop_data_list, start=1):
             assert data.edge_index is not None
             row, col = data.edge_index
             adj_t = SparseTensor(row=col, col=row, value=torch.tensor(data.edge_weight),
@@ -46,11 +46,11 @@ class TunedSIGN(SIGN):
 
 class OptimizedSignOperations:
     @staticmethod
-    def get_PoS_prepped_ds(powers_of_A, link_index, A, x, y):
-        print("PoS Optimized Flow.")
-        # optimized PoS flow, everything is created on the CPU, then in train() sent to GPU on a batch basis
+    def get_SoP_prepped_ds(powers_of_A, link_index, A, x, y):
+        print("SoP Optimized Flow.")
+        # optimized SoP flow, everything is created on the CPU, then in train() sent to GPU on a batch basis
 
-        pos_data_list = []
+        sop_data_list = []
 
         a_global_list = []
         g_global_list = []
@@ -130,8 +130,8 @@ class OptimizedSignOperations:
                 subgraph_features = torch.vstack([src_features, dst_features])
 
                 data[f'x{global_index + 1}'] = subgraph_features
-            pos_data_list.append(data)
-        return pos_data_list
+            sop_data_list.append(data)
+        return sop_data_list
 
     @staticmethod
     def get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop, max_nodes_per_hop, directed, A_csc, x, y,

@@ -160,7 +160,7 @@ class SEALDataset(InMemoryDataset):
             else:
                 rw_kwargs.update({"sign": True})
 
-            if sign_type == 'PoS' or sign_type == "hybrid":
+            if sign_type == 'SoP' or sign_type == "hybrid":
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -303,7 +303,7 @@ class SEALDynamicDataset(Dataset):
 
         self.powers_of_A = []
         if self.args.model == 'SIGN':
-            if self.sign_type == 'PoS':
+            if self.sign_type == 'SoP':
                 edge_index = self.data.edge_index
                 num_nodes = self.data.num_nodes
 
@@ -320,9 +320,9 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        # TODO: add support for dynamic PoS and SuP
+        # TODO: add support for dynamic SoP and SuP
         if self.args.model == 'SIGN':
-            raise NotImplementedError("PoS and SuP support in dynamic mode is not implemented (yet)")
+            raise NotImplementedError("SoP and SuP support in dynamic mode is not implemented (yet)")
 
         src, dst = self.links[idx]
         y = self.labels[idx]
@@ -363,7 +363,7 @@ class SEALDynamicDataset(Dataset):
                     data = sign_t(data, self.args.sign_k)
 
                 else:
-                    # PoS flow
+                    # SoP flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
@@ -383,7 +383,7 @@ class SEALDynamicDataset(Dataset):
                         pos_data_list.append(data)
 
                     sign_t = TunedSIGN(self.args.sign_k)
-                    data = sign_t.PoS_data_creation(pos_data_list)
+                    data = sign_t.SoP_data_creation(pos_data_list)
 
 
             else:
@@ -1576,7 +1576,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_mf', action='store_true', help="Train MF on the dataset")
 
     parser.add_argument('--sign_k', type=int, default=3)
-    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'PoS', 'hybrid'])
+    parser.add_argument('--sign_type', type=str, default='', required=False, choices=['SuP', 'SoP', 'hybrid'])
     parser.add_argument('--pool_operatorwise', action='store_true', default=False, required=False)
     parser.add_argument('--optimize_sign', action='store_true', default=False, required=False)
     parser.add_argument('--init_features', type=str, default='',
@@ -1606,8 +1606,8 @@ if __name__ == '__main__':
     if args.profile and not torch.cuda.is_available():
         raise Exception("CUDA needs to be enabled to run PyG profiler")
 
-    if (args.sign_type == 'PoS' or args.sign_type == 'hybrid') and not args.pool_operatorwise:
-        raise Exception(f"Cannot run PoS with pool_operatorwise: {args.pool_operatorwise}")
+    if (args.sign_type == 'SoP' or args.sign_type == 'hybrid') and not args.pool_operatorwise:
+        raise Exception(f"Cannot run SoP with pool_operatorwise: {args.pool_operatorwise}")
 
     if args.sign_type == 'hybrid' and not args.optimize_sign:
         raise Exception(f"Cannot run hybrid mode with optimize_size set to {args.optimize_sign}")

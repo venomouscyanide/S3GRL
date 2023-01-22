@@ -762,7 +762,7 @@
       }
     },
 
-    "NS_PoS": {
+    "NS_SoP": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -827,7 +827,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "PoS",
+        "sign_type": "SoP",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -838,7 +838,7 @@
         "init_representation": ""
       }
     },
-    "Power_PoS": {
+    "Power_SoP": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -903,7 +903,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "PoS",
+        "sign_type": "SoP",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -914,7 +914,7 @@
         "init_representation": ""
       }
     },
-    "Yeast_PoS": {
+    "Yeast_SoP": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -979,7 +979,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "PoS",
+        "sign_type": "SoP",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -990,7 +990,7 @@
         "init_representation": ""
       }
     },
-    "Ecoli_PoS": {
+    "Ecoli_SoP": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -1055,7 +1055,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "PoS",
+        "sign_type": "SoP",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",
@@ -1066,7 +1066,7 @@
         "init_representation": ""
       }
     },
-    "PB_PoS": {
+    "PB_SoP": {
       "ds_params": {
         "runs": 1,
         "seeds": [
@@ -1131,7 +1131,7 @@
         "train_n2v": false,
         "train_mf": false,
         "sign_k": 3,
-        "sign_type": "PoS",
+        "sign_type": "SoP",
         "pool_operatorwise": true,
         "optimize_sign": true,
         "init_features": "n2v",

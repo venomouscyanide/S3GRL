@@ -461,7 +461,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             # Keep in mind that in hybrid, you do not need to set sign_k to 5. Just set it at the individual level.
             # ie; the operators per model you want. If you need 5 in total, use sign_k as 3. This is confusing,
             # but, works.
-            # optimized hybrid (PoS + SuP) flow. We do not support non-optimized hybrid flow.
+            # optimized hybrid (SoP + SuP) flow. We do not support non-optimized hybrid flow.
             # SuP in hybrid is currently only vanilla SuP and not k-heuristic SuP.
             sign_k = sign_kwargs['sign_k']
 
@@ -472,11 +472,11 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
             if sign_k == 1:
                 return sup_data_list
 
-            print("Prepping PoS data")
-            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
+            print("Prepping SoP data")
+            sop_data_list = OptimizedSignOperations.get_SoP_prepped_ds(powers_of_A, link_index, A, x, y)
 
             combined_data = []
-            for sup_data, pos_data in zip(sup_data_list, pos_data_list):
+            for sup_data, pos_data in zip(sup_data_list, sop_data_list):
                 data = sup_data
 
                 for k in range(sign_k + 1, sign_k * 2):
@@ -485,9 +485,9 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                 combined_data.append(data)
             return combined_data
         elif powers_of_A and sign_kwargs['optimize_sign']:
-            # optimized PoS flow
-            pos_data_list = OptimizedSignOperations.get_PoS_prepped_ds(powers_of_A, link_index, A, x, y)
-            return pos_data_list
+            # optimized SoP flow
+            sop_data_list = OptimizedSignOperations.get_SoP_prepped_ds(powers_of_A, link_index, A, x, y)
+            return sop_data_list
         elif not powers_of_A and sign_kwargs['optimize_sign'] and not sign_kwargs['k_heuristic']:
             # optimized SuP flow
             sup_data_list = OptimizedSignOperations.get_SuP_prepped_ds(link_index, num_hops, A, ratio_per_hop,
@@ -501,7 +501,7 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                                                                         sign_kwargs, rw_kwargs)
             return sup_data_list
         elif not sign_kwargs['optimize_sign']:
-            # SIGN + SEAL flow; includes both SuP and PoS flows
+            # SIGN + SEAL flow; includes both SuP and SoP flows
             print_out = True
             for src, dst in tqdm(link_index.t().tolist()):
                 if not powers_of_A:
@@ -530,15 +530,15 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
                     data_list.append(data)
                 else:
-                    # PoS flow
+                    # SoP flow
 
                     # debug code with graphistry
                     # networkx_G = to_networkx(data)  # the full graph
                     # graphistry.bind(source='src', destination='dst', node='nodeid').plot(networkx_G)
                     # check against the nodes that is received in tmp before the relabeling occurs
-                    pos_data_list = []
+                    sop_data_list = []
                     if print_out:
-                        print("PoS Non-Optimized Flow.")
+                        print("SoP Non-Optimized Flow.")
                     print_out = False
                     for index, power_of_a in enumerate(powers_of_A, start=1):
                         tmp = k_hop_subgraph(src, dst, num_hops, power_of_a, ratio_per_hop,
@@ -549,10 +549,10 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
                         }
 
                         data = construct_pyg_graph(*tmp, node_label, sign_pyg_kwargs)
-                        pos_data_list.append(data)
+                        sop_data_list.append(data)
 
                     sign_t = TunedSIGN(sign_kwargs['sign_k'])
-                    data = sign_t.PoS_data_creation(pos_data_list)
+                    data = sign_t.SoP_data_creation(sop_data_list)
                     data_list.append(data)
         else:
             # No match found
