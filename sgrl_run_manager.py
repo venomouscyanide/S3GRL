@@ -68,7 +68,6 @@ class SGRLArgumentParser:
         self.test_multiple_models = test_multiple_models
         self.use_heuristic = use_heuristic
 
-        # ScaLed settings
         self.m = m
         self.M = M
         self.cuda_device = cuda_device
