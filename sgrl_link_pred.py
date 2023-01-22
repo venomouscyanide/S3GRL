@@ -56,7 +56,6 @@ class SEALDataset(InMemoryDataset):
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
                  pos_pairwise=False, neg_ratio=1, use_feature=False, sign_type="", args=None):
-        # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -123,7 +122,6 @@ class SEALDataset(InMemoryDataset):
 
         cached_pos_rws = cached_neg_rws = None
         if self.rw_kwargs.get('m') and self.args.optimize_sign and self.sign_type == "PoS":
-            # currently only cache for flows involving PoS + Optimized using the SIGN + ScaLed flow
             cached_pos_rws = create_rw_cache(self.sparse_adj, pos_edge, self.device, self.rw_kwargs['m'],
                                              self.rw_kwargs['M'])
             cached_neg_rws = create_rw_cache(self.sparse_adj, neg_edge, self.device, self.rw_kwargs['m'],
@@ -227,7 +225,6 @@ class SEALDynamicDataset(Dataset):
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0,
                  max_nodes_per_hop=None, directed=False, rw_kwargs=None, device='cpu', pairwise=False,
                  pos_pairwise=False, neg_ratio=1, use_feature=False, sign_type="", args=None, **kwargs):
-        # TODO: avoid args, use the exact arguments instead
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -289,9 +286,6 @@ class SEALDynamicDataset(Dataset):
         self.unique_nodes = {}
         if self.rw_kwargs.get('M'):
             print("Start caching random walk unique nodes")
-            # if in dynamic ScaLed mode, need to cache the unique nodes of random walks before get() due to below error
-            # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
-            # To use CUDA with multiprocessing, you must use the 'spawn' start method
             for link in self.links:
                 rw_M = self.rw_kwargs.get('M')
                 starting_nodes = []
@@ -320,7 +314,6 @@ class SEALDynamicDataset(Dataset):
         return self.__len__()
 
     def get(self, idx):
-        # TODO: add support for dynamic SoP and PoS
         if self.args.model == 'SIGN':
             raise NotImplementedError("SoP and PoS (plus) support in dynamic mode is not implemented (yet)")
 
@@ -387,8 +380,6 @@ class SEALDynamicDataset(Dataset):
 
 
             else:
-                # SIGN + ScaLed flow (research is pending for this)
-                # TODO: this is not yet fully implemented and tested
                 rw_kwargs.update({'sign': True})
                 data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                       self.max_nodes_per_hop, node_features=self.data.x,
@@ -404,7 +395,6 @@ class SEALDynamicDataset(Dataset):
                                      y=y, directed=self.directed, A_csc=self.A_csc)
                 data = construct_pyg_graph(*tmp, self.node_label, sign_kwargs)
             else:
-                # ScaLed flow
                 data = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop,
                                       self.max_nodes_per_hop, node_features=self.data.x,
                                       y=y, directed=self.directed, A_csc=self.A_csc, rw_kwargs=rw_kwargs)
@@ -660,7 +650,7 @@ def _get_test_auc(args, device, emb, model, test_loader):
 
 @torch.no_grad()
 def test_multiple_models(models, val_loader, device, emb, test_loader, evaluator, args):
-    raise NotImplementedError("This is untested for SCALED")
+    raise NotImplementedError("This is untested")
     for m in models:
         m.eval()
 
@@ -1026,7 +1016,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
         directed = False
 
     if args.use_valedges_as_input:
-        # TODO; this is broken atm for SIGN-esque training. Fix soon
         val_edge_index = split_edge['valid']['edge'].t()
         if not directed:
             val_edge_index = to_undirected(val_edge_index)
@@ -1280,7 +1269,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
                                  num_workers=args.num_workers, follow_batch=follow_batch)
 
     if args.train_node_embedding:
-        # TODO; heads-up: this arg is not supported in SIGN
         emb = torch.nn.Embedding(data.num_nodes, args.hidden_channels).to(device)
     elif args.pretrained_node_embedding:
         weight = torch.load(args.pretrained_node_embedding)
@@ -1475,7 +1463,6 @@ def run_sgrl_learning(args, device, hypertuning=False):
             shutil.rmtree(args.res_dir)
 
     print("fin.")
-    # TODO; change logic for HITS@K
     return total_prep_time, best_test_scores[0], all_train_times, all_inference_times, total_params
 
 

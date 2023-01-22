@@ -84,7 +84,6 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
         return nodes, subgraph, dists, node_features, y
     else:
-        # Start of core-logic for ScaLed.
         rw_m = rw_kwargs['rw_m']
         rw_M = rw_kwargs['rw_M']
         sparse_adj = rw_kwargs['sparse_adj']
@@ -167,12 +166,11 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
             z_revised = py_g_drnl_node_labeling(sub_edge_index_revised, src, dst,
                                                 num_nodes=sub_nodes.size(0))
         else:
-            raise NotImplementedError(f"ScaLed does not support {rw_kwargs['node_label']} labeling trick yet.")
+            raise NotImplementedError(f"Does not support {rw_kwargs['node_label']} labeling trick yet.")
 
         data_revised = Data(x=x, z=z_revised,
                             edge_index=sub_edge_index_revised, y=y, node_id=torch.LongTensor(rw_set),
                             num_nodes=len(rw_set), edge_weight=torch.ones(sub_edge_index_revised.shape[-1]))
-        # end of core-logic for ScaLed
         return data_revised
 
 
@@ -320,8 +318,6 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
 
 def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, x, y, directed, A_csc, node_label, rw_kwargs, verbose=False):
-    # TODO: reuse *.num_nodes and .num_edges
-    # calculate the % of nodes/edges in original k-hop vs rw induced graph
     tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                          max_nodes_per_hop, node_features=x, y=y,
                          directed=directed, A_csc=A_csc)
@@ -352,8 +348,6 @@ def calc_node_edge_ratio(src, dst, num_hops, A, ratio_per_hop,
 def calc_ratio_helper(link_index_pos, link_index_neg, A, x, y, num_hops, node_label='drnl',
                       ratio_per_hop=1.0, max_nodes_per_hop=None,
                       directed=False, A_csc=None, rw_kwargs=None, split='train', dataset_name='', seed=1):
-    # TODO: this needs to be updated to account for addition of SIGN
-    # calculate sparsity of subgraphs of seal vs ScaLed for the split
     stats_dict = {}
 
     overall_seal_node_storage = []
@@ -568,7 +562,6 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
             data = construct_pyg_graph(*tmp, node_label)
         else:
-            # ScaLed flow
             data = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop,
                                   max_nodes_per_hop, node_features=x, y=y,
                                   directed=directed, A_csc=A_csc, rw_kwargs=rw_kwargs)
@@ -666,7 +659,6 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100, neg
         neg_edge = neg_edge[:, perm]
 
     elif 'source_node' in split_edge['train']:
-        # TODO: find out what dataset split prompts this flow
         source = split_edge[split]['source_node']
         target = split_edge[split]['target_node']
         if split == 'train':
