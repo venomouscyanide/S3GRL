@@ -1,7 +1,7 @@
 #!/bin/sh
 # this installation is very specific to Mac M1 chip, however, simple pip installs should work on any silicon
-conda create --name sweal_3_9 python=3.9 # don't use python 3.10 as it breaks the PyCharm debugger flow: https://youtrack.jetbrains.com/issue/PY-52137
-conda activate sweal_3_9
+conda create --name s3grl python=3.9 # don't use python 3.10 as it breaks the PyCharm debugger flow: https://youtrack.jetbrains.com/issue/PY-52137
+conda activate s3grl
 conda install pytorch torchvision -c pytorch
 export CC=/opt/homebrew/Cellar/llvm/13.0.1_1/bin/clang # point to the brew clang compiler
 pip install torch-sparse==0.6.13
