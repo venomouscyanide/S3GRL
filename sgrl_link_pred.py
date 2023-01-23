@@ -971,6 +971,10 @@ def run_sgrl_learning(args, device, hypertuning=False):
     if init_features == "degree":
         one_hot = OneHotDegree(max_degree=1024)
         data = one_hot(data)
+    elif init_features == "ones":
+        data.x = torch.ones(size=(data.num_nodes, args.hidden_channels))
+    elif init_features == "zeros":
+        data.x = torch.zeros(size=(data.num_nodes, args.hidden_channels))
     elif init_features == "eye":
         data.x = torch.eye(data.num_nodes)
     elif init_features == "n2v":
