@@ -8,7 +8,7 @@ import os
 
 
 def node_2_vec_pretrain(dataset, edge_index, num_nodes, emb_dim, seed, device, epochs, hypertuning=False,
-                        extra_identifier='', cache=False):
+                        extra_identifier='', cache=True):
     if hypertuning:
         emb_folder = f'{Path.home()}/Emb'
     else:
