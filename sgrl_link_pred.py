@@ -391,7 +391,8 @@ class SEALDynamicDataset(Dataset):
             link_index, self.A, self.data.x, y, self.num_hops, self.node_label,
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed, self.A_csc, rw_kwargs, sign_kwargs,
             powers_of_A=self.powers_of_A, data=self.data, verbose=verbose)[0]
-        self.cached_data[idx] = data
+        if self.args.cache_dynamic:
+            self.cached_data[idx] = data
         return data
 
 
@@ -1380,20 +1381,20 @@ def run_sgrl_learning(args, device, hypertuning=False):
         for epoch in range(start_epoch, start_epoch + args.epochs):
             if args.profile:
                 # this gives the stats for exactly one training epoch
-                if epoch == 1 and args.dynamic_train:
+                if epoch == 1 and args.dynamic_train and args.cache_dynamic:
                     train_loader.num_workers = 0
-                if epoch == 1 and args.dynamic_val:
+                if epoch == 1 and args.dynamic_val and args.cache_dynamic:
                     val_loader.num_workers = 0
-                if epoch == 1 and args.dynamic_test:
+                if epoch == 1 and args.dynamic_test and args.cache_dynamic:
                     test_loader.num_workers = 0
                 loss, stats = profile_train(model, train_loader, optimizer, device, emb, train_dataset, args)
                 all_stats.append(stats)
             else:
-                if epoch == 1 and args.dynamic_train:
+                if epoch == 1 and args.dynamic_train and args.cache_dynamic:
                     train_loader.num_workers = 0
-                if epoch == 1 and args.dynamic_val:
+                if epoch == 1 and args.dynamic_val and args.cache_dynamic:
                     val_loader.num_workers = 0
-                if epoch == 1 and args.dynamic_test:
+                if epoch == 1 and args.dynamic_test and args.cache_dynamic:
                     test_loader.num_workers = 0
 
                 if not args.pairwise:
@@ -1433,15 +1434,15 @@ def run_sgrl_learning(args, device, hypertuning=False):
                         with open(log_file, 'a') as f:
                             print(key, file=f)
                             print(to_print, file=f)
-            if epoch == 1 and args.dynamic_train:
+            if epoch == 1 and args.dynamic_train and args.cache_dynamic:
                 train_loader.dataset.set_use_cache(True, id="train")
                 train_loader.num_workers = args.num_workers
 
-            if epoch == 1 and args.dynamic_val:
+            if epoch == 1 and args.dynamic_val and args.cache_dynamic:
                 val_loader.dataset.set_use_cache(True, id="val")
                 val_loader.dataset.num_workers = args.num_workers
 
-            if epoch == 1 and args.dynamic_test:
+            if epoch == 1 and args.dynamic_test and args.cache_dynamic:
                 test_loader.dataset.set_use_cache(True, id="test")
                 test_loader.dataset.num_workers = args.num_workers
 
@@ -1481,8 +1482,19 @@ def run_sgrl_learning(args, device, hypertuning=False):
             shutil.rmtree(args.res_dir)
 
     print("fin.")
-    # TODO; change logic for HITS@K
-    return total_prep_time, best_test_scores[0], all_train_times, all_inference_times, total_params
+    if args.dataset == 'ogbl-collab':
+        best = best_test_scores[1]  # hits@50
+    elif args.dataset == 'ogbl-ddi':
+        best = best_test_scores[0]  # hits@20
+    elif args.dataset == 'ogbl-ppa':
+        best = best_test_scores[2]  # hits@100
+    elif args.dataset == 'ogbl-citation2':
+        best = best_test_scores[0]  # MRR
+    elif args.dataset == 'ogbl-vessel':
+        best = best_test_scores[0]  # aucroc
+    else:
+        best = best_test_scores[0]  # auc
+    return total_prep_time, best, all_train_times, all_inference_times, total_params
 
 
 @timeit()
@@ -1595,6 +1607,8 @@ if __name__ == '__main__':
                         choices=['union', 'intersection'])
     parser.add_argument('--k_pool_strategy', type=str, default="", required=False, choices=['mean', 'concat', 'sum'])
     parser.add_argument('--init_representation', type=str, choices=['GIC', 'ARGVA', 'GAE', 'VGAE'])
+
+    parser.add_argument('--cache_dynamic', action='store_true', default=False, required=False)
 
     args = parser.parse_args()
 
