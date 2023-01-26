@@ -820,6 +820,8 @@ def run_sgrl_learning(args, device, hypertuning=False):
     if args.dataset.startswith('ogbl'):
         dataset = PygLinkPropPredDataset(name=args.dataset, transform=NormalizeFeatures())
         split_edge = dataset.get_edge_split()
+        if args.dataset == 'ogbl-ppa':
+            dataset.data.x = dataset.data.x.type(torch.FloatTensor)
         data = dataset[0]
 
     elif args.dataset.startswith('ogbl-vessel'):
