@@ -970,8 +970,12 @@ def run_sgrl_learning(args, device, hypertuning=False):
         print(f"Init features using: {init_features}")
 
     if init_features == "degree":
-        one_hot = OneHotDegree(max_degree=1024)
-        data = one_hot(data)
+        import torch.nn.functional as F
+        from torch_geometric.utils import degree
+        idx, x = data.edge_index[0], data.x
+        deg = degree(idx, data.num_nodes, dtype=torch.long)
+        deg = F.one_hot(deg, num_classes=max(deg) + 1).to(torch.float)
+        data.x = deg
     elif init_features == "ones":
         data.x = torch.ones(size=(data.num_nodes, args.hidden_channels))
     elif init_features == "zeros":
