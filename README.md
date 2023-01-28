@@ -33,6 +33,16 @@ Specific arguments related to our framework:
 - `k_pool_strategy` - How to pool the nodes other than source-target in the forward pass for `CCN` (the nodes you select using `k_node_set_strategy`).  Either mean or sum pooling. Works when `k_heuristic` is True.
 - `init_representation` - Use an unsupervised model to train the initial features before running S3GRL. Choose between 'GIC', 'ARGVA', 'GAE', 'VGAE'.
 
+## Supported Datasets
+We support the following datasets:
+
+
+## Reporting Issues and Improvements
+We currently don't have an issue/PR template. However, if you find an issue in our code please create an issue in GitHub. It would be great if you could give as much information regarding the issue as possible (what command was run, what are the python package versions, providing full stack trace etc.).  
+
+If you have any further questions, you can reach out to us (the authors) via email and we will be happy to have a conversation. 
+[Paul Louis](mailto:paul.louis@ontariotechu.net), [Shweta Ann Jacob](mailto:shweta.jacob@ontariotechu.net)
+
 
 
 ## Reproducing the Paper's Tabular data
