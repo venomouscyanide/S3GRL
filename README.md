@@ -1,6 +1,6 @@
 S3GRL (Scalable Simplified Subgraph Representation Learning)
 ===============================================================================
-S3GRL is a subgraph representation learning (SGRL) framework aimed at faster link prediction. S3GRL introduces subgraph sampling and subgraph diffusion operators that allow for fast precomputation .
+S3GRL (Scalable Simplified Subgraph Representation Learning) is a subgraph representation learning (SGRL) framework aimed at faster link prediction. S3GRL introduces subgraph sampling and subgraph diffusion operator pairs that allow for fast precomputation leading to faster runtimes.
 
 ## S3GRL architecture
 <img width="1260" alt="Screenshot 2023-01-28 at 3 19 09 PM" src="https://user-images.githubusercontent.com/14299839/215289015-e437d5d5-9df7-48b4-842a-932d4a0c7fc2.png">
@@ -34,8 +34,11 @@ Specific arguments related to our framework:
 - `init_representation` - Use an unsupervised model to train the initial features before running S3GRL. Choose between 'GIC', 'ARGVA', 'GAE', 'VGAE'.
 
 ## Supported Datasets
-We support the following datasets:
+We support any PyG dataset. However, the below list covers all the datasets we use in our paper's experiments:
 
+1) Planetoid Dataset (Cora, PubMed, CiteSeer) from "Revisiting Semi-Supervised Learning with Graph Embeddings
+    <https://arxiv.org/abs/1603.08861>"
+2) SEAL datasets (USAir, Yeast etc. introduced in the original paper) from "Link prediction based on graph neural networks https://arxiv.org/pdf/1802.09691.pdf"
 
 ## Reporting Issues and Improvements
 We currently don't have an issue/PR template. However, if you find an issue in our code please create an issue in GitHub. It would be great if you could give as much information regarding the issue as possible (what command was run, what are the python package versions, providing full stack trace etc.).  
