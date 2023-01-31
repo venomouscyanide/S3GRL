@@ -2,6 +2,8 @@ S3GRL (Scalable Simplified Subgraph Representation Learning)
 ===============================================================================
 S3GRL (Scalable Simplified Subgraph Representation Learning) is a subgraph representation learning (SGRL) framework aimed at faster link prediction. S3GRL introduces subgraph sampling and subgraph diffusion operator pairs that allow for fast precomputation leading to faster runtimes.
 
+Please read our paper here: https://arxiv.org/abs/2301.12562 
+
 ## S3GRL architecture
 <img width="1260" alt="Screenshot 2023-01-28 at 3 19 09 PM" src="https://user-images.githubusercontent.com/14299839/215289015-e437d5d5-9df7-48b4-842a-932d4a0c7fc2.png">
 
@@ -88,3 +90,19 @@ Mavromatis et al. (https://github.com/cmavro/Graph-InfoClust-GIC) and WalkPool b
 al. (https://github.com/DaDaCheng/WalkPooling). There are also some baseline model codes taken from OGB
 implementations (https://github.com/snap-stanford/ogb) and other Pytorch Geometric
 implementations (https://github.com/pyg-team/pytorch_geometric).
+
+## Citing Us/BibTex
+Please cite our work if you find it useful in any way.
+```
+@misc{https://doi.org/10.48550/arxiv.2301.12562,
+  doi = {10.48550/ARXIV.2301.12562},
+  url = {https://arxiv.org/abs/2301.12562},
+  author = {Louis, Paul and Jacob, Shweta Ann and Salehi-Abari, Amirali},
+  keywords = {Machine Learning (cs.LG), Social and Information Networks (cs.SI), FOS: Computer and information sciences, FOS: Computer and information sciences},
+  title = {Simplifying Subgraph Representation Learning for Scalable Link Prediction},
+  publisher = {arXiv},
+  year = {2023},
+  copyright = {arXiv.org perpetual, non-exclusive license}
+}
+
+```
