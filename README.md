@@ -106,3 +106,5 @@ Please cite our work if you find it useful in any way.
 }
 
 ```
+
+The PDF of our preprint is available at https://arxiv.org/pdf/2301.12562.pdf
