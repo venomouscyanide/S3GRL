@@ -1,5 +1,8 @@
 S3GRL (Scalable Simplified Subgraph Representation Learning)
 ===============================================================================
+
+### **N.B.: There is a newer version of this project and paper, aimed at working on more datasets, including the OGB large-scale datasets. Check it out here: https://github.com/venomouscyanide/S3GRL_OGB**.
+
 S3GRL (Scalable Simplified Subgraph Representation Learning) is a subgraph representation learning (SGRL) framework aimed at faster link prediction. S3GRL introduces subgraph sampling and subgraph diffusion operator pairs that allow for fast precomputation leading to faster runtimes.
 
 Please read our paper here: https://arxiv.org/abs/2301.12562 
