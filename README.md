@@ -7,6 +7,8 @@ S3GRL (Scalable Simplified Subgraph Representation Learning) is a subgraph repre
 
 Please read our paper here: https://arxiv.org/abs/2301.12562 
 
+This work also constitutes as the primary contribution in my Master's thesis titled "Scalable Subgraph Representation Learning through Simplification", which was written as part of my Master's degree at UOIT. You can read it [here.](https://drive.google.com/file/d/1mYTdNUVftkfi1rzC7aPzqEAhaNftgA4d/view?usp=sharing)
+
 ## S3GRL architecture
 <img width="1260" alt="Screenshot 2023-01-28 at 3 19 09 PM" src="https://user-images.githubusercontent.com/14299839/215289015-e437d5d5-9df7-48b4-842a-932d4a0c7fc2.png">
 
